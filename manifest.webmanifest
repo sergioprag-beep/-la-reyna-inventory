@@ -1,0 +1,9 @@
+{
+  "name": "La Reyna Xpress – Inventario",
+  "short_name": "LRX Inventario",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#244b93",
+  "icons": []
+}
