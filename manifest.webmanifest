@@ -1,7 +1,6 @@
 {
   "name": "La Reyna Xpress Inventory",
   "short_name": "La Reyna Inventory",
-  "description": "Sistema de inventario, compras, food cost, proveedores, movimientos y reportes para La Reyna Xpress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,7 +8,7 @@
   "theme_color": "#244b93",
   "orientation": "any",
   "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
