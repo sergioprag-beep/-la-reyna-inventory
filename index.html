@@ -519,5 +519,59 @@ if ('serviceWorker' in navigator) {
   document.addEventListener('DOMContentLoaded',renderExtra);
 })();
 </script>
+
+<script>
+(function(){
+  const PRODUCT_STORE='LRX_FINAL_STATE_V1';
+  function getState(){try{return JSON.parse(localStorage.getItem(PRODUCT_STORE)||'{}')}catch(e){return {}}}
+  function setState(s){localStorage.setItem(PRODUCT_STORE,JSON.stringify(s))}
+  function valueByLabels(root, labels){
+    const els=[...root.querySelectorAll('input,select,textarea')];
+    for(const el of els){
+      const txt=((el.getAttribute('name')||'')+' '+(el.getAttribute('id')||'')+' '+(el.getAttribute('placeholder')||'')).toLowerCase();
+      if(labels.some(x=>txt.includes(x))) return el.value;
+      const lab=el.closest('label')?.innerText?.toLowerCase()||'';
+      if(labels.some(x=>lab.includes(x))) return el.value;
+    }
+    return '';
+  }
+  document.addEventListener('click',function(ev){
+    const b=ev.target.closest('button,[role="button"]'); if(!b)return;
+    const txt=(b.innerText||b.textContent||'').trim().toLowerCase();
+    if(!/(guardar|save)/.test(txt))return;
+    const modal=b.closest('.modal,.dialog,[role="dialog"]')||b.closest('form')||document;
+    const name=valueByLabels(modal,['nombre','name','producto']);
+    if(!name)return;
+    // Only intercept likely product forms, not recipe/category/brand forms.
+    const context=(modal.innerText||'').toLowerCase();
+    if(!/(producto|product)/.test(context) || /(receta|recipe|categoría|categoria|marca|brand)/.test(context)&&!/(stock|inventario|supplier|proveedor)/.test(context))return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    const s=getState();
+    s.products=Array.isArray(s.products)?s.products:[];
+    const p={
+      id:Date.now(),
+      name:name.trim(),
+      brand:valueByLabels(modal,['marca','brand']).trim(),
+      category:valueByLabels(modal,['categoría','categoria','category']).trim()||'Otros',
+      supplier:valueByLabels(modal,['proveedor','supplier']).trim(),
+      sku:valueByLabels(modal,['sku','código interno','codigo interno']).trim(),
+      packaging:valueByLabels(modal,['empaque','packaging']).trim(),
+      unit:valueByLabels(modal,['unidad','unit']).trim()||'unidad',
+      quantityPerPackage:Number(valueByLabels(modal,['cantidad por paquete','qty package']))||0,
+      cost:Number(valueByLabels(modal,['costo','cost','precio de compra']))||0,
+      stock:Number(valueByLabels(modal,['stock','existencia','cantidad']))||0,
+      minimum:Number(valueByLabels(modal,['mínimo','minimo','minimum']))||0,
+      emergencyStock:Number(valueByLabels(modal,['emergencia','emergency']))||0,
+      createdAt:new Date().toISOString()
+    };
+    s.products.push(p); setState(s);
+    alert('Producto guardado correctamente: '+p.name);
+    // close common modal
+    const close=modal.querySelector('[data-close],.close,[aria-label*="Close"],[aria-label*="Cerrar"]');
+    if(close) close.click();
+    setTimeout(()=>location.reload(),150);
+  },true);
+})();
+</script>
 </body>
 </html>
