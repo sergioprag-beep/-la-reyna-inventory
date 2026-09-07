@@ -1,9 +1,5 @@
-# LA REYNA XPRESS INVENTORY — PWA
-Paquete instalable para iPhone, iPad, Mac y Windows.
+# La Reyna Xpress — V28.1 Compras y Reportes
 
-La PWA necesita publicarse con HTTPS para poder instalarse normalmente.
-Para sincronizar los mismos datos entre todos los dispositivos, la siguiente fase es conectar una base de datos cloud + autenticación. Este paquete conserva la aplicación actual como base y añade manifest, iconos y Service Worker.
+Corrección sobre V28: compras usan el ledger canónico `lrx_purchases_v8`, se sincronizan con inventario y ahora pueden editarse/eliminarse. Reportes muestran totales y los reportes impresos/PDF incluyen resúmenes.
 
-Instalación:
-- iPhone/iPad: Safari → Compartir → Añadir a pantalla de inicio.
-- Mac/Windows: Chrome/Edge → Instalar aplicación.
+Instalación GitHub Pages: reemplazar `index.html` y `sw.js`. No borrar datos locales de la PWA.
