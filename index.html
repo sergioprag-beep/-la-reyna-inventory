@@ -743,7 +743,24 @@ let arr=products.filter(p=>(!q||String(p.name||"").toLowerCase().includes(q)||St
 document.getElementById("productRows").innerHTML=arr.map((p)=>{let value=Number(p.stock||0)*Number(p.cost||0);let critical=Number(p.stock||0)<=Number(p.emergency||0),low=Number(p.stock||0)<=Number(p.min||0);
 return `<tr><td>${p.photo?`<img class="img" src="${p.photo}">`:"📦"}</td><td><b>${esc(p.name)}</b><br><small>SKU: ${esc(p.sku)}${p.brand?` • Marca: ${esc(p.brand)}`:""}</small></td><td>${esc(p.category)}</td><td>${esc(p.supplier)}</td><td>${esc(p.pack)} / ${esc(p.packQty)} ${esc(p.unit)}</td><td>${p.stock}</td><td>${money(p.cost)}</td><td>${money(value)}</td><td><span class="badge ${critical?"critical":low?"low":"ok"}">${critical?"EMERGENCIA":low?"BAJO":"OK"}</span></td><td><button onclick="editProduct(${p.id})">✏️ Editar</button> <button onclick="deleteProduct(${p.id})">🗑️ Eliminar</button></td></tr>`}).join("")||`<tr><td colspan="11">No hay productos registrados.</td></tr>`;
 }
-function renderMovements(){document.getElementById("movementRows").innerHTML=movements.slice().reverse().map(m=>`<tr><td>${m.date}</td><td>${esc(m.type)}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join("");}
+function renderMovements(){
+  const tb=document.getElementById("movementRows"); if(!tb)return;
+  // Always read the current ledgers from localStorage. Purchase/advanced inventory
+  // modules write directly to storage, so the startup `movements` array can be stale.
+  let legacy=[]; let canonical=[];
+  try{legacy=JSON.parse(localStorage.getItem("lrx_movements")||"[]");if(!Array.isArray(legacy))legacy=[]}catch(e){legacy=[]}
+  try{canonical=JSON.parse(localStorage.getItem("lrx_inventory_moves_v10")||"[]");if(!Array.isArray(canonical))canonical=[]}catch(e){canonical=[]}
+  const rows=[...legacy];
+  const seen=new Set(rows.map(m=>String(m.id||"")+"|"+String(m.date||"")+"|"+String(m.type||"")+"|"+String(m.product||m.productName||"")+"|"+String(m.qty||"")));
+  canonical.forEach(m=>{
+    const product=m.product||m.productName||"";
+    const key=String(m.id||"")+"|"+String(m.date||"")+"|"+String(m.type||"")+"|"+String(product)+"|"+String(m.qty||"");
+    if(!seen.has(key))rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||""});
+  });
+  // Keep the legacy in-memory variable synchronized for older handlers.
+  movements=rows.slice();
+  tb.innerHTML=rows.slice().reverse().map(m=>`<tr><td>${esc(m.date||"")}</td><td>${esc(m.type||"")}</td><td>${esc(m.product||m.productName||"")}</td><td>${Number(m.qty||0)}</td><td>${money(Number(m.cost||0))}</td><td>${esc(m.note||"")}</td></tr>`).join("")||`<tr><td colspan="6">No hay movimientos registrados.</td></tr>`;
+}
 function canonicalPurchases(){
   let a=[];
   try{a=JSON.parse(localStorage.getItem("lrx_purchases_v8")||"[]")}catch(e){a=[]}
