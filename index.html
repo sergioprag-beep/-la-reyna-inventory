@@ -1418,8 +1418,13 @@ function fc(r){const c=recCost(r);const per=Number(r.yieldQty)||1;const price=Nu
 function openBox(title,body,saveFn){
  let m=document.getElementById('lrxMasterModal');if(m)m.remove();
  m=document.createElement('div');m.id='lrxMasterModal';m.className='modal show';
- m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button class="primary" id="lrxMasterSave">Guardar</button> <button onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
- document.body.appendChild(m);m.querySelector('#lrxMasterSave').onclick=()=>saveFn(m);
+ m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button type="button" class="primary" id="lrxMasterSave">Guardar</button> <button type="button" onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
+ document.body.appendChild(m);
+ const saveBtn=m.querySelector('#lrxMasterSave');
+ saveBtn.addEventListener('click',function(ev){
+   ev.preventDefault(); ev.stopPropagation();
+   try{ saveFn(m); }catch(err){ console.error(err); alert('No se pudo guardar la receta: '+(err?.message||err)); }
+ });
 }
 LRXIng.open=function(id=null){
  const x=id?ingredients.find(a=>String(a.id)===String(id)):null;
@@ -1472,7 +1477,10 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
-   write(RK,recipeBook);renderRecipeBook();m.remove();return true;
+   write(RK,recipeBook);
+   renderRecipeBook();
+   m.remove();
+   return true;
  });
  const m=document.getElementById('lrxMasterModal');
  (x?.items||[]).forEach(i=>LRXRec.addRow(i.ingredientId,i.qty));
@@ -1853,16 +1861,6 @@ function applySale(r,qty){
  }
  // All checks passed; now mutate inventory.
  neededProducts.forEach(x=>consumeProduct(x.productId,x.qty));
- // Mirror POS consumption into the legacy ledger used by the visible Movimientos table.
- try{
-   const mv=JSON.parse(localStorage.getItem('lrx_movements')||'[]');
-   const now=new Date();
-   neededProducts.forEach(x=>{
-     mv.push({date:now.toLocaleString(),type:'salida/venta',product:x.productName,qty:Number(x.qty)||0,cost:Number((ps.find(z=>String(z.id)===String(x.productId))||{}).cost||0),note:'Venta: '+String(r.name||'')});
-   });
-   localStorage.setItem('lrx_movements',JSON.stringify(mv));
-   try{movements=mv}catch(e){}
- }catch(e){console.error('No se pudo registrar el movimiento POS',e)}
  neededPreps.forEach(x=>consumePrep(x.prepId,x.qty));
  return {ok:true,products:neededProducts,preps:neededPreps};
 }
@@ -3837,19 +3835,7 @@ const POS={
       for(const item of r.items){const use=this.num(item.qty)*this.num(line.qty);if(use<=0)continue;if(item.type==='prep')consumedPreps.push({prepId:item.ref,qty:use});else{const ing=this.ingredients().find(x=>String(x.id)===String(item.ref));const p=ing?this.findProduct(ing):null;if(p)consumedProducts.push({productId:p.id,productName:p.name,usageQty:use,qty:this.usageToStock(use,ing,p),unit:ing.unit})}}
       records.push({id:stamp+i,transactionId,recipeId:r.id,recipeName:r.name,qty:line.qty,baseSalePrice:this.num(line.basePrice??r.salePrice),salePrice:this.num(line.salePrice),grossRevenue:lineGross,discountAmount:lineDiscount,discountPercent:subtotal?(discount/subtotal*100):0,discountType:dtype,discountValue:dval,discountReason:reason,revenue:netRevenue,channel,date:new Date().toISOString(),consumedProducts,consumedPreps});
     });
-    this.write('lrx_sales_v5',sales.concat(records));
-    // POS -> visible Movimientos bridge: record each consumed inventory product as salida/venta.
-    try{
-      const mv=this.read('lrx_movements',[]);
-      records.forEach(rec=>{
-        (rec.consumedProducts||[]).forEach(cp=>{
-          const qty=this.num(cp.qty??cp.usageQty);
-          if(qty>0) mv.push({date:new Date().toLocaleString(),type:'salida/venta',product:cp.productName||'',qty,cost:Number((ps.find(p=>String(p.id)===String(cp.productId))||{}).cost||0),note:'Venta: '+rec.recipeName});
-        });
-      });
-      this.write('lrx_movements',mv);
-    }catch(e){console.error('No se pudo registrar movimiento de venta',e)}
-    this.cart=[];this.renderCart();
+    this.write('lrx_sales_v5',sales.concat(records)); this.cart=[];this.renderCart();
     const msg=document.getElementById('posMsg');if(msg)msg.innerHTML='✅ Venta guardada. Inventario actualizado. Descuento: '+this.money(discount)+' • Total: '+this.money(subtotal-discount);
     try{if(typeof window.refresh==='function')window.refresh()}catch(e){} try{if(typeof window.render==='function')window.render()}catch(e){}
   },
@@ -6168,31 +6154,5 @@ window.LRXMenuPlatformBridge={refresh:inject};
   if(window.LRXPurchaseLedger){window.LRXPurchaseLedger.open=openPurchase;window.LRXPurchaseLedger.save=window.LRXPurchaseFix?.save||window.LRXPurchaseLedger.save;}
 })();
 </script>
-<script>
-/* V57.7 FIX 6.1 — Manual Movement Ledger Fix (isolated)
-   Keeps the V57.5 UI. Manual Entrada/Salida/Merma now persist to both
-   legacy lrx_movements (visible Movimientos) and advanced inventory ledger. */
-(function(){
-  function read(key, fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v==null?fallback:v}catch(e){return fallback}}
-  function write(key,v){localStorage.setItem(key,JSON.stringify(v))}
-  window.saveMovement=function(type){
-    const ps=read('lrx_products',[]); const idx=Number(document.getElementById('mp')?.value); const q=Number(document.getElementById('mq')?.value)||0; const note=(document.getElementById('mn')?.value||'').trim(); const p=ps[idx];
-    if(!p||!(q>0)){alert('Producto y cantidad son obligatorios.');return}
-    const t=String(type||'entrada').toLowerCase();
-    const sign=t==='entrada'?1:-1;
-    p.stock=Math.max(0,Number(p.stock||0)+sign*q);
-    write('lrx_products',ps);
-    const now=new Date();
-    const legacy=read('lrx_movements',[]); legacy.push({date:now.toLocaleString(),type:t,product:p.name,qty:q,cost:Number(p.cost||0),note}); write('lrx_movements',legacy);
-    const adv=read('lrx_inventory_moves_v10',[]); adv.push({id:Date.now(),date:now.toISOString(),type:t,productId:p.id,productName:p.name,qty:q,unit:p.unit||'unidad',note,cost:Number(p.cost||0),total:q*Number(p.cost||0)}); write('lrx_inventory_moves_v10',adv);
-    try{products=ps;movements=legacy}catch(e){}
-    try{closeModal()}catch(e){}
-    try{refresh()}catch(e){try{renderMovements()}catch(_){}
-    }
-    alert((t==='entrada'?'Entrada':t==='salida'?'Salida':'Merma')+' registrada correctamente.');
-  };
-})();
-</script>
-
 </body>
 </html>
