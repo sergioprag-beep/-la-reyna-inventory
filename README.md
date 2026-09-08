@@ -1,8 +1,5 @@
-# La Reyna Xpress Management PRO v58.2
+# La Reyna Xpress Management PRO V57.7 — PURCHASE FIX 5
 
-## Recipe Save Fix
-- Fixed the **Guardar** action in the recipe editor so it uses a direct button handler.
-- Validates recipe name and ingredient rows before saving.
-- Saves the recipe to the recipe book and synchronizes final recipes with the modern final-recipe ledger.
-- Keeps decimal ingredient quantities.
-- Supports creating and editing recipes without changing the stabilized purchase/inventory flow.
+Fixes the purchase flow when selecting an existing product. The visible product selection is now synchronized with the hidden product ID used by the save handler, preventing the false “Selecciona un producto.” error.
+
+Also preserves the new-product-from-purchase flow: after creating a product, it returns to the purchase form with that product selected.
