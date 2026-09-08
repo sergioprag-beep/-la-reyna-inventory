@@ -644,7 +644,7 @@ nav.lrx-compact .lrx-submenu button.active{background:var(--pink);color:#fff}
 <p><strong>Los platos se crean una sola vez en Recetas.</strong> Aquí solo eliges cantidades y registras la venta.</p>
 <div class="grid2">
 <label>Canal<select id="posChannel"><option>Salón</option><option>Para llevar</option><option>Uber Eats</option><option>DoorDash</option><option>Grubhub</option><option>Otro</option></select></label>
-<label>Buscar plato<input id="posSearch" type="search" placeholder="Buscar receta..."></label>
+<label>Buscar plato<input id="posSearch" type="search" placeholder="Buscar receta..." oninput="try{window.LRXPOS&&window.LRXPOS.refresh()}catch(e){}"></label>
 </div>
 </div>
 <div class="card" id="posSaleControls">
@@ -3594,6 +3594,7 @@ const POS={
   recipes(){
     const finals=this.read('lrx_finalrecipes_v3',[]);
     const book=this.read('lrx_recipebook_v1',[]);
+    const legacy=this.read('lrx_recipes',[]);
     const out=[];
     const seen=new Set();
 
@@ -3631,6 +3632,14 @@ const POS={
 
     finals.forEach(r=>add(r,'final'));
     book.forEach(r=>add(r,'book'));
+    // Legacy recipe catalog fallback: keep the current POS usable when older
+    // recipe records are present in lrx_recipes but not yet mirrored into the
+    // final-recipe store.
+    legacy.forEach(r=>{
+      if(!r || !r.name) return;
+      const copy={...r,items:r.items||r.ingredients||r.components||[]};
+      add(copy,'legacy');
+    });
 
     return out;
   },
@@ -6144,46 +6153,6 @@ window.LRXMenuPlatformBridge={refresh:inject};
   // CRITICAL: V55.6 redefines LRXPurchaseLedger after the earlier purchase fix.
   // The purchase modal uses product IDs, so it must use the ID-based V57.7 save handler.
   if(window.LRXPurchaseLedger){window.LRXPurchaseLedger.open=openPurchase;window.LRXPurchaseLedger.save=window.LRXPurchaseFix?.save||window.LRXPurchaseLedger.save;}
-})();
-</script>
-
-<script>
-/* V57.7 FIX 6.3 — Manual Movements FINAL
-   Persist directly to the movement/product keys. The base V57.5 file has
-   later modules that also define a global save(), so this handler must not
-   call save(). */
-(function(){
-  function read(key, fallback){
-    try{ const v=JSON.parse(localStorage.getItem(key)||'null'); return v==null?fallback:v; }
-    catch(e){ return fallback; }
-  }
-  function write(key,value){ localStorage.setItem(key,JSON.stringify(value)); }
-  function saveManualMovement(type){
-    const ps=read('lrx_products',[]);
-    const idx=Number(document.getElementById('mp')?.value);
-    const q=Number(document.getElementById('mq')?.value)||0;
-    const note=(document.getElementById('mn')?.value||'').trim();
-    const p=ps[idx];
-    if(!p){ alert('Selecciona un producto.'); return; }
-    if(!(q>0)){ alert('La cantidad debe ser mayor que 0.'); return; }
-    const t=String(type||'entrada').toLowerCase();
-    const sign=t==='entrada'?1:-1;
-    p.stock=Math.max(0,Number(p.stock||0)+(sign*q));
-    write('lrx_products',ps);
-    const now=new Date();
-    const legacy=read('lrx_movements',[]);
-    legacy.push({date:now.toLocaleString(),type:t,product:p.name,qty:q,cost:Number(p.cost||0),note});
-    write('lrx_movements',legacy);
-    const adv=read('lrx_inventory_moves_v10',[]);
-    adv.push({id:Date.now(),date:now.toISOString(),type:t,productId:p.id,productName:p.name,qty:q,unit:p.unit||'unidad',note,cost:Number(p.cost||0),total:q*Number(p.cost||0)});
-    write('lrx_inventory_moves_v10',adv);
-    try{ products=ps; movements=legacy; }catch(e){}
-    try{ closeModal(); }catch(e){}
-    try{ if(typeof renderMovements==='function') renderMovements(); }catch(e){}
-    try{ if(typeof dashboard==='function') dashboard(); }catch(e){}
-    alert((t==='entrada'?'Entrada':t==='salida'?'Salida':'Merma')+' registrada correctamente.');
-  }
-  window.saveMovement=saveManualMovement;
 })();
 </script>
 </body>
