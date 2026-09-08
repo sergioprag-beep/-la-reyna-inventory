@@ -1596,6 +1596,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 #finalRecipePanel table th,#finalRecipePanel table td{display:table-cell !important;white-space:nowrap}
 #finalRecipePanel > div{overflow-x:auto !important}
 .lrx-pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f5e8ef;color:#9b2456}
+ .lrx-pagination{margin-top:12px;padding:12px;border:1px solid #e6e9ef;border-radius:12px;background:#f8fafc}.lrx-page-summary{font-size:14px;color:#667085;margin-bottom:8px}.lrx-page-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.lrx-page-controls button{padding:8px 12px;border:1px solid #d0d5dd;border-radius:9px;background:#fff;font-weight:700}.lrx-page-controls button.primary{background:#244b93;color:#fff}.lrx-page-controls button:disabled{opacity:.45}.lrx-page-controls label{margin-left:auto;font-size:14px;color:#667085}.lrx-page-controls select{padding:7px 9px;border:1px solid #d0d5dd;border-radius:8px;background:#fff}
 </style>
 <script>
 (function(){
@@ -1635,12 +1636,24 @@ function ordersAvailable(r){
  }
  return min===Infinity?0:min
 }
+let finalPage=1;
+let finalPageSize=20;
 function renderFinal(){
  const tb=document.getElementById('finalRows');if(!tb)return;
- tb.innerHTML=finals.map(r=>{
+ const total=finals.length;
+ const pages=Math.max(1,Math.ceil(total/finalPageSize));
+ if(finalPage>pages)finalPage=pages;
+ const start=(finalPage-1)*finalPageSize;
+ const rows=finals.slice(start,start+finalPageSize);
+ tb.innerHTML=rows.map(r=>{
   const c=finalCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,o=ordersAvailable(r);
   const profit=Math.max(0,price-c),margin=price?profit/price*100:0; return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${price.toFixed(2)}</td><td>$${c.toFixed(2)}</td><td>$${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
  }).join('')||'<tr><td colspan="9">No hay recetas finales.</td></tr>';
+ const pg=document.getElementById('finalPagination');
+ if(pg){
+  const nums=Array.from({length:pages},(_,i)=>i+1).map(n=>`<button type="button" class="${n===finalPage?'primary':''}" onclick="window.LRXFinal.goPage(${n})">${n}</button>`).join('');
+  pg.innerHTML=`<div class="lrx-page-summary">Mostrando <b>${total?start+1:0}–${Math.min(start+finalPageSize,total)}</b> de <b>${total}</b> recetas</div><div class="lrx-page-controls"><button type="button" ${finalPage<=1?'disabled':''} onclick="window.LRXFinal.goPage(${finalPage-1})">‹ Anterior</button>${nums}<button type="button" ${finalPage>=pages?'disabled':''} onclick="window.LRXFinal.goPage(${finalPage+1})">Siguiente ›</button><label>Por página <select onchange="window.LRXFinal.setPageSize(this.value)"><option value="20" ${finalPageSize===20?'selected':''}>20</option><option value="50" ${finalPageSize===50?'selected':''}>50</option><option value="100" ${finalPageSize===100?'selected':''}>100</option></select></label></div>`;
+ }
 }
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
@@ -1676,6 +1689,8 @@ window.LRXFinal={
   b.appendChild(d);
  },
  add(){modal(null)},edit(id){const r=finals.find(x=>String(x.id)===String(id));if(r)modal(r)},
+ goPage(n){const pages=Math.max(1,Math.ceil(finals.length/finalPageSize));finalPage=Math.max(1,Math.min(pages,Number(n)||1));renderFinal()},
+ setPageSize(n){finalPageSize=Math.max(1,Number(n)||20);finalPage=1;renderFinal()},
  del(id){const r=finals.find(x=>String(x.id)===String(id));if(r&&confirm('¿Eliminar "'+r.name+'"?')){finals=finals.filter(x=>String(x.id)!==String(id));saveF();renderFinal()}},
  state:finals
 };
@@ -1686,7 +1701,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';
  p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p>
  <button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button>
- <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div>`;
+ <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div><div id="finalPagination" class="lrx-pagination"></div>`;
  sec.appendChild(p);renderFinal();
  setInterval(renderFinal,1000);
 });
@@ -3046,7 +3061,7 @@ function parse(text){
 }
 async function pick(file){if(!file)return;imageFile=file;const url=URL.createObjectURL(file);document.getElementById('rsPreview').innerHTML=`<img src="${url}" style="max-width:100%;max-height:320px;border-radius:12px;border:1px solid #ddd">`;document.getElementById('rsMsg').textContent='Imagen cargada. Pulsa Analizar imagen.'}
 async function analyze(){if(!imageFile)return alert('Primero toma una foto o sube una imagen.');if(typeof Tesseract==='undefined')return alert('El motor OCR no está disponible. Revisa tu conexión e inténtalo de nuevo.');const msg=document.getElementById('rsMsg');try{msg.textContent='Analizando imagen…';const r=await Tesseract.recognize(imageFile,'eng',{logger:m=>{if(m.progress)msg.textContent='Analizando: '+Math.round(m.progress*100)+'%'}});document.getElementById('rsText')?.remove();parse(r.data.text||'');msg.textContent='Análisis terminado. Revisa y edita todos los datos antes de guardar.'}catch(e){console.error(e);msg.textContent='No se pudo analizar la imagen. Puedes introducir los datos manualmente.'}}
-function save(){const name=document.getElementById('rsName').value.trim();if(!name)return alert('El nombre de la receta es obligatorio.');const all=ings();const items=rows.map(r=>{const m=all.find(x=>String(x.id)===String(r.ingredientId))||best(r.name);return {type:'ingredient',ref:m?.id||'',qty:Number(r.qty)||0}}).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Cada ingrediente debe estar relacionado con un ingrediente existente.');let finals=read(FK,[]);const obj={id:Date.now(),name,salePrice:Number(document.getElementById('rsPrice').value)||0,yieldQty:Number(document.getElementById('rsYield').value)||1,yieldUnit:document.getElementById('rsYieldUnit').value.trim()||'orden',items};finals.push(obj);write(FK,finals);if(typeof renderFinal==='function')renderFinal();renderSaved();alert('Receta creada correctamente. Ahora puedes editarla o eliminarla desde Recetas.');}
+function save(){const name=document.getElementById('rsName').value.trim();if(!name)return alert('El nombre de la receta es obligatorio.');const all=ings();const items=rows.map(r=>{const m=all.find(x=>String(x.id)===String(r.ingredientId))||best(r.name);return {type:'ingredient',ref:m?.id||'',qty:Number(r.qty)||0}}).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Cada ingrediente debe estar relacionado con un ingrediente existente.');let finals=read(FK,[]);const obj={id:Date.now(),name,salePrice:Number(document.getElementById('rsPrice').value)||0,yieldQty:Number(document.getElementById('rsYield').value)||1,yieldUnit:document.getElementById('rsYieldUnit').value.trim()||'orden',items};finals.unshift(obj);write(FK,finals);if(typeof renderFinal==='function')renderFinal();renderSaved();alert('Receta creada correctamente. Ahora puedes editarla o eliminarla desde Recetas.');}
 function renderSaved(){const tb=document.getElementById('rsSavedRows');if(!tb)return;const f=read(FK,[]);tb.innerHTML=f.slice().reverse().map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>$${Number(r.salePrice||0).toFixed(2)}</td><td>${(r.items||[]).length}</td><td><button onclick="LRXRecipeScan.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXRecipeScan.del('${r.id}')">🗑️ Eliminar</button></td></tr>`).join('')||'<tr><td colspan="4">No hay recetas finales.</td></tr>'}
 function edit(id){if(window.LRXFinal?.edit)return window.LRXFinal.edit(id);alert('Abre Recetas para editar esta receta.')}
 function del(id){
