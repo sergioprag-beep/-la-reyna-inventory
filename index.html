@@ -1853,6 +1853,16 @@ function applySale(r,qty){
  }
  // All checks passed; now mutate inventory.
  neededProducts.forEach(x=>consumeProduct(x.productId,x.qty));
+ // Mirror POS consumption into the legacy ledger used by the visible Movimientos table.
+ try{
+   const mv=JSON.parse(localStorage.getItem('lrx_movements')||'[]');
+   const now=new Date();
+   neededProducts.forEach(x=>{
+     mv.push({date:now.toLocaleString(),type:'salida/venta',product:x.productName,qty:Number(x.qty)||0,cost:Number((ps.find(z=>String(z.id)===String(x.productId))||{}).cost||0),note:'Venta: '+String(r.name||'')});
+   });
+   localStorage.setItem('lrx_movements',JSON.stringify(mv));
+   try{movements=mv}catch(e){}
+ }catch(e){console.error('No se pudo registrar el movimiento POS',e)}
  neededPreps.forEach(x=>consumePrep(x.prepId,x.qty));
  return {ok:true,products:neededProducts,preps:neededPreps};
 }
