@@ -1608,20 +1608,32 @@ const ingredients=()=>readArr('lrx_ingredients_v1');
 const preps=()=>readArr('lrx_preparations_v2');
 const productsNow=()=>readArr('lrx_products');
 function allFinalRecipes(){
- // IMPORTANT: every record saved in lrx_finalrecipes_v3 is a final recipe.
- // Do not discard records just because their component links are incomplete,
- // and do not deduplicate by name. The dashboard count and this table must
- // represent the same recipe set (e.g. all 44 final recipes).
- return readArr(FK).map((r,idx)=>{
+ // Unified recipe view: the dashboard's 44 final recipes are stored in
+ // lrx_recipebook_v1, while newer final recipes are stored in
+ // lrx_finalrecipes_v3. Read BOTH stores without deleting or migrating data.
+ // Deduplicate only when the same recipe has the same id or the same name,
+ // so the table represents the complete set shown by the dashboard.
+ const out=[], seenIds=new Set(), seenNames=new Set();
+ const add=(r,idx,source)=>{
   const name=String(r?.name||r?.recipeName||r?.title||'').trim()||('Receta '+(idx+1));
+  const id=r?.id??(source+'-'+idx+'-'+name);
+  const idKey=String(id);
+  const nameKey=name.toLowerCase().replace(/\s+/g,' ').trim();
+  if(seenIds.has(idKey)||seenNames.has(nameKey)) return;
   const raw=(r?.items||r?.ingredients||r?.components||r?.recipeItems||[]);
   const items=Array.isArray(raw)?raw.map(i=>({
     type:i?.type==='prep'?'prep':'ingredient',
     ref:i?.ref??i?.ingredientId??i?.productId??i?.id,
     qty:Number(i?.qty??i?.quantity??0)
   })).filter(i=>i.ref!==undefined&&i.ref!==null&&i.qty>0):[];
-  return {...r,id:r?.id??('final-'+idx+'-'+name),name,items,source:'final'};
- });
+  out.push({...r,id,name,items,source});
+  seenIds.add(idKey); seenNames.add(nameKey);
+ };
+ // Recipe Book is the legacy/master recipe list used by the dashboard.
+ readArr(RBK).forEach((r,i)=>{if(r?.type!=='pre')add(r,i,'recipebook')});
+ // Add any final recipes that exist only in the newer final-recipe store.
+ readArr(FK).forEach((r,i)=>add(r,i,'final'));
+ return out;
 }
 let finals=allFinalRecipes();
 let finalPage=1;
