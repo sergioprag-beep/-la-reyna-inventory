@@ -1418,13 +1418,8 @@ function fc(r){const c=recCost(r);const per=Number(r.yieldQty)||1;const price=Nu
 function openBox(title,body,saveFn){
  let m=document.getElementById('lrxMasterModal');if(m)m.remove();
  m=document.createElement('div');m.id='lrxMasterModal';m.className='modal show';
- m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button type="button" class="primary" id="lrxMasterSave">Guardar</button> <button type="button" onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
- document.body.appendChild(m);
- const saveBtn=m.querySelector('#lrxMasterSave');
- saveBtn.addEventListener('click',function(ev){
-   ev.preventDefault(); ev.stopPropagation();
-   try{ saveFn(m); }catch(err){ console.error(err); alert('No se pudo guardar la receta: '+(err?.message||err)); }
- });
+ m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button class="primary" id="lrxMasterSave">Guardar</button> <button onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
+ document.body.appendChild(m);m.querySelector('#lrxMasterSave').onclick=()=>saveFn(m);
 }
 LRXIng.open=function(id=null){
  const x=id?ingredients.find(a=>String(a.id)===String(id)):null;
@@ -1477,10 +1472,7 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
-   write(RK,recipeBook);
-   renderRecipeBook();
-   m.remove();
-   return true;
+   write(RK,recipeBook);renderRecipeBook();m.remove();return true;
  });
  const m=document.getElementById('lrxMasterModal');
  (x?.items||[]).forEach(i=>LRXRec.addRow(i.ingredientId,i.qty));
@@ -1618,52 +1610,28 @@ function itemCost(i){
 }
 function finalCost(r){return (r.items||[]).reduce((a,i)=>a+itemCost(i),0)}
 function ordersAvailable(r){
- if(!r?.items?.length)return 0;
- const ps=Array.isArray(products)?products:[];
- const ins=ingredients();
- const normU=x=>String(x??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
- const findProd=ing=>{
-  if(!ing)return null;
-  let p=ps.find(x=>String(x.id)===String(ing.productId));
-  if(p)return p;
-  const names=[ing.productName,ing.product,ing.name].map(normU).filter(x=>x.length>=2);
-  for(const n of names){p=ps.find(x=>normU(x.name)===n);if(p)return p}
-  for(const n of names){if(n.length>=4){p=ps.find(x=>normU(x.name).includes(n)||n.includes(normU(x.name)));if(p)return p}}
-  return null;
- };
- const stockNeed=(qty,ing,p)=>{
-  const q=Number(qty)||0;
-  if(window.LRXUnits&&typeof window.LRXUnits.stockUnitsForUsage==='function'&&p&&ing){
-   try{return Number(window.LRXUnits.stockUnitsForUsage(q,ing,p))||0}catch(e){}
-  }
-  return q;
- };
  let min=Infinity;
- for(const i of r.items){
-  const q=Number(i.qty)||0;if(q<=0)continue;
+ for(const i of (r.items||[])){
   if(i.type==='prep'){
-   const prep=preps().find(x=>String(x.id)===String(i.ref));
-   if(!prep){min=0;continue}
+   const p=preps().find(x=>String(x.id)===String(i.ref)); if(!p||!i.qty) continue;
+   // Available batches from raw ingredients, then convert to produced quantity.
    let batches=Infinity;
-   for(const z of (prep.items||[])){
-    const a=ins.find(x=>String(x.id)===String(z.ingredientId));
-    const prod=findProd(a);
-    const need=stockNeed(z.qty,a,prod);
-    if(!prod||need<=0){batches=0;break}
-    batches=Math.min(batches,Number(prod.stock||0)/need);
+   for(const z of (p.items||[])){
+    const a=ingredients().find(x=>String(x.id)===String(z.ingredientId));
+    const prod=(typeof products!=='undefined'?products:[]).find(x=>String(x.id)===String(a?.productId));
+    if(!prod || Number(z.qty)<=0){batches=0;break}
+    batches=Math.min(batches,Math.floor(Number(prod.stock||0)/Number(z.qty)))
    }
-   if(batches===Infinity)batches=0;
-   const produced=batches*(Number(prep.yieldQty)||1);
-   min=Math.min(min,Math.floor(produced/q));
+   const produced=batches===Infinity?0:batches*Number(p.yieldQty||0);
+   min=Math.min(min,Math.floor(produced/Number(i.qty)))
   }else{
-   const a=ins.find(x=>String(x.id)===String(i.ref??i.ingredientId));
-   const prod=findProd(a);
-   const need=stockNeed(q,a,prod);
-   if(!prod||need<=0){min=0;continue}
-   min=Math.min(min,Math.floor(Number(prod.stock||0)/need));
+   const a=ingredients().find(x=>String(x.id)===String(i.ref));
+   const prod=(typeof products!=='undefined'?products:[]).find(x=>String(x.id)===String(a?.productId));
+   if(!prod||Number(i.qty)<=0){min=0;continue}
+   min=Math.min(min,Math.floor(Number(prod.stock||0)/Number(i.qty)))
   }
  }
- return min===Infinity?0:min;
+ return min===Infinity?0:min
 }
 function renderFinal(){
  const tb=document.getElementById('finalRows');if(!tb)return;
