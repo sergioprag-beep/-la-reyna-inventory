@@ -5939,7 +5939,7 @@ window.addEventListener('pageshow',()=>setTimeout(bind,50));
     if(rs.length===1 && !rs[0].querySelector('button, a, input, select')){
       const txt=(rs[0].textContent||'').trim().toLowerCase();
       if(/no hay|no .*yet|no .*record|sin registros|no sales|no purchases|no suppliers|no bills|no inventory/.test(txt)){
-        const c=ensureControls(tb); if(c)c.innerHTML=''; return;
+        const c=ensureControls(tb); if(c){c.innerHTML='';c.dataset.signature='';} return;
       }
     }
     const k=key(tb), size=getSize();
@@ -5949,19 +5949,32 @@ window.addEventListener('pageshow',()=>setTimeout(bind,50));
     st.page=Math.min(Math.max(1,st.page),pages); st.size=size; state.set(k,st);
     rs.forEach((r,i)=>{r.style.display=(i>=(st.page-1)*size && i<st.page*size)?'':'none'});
     const c=ensureControls(tb); if(!c)return;
-    // Keep the pagination/size controls visible even when the selected page size
-    // is larger than the current record count. This lets the user change back
-    // to 20/50/100 without the control disappearing.
+    // Stable controls: build once and update text/state without replacing the
+    // native <select> while the user is interacting with it. This prevents
+    // iOS Safari from closing the picker immediately on pages that are being
+    // refreshed by another module.
     const start=rs.length?((st.page-1)*size+1):0, end=Math.min(st.page*size,rs.length);
-    let nums='';
-    const lo=Math.max(1,st.page-2), hi=Math.min(pages,st.page+2);
-    for(let i=lo;i<=hi;i++) nums+=`<button type="button" class="lrx-page-num ${i===st.page?'active':''}" data-page="${i}">${i}</button>`;
-    c.innerHTML=`<div class="lrx-pager-info">Mostrando <b>${start}–${end}</b> de <b>${rs.length}</b> registros</div><div class="lrx-pager-actions"><button type="button" class="lrx-page-prev" ${st.page===1?'disabled':''}>‹ Anterior</button>${nums}<button type="button" class="lrx-page-next" ${st.page===pages?'disabled':''}>Siguiente ›</button><label class="lrx-page-size">Por página <select><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label></div>`;
-    c.querySelector('select').value=String(size);
-    c.querySelector('.lrx-page-prev').onclick=()=>{st.page--;render(tb,false)};
-    c.querySelector('.lrx-page-next').onclick=()=>{st.page++;render(tb,false)};
-    c.querySelectorAll('.lrx-page-num').forEach(b=>b.onclick=()=>{st.page=Number(b.dataset.page);render(tb,false)});
-    c.querySelector('select').onchange=e=>{localStorage.setItem(PAGE_KEY,e.target.value);st.page=1;render(tb,true)};
+    const signature=String(size)+'|'+String(st.page)+'|'+String(pages)+'|'+String(rs.length);
+    if(c.dataset.signature!==signature || !c.querySelector('select')){
+      let nums='';
+      const lo=Math.max(1,st.page-2), hi=Math.min(pages,st.page+2);
+      for(let i=lo;i<=hi;i++) nums+=`<button type="button" class="lrx-page-num ${i===st.page?'active':''}" data-page="${i}">${i}</button>`;
+      c.innerHTML=`<div class="lrx-pager-info">Mostrando <b>${start}–${end}</b> de <b>${rs.length}</b> registros</div><div class="lrx-pager-actions"><button type="button" class="lrx-page-prev" ${st.page===1?'disabled':''}>‹ Anterior</button>${nums}<button type="button" class="lrx-page-next" ${st.page===pages?'disabled':''}>Siguiente ›</button><label class="lrx-page-size">Por página <select aria-label="Registros por página"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label></div>`;
+      c.dataset.signature=signature;
+      c.querySelector('select').value=String(size);
+      c.querySelector('.lrx-page-prev').onclick=()=>{st.page--;render(tb,false)};
+      c.querySelector('.lrx-page-next').onclick=()=>{st.page++;render(tb,false)};
+      c.querySelectorAll('.lrx-page-num').forEach(b=>b.onclick=()=>{st.page=Number(b.dataset.page);render(tb,false)});
+      c.querySelector('select').onchange=e=>{
+        const n=Math.max(1,Number(e.target.value)||20);
+        localStorage.setItem(PAGE_KEY,String(n));
+        st.size=n; st.page=1; state.set(k,st);
+        render(tb,true);
+      };
+    }else{
+      const info=c.querySelector('.lrx-pager-info'); if(info)info.innerHTML=`Mostrando <b>${start}–${end}</b> de <b>${rs.length}</b> registros`;
+      const sel=c.querySelector('select'); if(sel && document.activeElement!==sel)sel.value=String(size);
+    }
   }
   function attach(tb){
     if(!tb || tb.__lrxPagerAttached || excluded.has(tb.id)) return;
