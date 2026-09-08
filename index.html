@@ -150,7 +150,7 @@ nav.lrx-compact .lrx-submenu button.active{background:var(--pink);color:#fff}
     <div class="card"><small>Órdenes disponibles</small><div class="metric" id="recipeAvailableTotal">0</div></div>
     <div class="card"><small>Food Cost promedio</small><div class="metric" id="recipeFcAvg">0%</div></div>
   </div>
-  <div style="overflow:auto"><table><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
+  <div style="overflow:auto"><table><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Utilidad</th><th>Margen</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
 </section>
 
 <section id="movimientos" class="page">
@@ -1418,13 +1418,8 @@ function fc(r){const c=recCost(r);const per=Number(r.yieldQty)||1;const price=Nu
 function openBox(title,body,saveFn){
  let m=document.getElementById('lrxMasterModal');if(m)m.remove();
  m=document.createElement('div');m.id='lrxMasterModal';m.className='modal show';
- m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button type="button" class="primary" id="lrxMasterSave">Guardar</button> <button type="button" onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
- document.body.appendChild(m);
- const saveBtn=m.querySelector('#lrxMasterSave');
- saveBtn.addEventListener('click',function(ev){
-   ev.preventDefault(); ev.stopPropagation();
-   try{ saveFn(m); }catch(err){ console.error(err); alert('No se pudo guardar la receta: '+(err?.message||err)); }
- });
+ m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button class="primary" id="lrxMasterSave">Guardar</button> <button onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
+ document.body.appendChild(m);m.querySelector('#lrxMasterSave').onclick=()=>saveFn(m);
 }
 LRXIng.open=function(id=null){
  const x=id?ingredients.find(a=>String(a.id)===String(id)):null;
@@ -1477,10 +1472,7 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
-   write(RK,recipeBook);
-   renderRecipeBook();
-   m.remove();
-   return true;
+   write(RK,recipeBook);renderRecipeBook();m.remove();return true;
  });
  const m=document.getElementById('lrxMasterModal');
  (x?.items||[]).forEach(i=>LRXRec.addRow(i.ingredientId,i.qty));
@@ -1497,11 +1489,12 @@ LRXRec.delete=function(id){const x=recipeBook.find(a=>String(a.id)===String(id))
 LRXRec.available=function(id){const r=recipeBook.find(a=>String(a.id)===String(id));return r?recAvailable(r):0}
 function renderRecipeBook(){
  const rows=document.getElementById('recipeBookRows');if(!rows)return;
- const pre=recipeBook.filter(r=>r.type==='pre').length, fin=recipeBook.filter(r=>r.type!=='pre').length;
+ const all=unifiedFinalRecipes();
+ const pre=recipeBook.filter(r=>r.type==='pre').length,fin=all.length;
  document.getElementById('prepCount').textContent=pre;document.getElementById('finalCount').textContent=fin;
- document.getElementById('recipeAvailableTotal').textContent=recipeBook.filter(r=>r.type!=='pre').reduce((a,r)=>a+recAvailable(r),0);
- document.getElementById('recipeFcAvg').textContent=(recipeBook.filter(r=>r.type!=='pre').length?recipeBook.filter(r=>r.type!=='pre').reduce((a,r)=>a+fc(r),0)/recipeBook.filter(r=>r.type!=='pre').length:0).toFixed(1)+'%';
- rows.innerHTML=recipeBook.map(r=>{const c=recCost(r),f=fc(r),a=recAvailable(r);return `<tr><td><span class="lrx-pill">${r.type==='pre'?'PRE-ELABORADO':'FINAL'}</span></td><td><b>${esc2(r.name)}</b></td><td>${r.yieldQty} ${esc2(r.yieldUnit)}</td><td>${money(c)}</td><td>${r.type==='pre'?'—':f.toFixed(1)+'%'}</td><td>${r.type==='pre'?'—':a}</td><td><button onclick="LRXRec.open('${r.id}')">✏️ Editar</button> <button onclick="LRXRec.delete('${r.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="7">No hay recetas. Crea primero tus pre-elaborados y luego tus recetas finales.</td></tr>';
+ document.getElementById('recipeAvailableTotal').textContent=all.reduce((a,r)=>a+unifiedOrdersAvailable(r),0);
+ document.getElementById('recipeFcAvg').textContent=(all.length?all.reduce((a,r)=>{const c=unifiedRecipeCost(r),p=Number(r.salePrice)||0;return a+(p?100*c/p:0)},0)/all.length:0).toFixed(1)+'%';
+ rows.innerHTML=all.map(r=>{const c=unifiedRecipeCost(r),p=Number(r.salePrice)||0,f=p?100*c/p:0,o=unifiedOrdersAvailable(r),u=p-c,m=p?u/p*100:0;return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc2(r.name)}</b></td><td>${r.yieldQty} ${esc2(r.yieldUnit)}</td><td>${money(c)}</td><td>${f.toFixed(1)}%</td><td>${o}</td><td>${money(u)}</td><td>${m.toFixed(1)}%</td><td><button onclick="LRXRec.open('${r.id}')">✏️ Editar</button> <button onclick="LRXRec.delete('${r.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="9">No hay recetas finales.</td></tr>';
 }
 window.renderIngredients=renderIngredients;window.renderRecipeBook=renderRecipeBook;
 window.renderRecipes=function(){}; // compatibility with the existing legacy refresh
@@ -1641,12 +1634,70 @@ function ordersAvailable(r){
  }
  return min===Infinity?0:min
 }
+function unifiedFinalRecipes(){
+ const out=[],seen=new Set();
+ const add=(r,source)=>{
+  if(!r)return;
+  const name=String(r.name||r.recipeName||'').trim();
+  if(!name)return;
+  const key=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(seen.has(key))return;
+  const items=(r.items||r.ingredients||[]).map(i=>({
+    type:i.type==='prep'?'prep':'ingredient',
+    ref:i.ref??i.ingredientId??i.productId,
+    ingredientId:i.ingredientId??i.ref??i.productId,
+    qty:Number(i.qty||0)
+  })).filter(i=>i.ref!==undefined&&i.ref!==null&&String(i.ref)!==''&&i.qty>0);
+  if(!items.length)return;
+  seen.add(key);
+  out.push({id:r.id,name,category:r.category||r.menuCategory||'Menú',salePrice:Number(r.salePrice??r.price??0)||0,yieldQty:Number(r.yieldQty)||1,yieldUnit:r.yieldUnit||'orden',items,source});
+ };
+ try{JSON.parse(localStorage.getItem('lrx_finalrecipes_v3')||'[]').forEach(r=>add(r,'final'))}catch(e){}
+ try{JSON.parse(localStorage.getItem('lrx_recipebook_v1')||'[]').forEach(r=>{if(String(r.type||'').toLowerCase()!=='pre')add(r,'book')})}catch(e){}
+ return out;
+}
+function unifiedRecipeCost(r){
+ try{if(window.LRXFoodCostFixed&&typeof window.LRXFoodCostFixed.recipes==='function'){
+  const rows=window.LRXFoodCostFixed.recipes(),id=String(r.id||''),n=String(r.name||'').trim().toLowerCase();
+  const h=rows.find(x=>id&&String(x.id)===id)||rows.find(x=>n&&String(x.name||'').trim().toLowerCase()===n);
+  if(h&&Number(h.cost)>0)return Number(h.cost);
+ }}catch(e){}
+ try{
+  const ings=JSON.parse(localStorage.getItem('lrx_ingredients_v1')||'[]');
+  const ps=(typeof products!=='undefined'&&Array.isArray(products))?products:JSON.parse(localStorage.getItem('lrx_products')||'[]');
+  const preps=JSON.parse(localStorage.getItem('lrx_preparations_v2')||'[]');
+  const pFor=(a)=>ps.find(p=>String(p.id)===String(a?.productId))||ps.find(p=>String(p.name||'').trim().toLowerCase()===String(a?.name||'').trim().toLowerCase());
+  const ingCost=(a)=>{const p=pFor(a);if(window.LRXUnits&&p&&a&&typeof window.LRXUnits.costPerUsage==='function'){try{return Number(window.LRXUnits.costPerUsage(a,p))||0}catch(e){}}return Number(a?.costPerUnit||a?.unitCost||p?.cost||0)||0};
+  let total=0;
+  (r.items||[]).forEach(i=>{const q=Number(i.qty)||0;if(q<=0)return;if(i.type==='prep'){const p=preps.find(x=>String(x.id)===String(i.ref));if(p){let pc=0;(p.items||[]).forEach(z=>{const a=ings.find(x=>String(x.id)===String(z.ingredientId));pc+=(Number(z.qty)||0)*ingCost(a)});total+=q*(pc/(Number(p.yieldQty)||1));}}else{const a=ings.find(x=>String(x.id)===String(i.ref)||String(x.id)===String(i.ingredientId));total+=q*ingCost(a)}});
+  return total/(Number(r.yieldQty)||1);
+ }catch(e){return Number(r.cost||r.recipeCost||r.totalCost||0)||0}
+}
+function unifiedOrdersAvailable(r){
+ try{
+  const ings=JSON.parse(localStorage.getItem('lrx_ingredients_v1')||'[]');
+  const ps=(typeof products!=='undefined'&&Array.isArray(products))?products:JSON.parse(localStorage.getItem('lrx_products')||'[]');
+  const preps=JSON.parse(localStorage.getItem('lrx_preparations_v2')||'[]');
+  const pFor=(a)=>ps.find(p=>String(p.id)===String(a?.productId))||ps.find(p=>String(p.name||'').trim().toLowerCase()===String(a?.name||'').trim().toLowerCase());
+  let min=Infinity;
+  for(const i of (r.items||[])){
+   const q=Number(i.qty)||0;if(q<=0)continue;
+   if(i.type==='prep'){
+    const p=preps.find(x=>String(x.id)===String(i.ref));if(!p){min=0;continue}
+    let batches=Infinity;
+    for(const z of (p.items||[])){const a=ings.find(x=>String(x.id)===String(z.ingredientId));const prod=pFor(a);if(!prod||Number(z.qty)<=0){batches=0;break}batches=Math.min(batches,Math.floor(Number(prod.stock||0)/Number(z.qty)))}
+    const produced=batches===Infinity?0:batches*Number(p.yieldQty||0);min=Math.min(min,Math.floor(produced/q));
+   }else{
+    const a=ings.find(x=>String(x.id)===String(i.ref)||String(x.id)===String(i.ingredientId));const prod=pFor(a);if(!prod){min=0;continue}min=Math.min(min,Math.floor(Number(prod.stock||0)/q));
+   }
+  }
+  return min===Infinity?0:min;
+ }catch(e){return 0}
+}
 function renderFinal(){
  const tb=document.getElementById('finalRows');if(!tb)return;
- tb.innerHTML=finals.map(r=>{
-  const c=finalCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,o=ordersAvailable(r);
-  return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${c.toFixed(2)}</td><td>$${price.toFixed(2)}</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
- }).join('')||'<tr><td colspan="7">No hay recetas finales.</td></tr>';
+ const all=unifiedFinalRecipes();
+ tb.innerHTML=all.map(r=>{const c=unifiedRecipeCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,profit=price-c,margin=price?profit/price*100:0,o=unifiedOrdersAvailable(r);return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${c.toFixed(2)}</td><td>$${price.toFixed(2)}</td><td>${fc.toFixed(1)}%</td><td>$${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="9">No hay recetas finales con ingredientes.</td></tr>';
 }
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
@@ -1690,9 +1741,9 @@ document.addEventListener('DOMContentLoaded',()=>{
  const sec=document.getElementById('recetario');if(!sec)return;
  if(document.getElementById('finalRecipePanel'))return;
  const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';
- p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p>
+ p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula costo, Food Cost, utilidad, margen y órdenes disponibles según el inventario actual.</p>
  <button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button>
- <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Costo</th><th>Venta</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div>`;
+ <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Costo</th><th>Venta</th><th>Food Cost</th><th>Utilidad</th><th>Margen</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div>`;
  sec.appendChild(p);renderFinal();
  setInterval(renderFinal,1000);
 });
