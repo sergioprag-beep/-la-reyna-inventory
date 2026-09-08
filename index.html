@@ -1601,110 +1601,108 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script>
 (function(){
 const FK='lrx_finalrecipes_v3';
-let finals=(()=>{try{return JSON.parse(localStorage.getItem(FK)||'[]')}catch(e){return[]}})();
-const saveF=()=>localStorage.setItem(FK,JSON.stringify(finals));
+const RBK='lrx_recipebook_v1';
+const readArr=(k)=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const ingredients=()=>{try{return JSON.parse(localStorage.getItem('lrx_ingredients_v1')||'[]')}catch(e){return[]}};
-const preps=()=>{try{return JSON.parse(localStorage.getItem('lrx_preparations_v2')||'[]')}catch(e){return[]}};
-function prepCostUnit(p){const ing=ingredients();let c=0;(p.items||[]).forEach(i=>{const a=ing.find(x=>String(x.id)===String(i.ingredientId));c+=Number(i.qty||0)*(window.LRXUnits&&a?window.LRXUnits.costPerUsage(a,(typeof products!=='undefined'?products:[]).find(z=>String(z.id)===String(a.productId))):Number(a?.costPerUnit||0))});return c/(Number(p.yieldQty)||1)}
-function itemCost(i){
- if(i.type==='prep'){const p=preps().find(x=>String(x.id)===String(i.ref));return Number(i.qty||0)*prepCostUnit(p||{})}
- const a=ingredients().find(x=>String(x.id)===String(i.ref));return Number(i.qty||0)*Number(a?.costPerUnit||0)
+const ingredients=()=>readArr('lrx_ingredients_v1');
+const preps=()=>readArr('lrx_preparations_v2');
+const productsNow=()=>readArr('lrx_products');
+function allFinalRecipes(){
+ const out=[],seen=new Set();
+ const add=(r,source)=>{
+  if(!r)return;
+  const name=String(r.name||r.recipeName||'').trim();
+  const key=name.toLowerCase();
+  if(!name||seen.has(key))return;
+  const items=(r.items||r.ingredients||[]).map(i=>({
+    type:i.type==='prep'?'prep':'ingredient',
+    ref:i.ref??i.ingredientId??i.productId,
+    qty:Number(i.qty||0)
+  })).filter(i=>i.ref!==undefined&&i.ref!==null&&i.qty>0);
+  if(!items.length)return;
+  seen.add(key);
+  out.push({...r,id:r.id??(source+'-'+name),name,items,source});
+ };
+ readArr(FK).forEach(r=>add(r,'final'));
+ readArr(RBK).forEach(r=>add(r,'recipebook'));
+ return out;
 }
-function finalCost(r){return (r.items||[]).reduce((a,i)=>a+itemCost(i),0)}
-function ordersAvailable(r){
- let min=Infinity;
- for(const i of (r.items||[])){
-  if(i.type==='prep'){
-   const p=preps().find(x=>String(x.id)===String(i.ref)); if(!p||!i.qty) continue;
-   // Available batches from raw ingredients, then convert to produced quantity.
-   let batches=Infinity;
-   for(const z of (p.items||[])){
-    const a=ingredients().find(x=>String(x.id)===String(z.ingredientId));
-    const prod=(typeof products!=='undefined'?products:[]).find(x=>String(x.id)===String(a?.productId));
-    if(!prod || Number(z.qty)<=0){batches=0;break}
-    batches=Math.min(batches,Math.floor(Number(prod.stock||0)/Number(z.qty)))
-   }
-   const produced=batches===Infinity?0:batches*Number(p.yieldQty||0);
-   min=Math.min(min,Math.floor(produced/Number(i.qty)))
-  }else{
-   const a=ingredients().find(x=>String(x.id)===String(i.ref));
-   const prod=(typeof products!=='undefined'?products:[]).find(x=>String(x.id)===String(a?.productId));
-   if(!prod||Number(i.qty)<=0){min=0;continue}
-   min=Math.min(min,Math.floor(Number(prod.stock||0)/Number(i.qty)))
-  }
- }
- return min===Infinity?0:min
-}
+let finals=allFinalRecipes();
 let finalPage=1;
 let finalPageSize=20;
-function renderFinal(){
- const tb=document.getElementById('finalRows');if(!tb)return;
- const total=finals.length;
- const pages=Math.max(1,Math.ceil(total/finalPageSize));
- if(finalPage>pages)finalPage=pages;
- const start=(finalPage-1)*finalPageSize;
- const rows=finals.slice(start,start+finalPageSize);
- tb.innerHTML=rows.map(r=>{
-  const c=finalCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,o=ordersAvailable(r);
-  const profit=Math.max(0,price-c),margin=price?profit/price*100:0; return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${price.toFixed(2)}</td><td>$${c.toFixed(2)}</td><td>$${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
- }).join('')||'<tr><td colspan="9">No hay recetas finales.</td></tr>';
- const pg=document.getElementById('finalPagination');
- if(pg){
-  const nums=Array.from({length:pages},(_,i)=>i+1).map(n=>`<button type="button" class="${n===finalPage?'primary':''}" onclick="window.LRXFinal.goPage(${n})">${n}</button>`).join('');
-  pg.innerHTML=`<div class="lrx-page-summary">Mostrando <b>${total?start+1:0}–${Math.min(start+finalPageSize,total)}</b> de <b>${total}</b> recetas</div><div class="lrx-page-controls"><button type="button" ${finalPage<=1?'disabled':''} onclick="window.LRXFinal.goPage(${finalPage-1})">‹ Anterior</button>${nums}<button type="button" ${finalPage>=pages?'disabled':''} onclick="window.LRXFinal.goPage(${finalPage+1})">Siguiente ›</button><label>Por página <select onchange="window.LRXFinal.setPageSize(this.value)"><option value="20" ${finalPageSize===20?'selected':''}>20</option><option value="50" ${finalPageSize===50?'selected':''}>50</option><option value="100" ${finalPageSize===100?'selected':''}>100</option></select></label></div>`;
+function syncFinals(){finals=allFinalRecipes();const pages=Math.max(1,Math.ceil(finals.length/finalPageSize));if(finalPage>pages)finalPage=pages;}
+function saveF(){localStorage.setItem(FK,JSON.stringify(readArr(FK)))}
+function prepCostUnit(p){const ing=ingredients();let c=0;(p?.items||[]).forEach(i=>{const a=ing.find(x=>String(x.id)===String(i.ingredientId));let u=0;try{u=window.LRXUnits&&a?window.LRXUnits.costPerUsage(a,productsNow().find(z=>String(z.id)===String(a.productId))):Number(a?.costPerUnit||0)}catch(e){u=Number(a?.costPerUnit||0)}c+=Number(i.qty||0)*Number(u||0)});return c/(Number(p?.yieldQty)||1)}
+function itemCost(i){
+ if(i.type==='prep'){const p=preps().find(x=>String(x.id)===String(i.ref));return Number(i.qty||0)*prepCostUnit(p||{})}
+ const a=ingredients().find(x=>String(x.id)===String(i.ref));
+ let c=Number(a?.costPerUnit||0);
+ if(window.LRXUnits&&a){try{c=Number(window.LRXUnits.costPerUsage(a,productsNow().find(z=>String(z.id)===String(a.productId))))||c}catch(e){}}
+ return Number(i.qty||0)*c;
+}
+function finalCost(r){
+ try{
+  if(window.LRXFoodCostFixed&&typeof window.LRXFoodCostFixed.recipes==='function'){
+   const rows=window.LRXFoodCostFixed.recipes(), id=String(r.id??''), name=String(r.name||'').trim().toLowerCase();
+   const h=rows.find(x=>id&&String(x.id)===id)||rows.find(x=>name&&String(x.name||'').trim().toLowerCase()===name);
+   if(h&&Number(h.cost)>0)return Number(h.cost);
+  }
+ }catch(e){}
+ return (r.items||[]).reduce((a,i)=>a+itemCost(i),0);
+}
+function ordersAvailable(r){
+ let min=Infinity; const ps=productsNow(), ings=ingredients(), pp=preps();
+ for(const i of (r.items||[])){
+  if(i.type==='prep'){
+   const p=pp.find(x=>String(x.id)===String(i.ref));if(!p||!i.qty){min=0;continue}
+   let batches=Infinity;
+   for(const z of (p.items||[])){
+    const a=ings.find(x=>String(x.id)===String(z.ingredientId));const prod=ps.find(x=>String(x.id)===String(a?.productId));
+    if(!prod||Number(z.qty)<=0){batches=0;break}
+    batches=Math.min(batches,Math.floor(Number(prod.stock||0)/Number(z.qty)));
+   }
+   const produced=batches===Infinity?0:batches*Number(p.yieldQty||0);min=Math.min(min,Math.floor(produced/Number(i.qty)));
+  }else{
+   const a=ings.find(x=>String(x.id)===String(i.ref));const prod=ps.find(x=>String(x.id)===String(a?.productId));
+   if(!prod||Number(i.qty)<=0){min=0;continue}
+   min=Math.min(min,Math.floor(Number(prod.stock||0)/Number(i.qty)));
+  }
  }
+ return min===Infinity?0:min;
+}
+function renderFinal(){
+ syncFinals();
+ const tb=document.getElementById('finalRows');if(!tb)return;
+ const total=finals.length,pages=Math.max(1,Math.ceil(total/finalPageSize)),start=(finalPage-1)*finalPageSize;
+ const rows=finals.slice(start,start+finalPageSize);
+ tb.innerHTML=rows.map(r=>{const c=finalCost(r),price=Number(r.salePrice??r.price??0),profit=price-c,margin=price?profit/price*100:0,fc=price?c/price*100:0,o=ordersAvailable(r);return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${price.toFixed(2)}</td><td>$${c.toFixed(2)}</td><td>$${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button type="button" data-final-edit="${esc(r.id)}" data-final-source="${r.source}">✏️ Editar</button> <button type="button" data-final-del="${esc(r.id)}" data-final-source="${r.source}">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="9">No hay recetas finales.</td></tr>';
+ const pg=document.getElementById('finalPagination');if(!pg)return;
+ const nums=Array.from({length:pages},(_,i)=>i+1).map(n=>`<button type="button" class="${n===finalPage?'primary':''}" data-final-page="${n}">${n}</button>`).join('');
+ pg.innerHTML=`<div class="lrx-page-summary">Mostrando <b>${total?start+1:0}–${Math.min(start+finalPageSize,total)}</b> de <b>${total}</b> recetas</div><div class="lrx-page-controls"><button type="button" data-final-prev ${finalPage<=1?'disabled':''}>‹ Anterior</button>${nums}<button type="button" data-final-next ${finalPage>=pages?'disabled':''}>Siguiente ›</button><label>Por página <select id="finalPageSize"><option value="20" ${finalPageSize===20?'selected':''}>20</option><option value="50" ${finalPageSize===50?'selected':''}>50</option><option value="100" ${finalPageSize===100?'selected':''}>100</option></select></label></div>`;
+ pg.querySelector('[data-final-prev]')?.addEventListener('click',()=>{if(finalPage>1){finalPage--;renderFinal()}});
+ pg.querySelector('[data-final-next]')?.addEventListener('click',()=>{if(finalPage<pages){finalPage++;renderFinal()}});
+ pg.querySelectorAll('[data-final-page]').forEach(b=>b.addEventListener('click',()=>{finalPage=Number(b.dataset.finalPage)||1;renderFinal()}));
+ pg.querySelector('#finalPageSize')?.addEventListener('change',e=>{finalPageSize=Math.max(1,Number(e.target.value)||20);finalPage=1;renderFinal()});
 }
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
  m=document.createElement('div');m.className='modal show';m.id='lrxFinalModal';
- m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2>
- <div class="lrx-final-grid">
- <label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label>
- <label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice||''}"></label>
- <label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label>
- <label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label>
- </div>
- <h3>Componentes</h3><div id="fi"></div>
- <button type="button" onclick="LRXFinal.row()">＋ Agregar ingrediente / pre-elaborado</button><br><br>
- <button class="primary" id="fs">Guardar</button> <button onclick="this.closest('.modal').remove()">Cancelar</button></div>`;
- document.body.appendChild(m);
- m.querySelector('#fs').onclick=()=>{
-  const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');
-  const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);
-  if(!items.length)return alert('Agrega al menos un componente.');
-  const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};
-  if(r)Object.assign(r,v);else finals.unshift(v);saveF();m.remove();renderFinal();
- };
- (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty)); if(!r)LRXFinal.row();
+ m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
+ document.body.appendChild(m);m.querySelector('#fcancel').onclick=()=>m.remove();m.querySelector('#addFinalComponent').onclick=()=>LRXFinal.row();
+ m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r.id));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
+ (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty));if(!r)LRXFinal.row();
 }
 window.LRXFinal={
- row(type='ingredient',ref='',qty=1){
-  const b=document.querySelector('#fi');if(!b)return;
-  const ing=ingredients(), pp=preps();
-  const opts=(type==='prep'?pp.map(x=>`<option value="${x.id}" ${String(x.id)===String(ref)?'selected':''}>👨‍🍳 ${esc(x.name)}</option>`):ing.map(x=>`<option value="${x.id}" ${String(x.id)===String(ref)?'selected':''}>🥬 ${esc(x.name)}</option>`)).join('');
-  const d=document.createElement('div');d.className='fr';d.style.display='grid';d.style.gridTemplateColumns='145px 2fr 1fr auto';d.style.gap='8px';d.style.marginBottom='8px';
-  d.innerHTML=`<select class="ft"><option value="ingredient" ${type==='ingredient'?'selected':''}>Ingrediente</option><option value="prep" ${type==='prep'?'selected':''}>Pre-elaborado</option></select><select class="frf">${opts}</select><input class="fq" type="number" step=".001" value="${qty}"><button type="button" onclick="this.parentElement.remove()">✕</button>`;
-  const sel=d.querySelector('.ft');sel.onchange=()=>{const current=d.querySelector('.frf').value;d.querySelector('.frf').innerHTML=(sel.value==='prep'?pp.map(x=>`<option value="${x.id}">👨‍🍳 ${esc(x.name)}</option>`):ing.map(x=>`<option value="${x.id}">🥬 ${esc(x.name)}</option>`)).join('');if(current)d.querySelector('.frf').value=current};
-  b.appendChild(d);
- },
- add(){modal(null)},edit(id){const r=finals.find(x=>String(x.id)===String(id));if(r)modal(r)},
- goPage(n){const pages=Math.max(1,Math.ceil(finals.length/finalPageSize));finalPage=Math.max(1,Math.min(pages,Number(n)||1));renderFinal()},
+ row(type='ingredient',ref='',qty=1){const b=document.querySelector('#fi');if(!b)return;const ing=ingredients(),pp=preps();const opts=(type==='prep'?pp.map(x=>`<option value="${x.id}" ${String(x.id)===String(ref)?'selected':''}>👨‍🍳 ${esc(x.name)}</option>`):ing.map(x=>`<option value="${x.id}" ${String(x.id)===String(ref)?'selected':''}>🥬 ${esc(x.name)}</option>`)).join('');const d=document.createElement('div');d.className='fr';d.style.display='grid';d.style.gridTemplateColumns='145px 2fr 1fr auto';d.style.gap='8px';d.style.marginBottom='8px';d.innerHTML=`<select class="ft"><option value="ingredient" ${type==='ingredient'?'selected':''}>Ingrediente</option><option value="prep" ${type==='prep'?'selected':''}>Pre-elaborado</option></select><select class="frf">${opts}</select><input class="fq" type="number" step=".001" value="${qty}"><button type="button" onclick="this.parentElement.remove()">✕</button>`;const sel=d.querySelector('.ft');sel.onchange=()=>{const current=d.querySelector('.frf').value;d.querySelector('.frf').innerHTML=(sel.value==='prep'?pp.map(x=>`<option value="${x.id}">👨‍🍳 ${esc(x.name)}</option>`):ing.map(x=>`<option value="${x.id}">🥬 ${esc(x.name)}</option>`)).join('');if(current)d.querySelector('.frf').value=current};b.appendChild(d)},
+ add(){modal(null)},
+ edit(id){const r=allFinalRecipes().find(x=>String(x.id)===String(id));if(r)modal(r)},
+ goPage(n){syncFinals();const pages=Math.max(1,Math.ceil(finals.length/finalPageSize));finalPage=Math.max(1,Math.min(pages,Number(n)||1));renderFinal()},
  setPageSize(n){finalPageSize=Math.max(1,Number(n)||20);finalPage=1;renderFinal()},
- del(id){const r=finals.find(x=>String(x.id)===String(id));if(r&&confirm('¿Eliminar "'+r.name+'"?')){finals=finals.filter(x=>String(x.id)!==String(id));saveF();renderFinal()}},
+ del(id){const r=allFinalRecipes().find(x=>String(x.id)===String(id));if(!r||!confirm('¿Eliminar "'+r.name+'"?'))return;if(r.source==='final'){localStorage.setItem(FK,JSON.stringify(readArr(FK).filter(x=>String(x.id)!==String(id))))}else{localStorage.setItem(RBK,JSON.stringify(readArr(RBK).filter(x=>String(x.id)!==String(id))))}renderFinal()},
  state:finals
 };
 window.LRXFinals=finals;
-document.addEventListener('DOMContentLoaded',()=>{
- const sec=document.getElementById('recetario');if(!sec)return;
- if(document.getElementById('finalRecipePanel'))return;
- const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';
- p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p>
- <button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button>
- <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div><div id="finalPagination" class="lrx-pagination"></div>`;
- sec.appendChild(p);renderFinal();
- setInterval(renderFinal,1000);
-});
+document.addEventListener('DOMContentLoaded',()=>{const sec=document.getElementById('recetario');if(!sec)return;if(document.getElementById('finalRecipePanel'))return;const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p><button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button><div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div><div id="finalPagination" class="lrx-pagination"></div>`;sec.appendChild(p);renderFinal();setInterval(renderFinal,1000);});
 })();
 </script>
 
