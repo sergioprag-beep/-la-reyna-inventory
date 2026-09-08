@@ -1390,19 +1390,22 @@ window.LRXIng={};
 window.LRXRec={};
 
 function esc2(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function productFor(i){return (typeof products!=='undefined'?products:[]).find(p=>String(p.id)===String(i.productId))}
+function productFor(i){if(!i)return null;return (typeof products!=='undefined'?products:[]).find(p=>String(p.id)===String(i.productId))||null}
 function ingredientCost(i){
+ if(!i)return 0;
  const p=productFor(i);
  if(window.LRXUnits && p) return window.LRXUnits.costPerUsage(i,p);
  return Number(i.costPerUnit??(p?.cost??0))||0;
 }
 function recCost(r){
- return (r.items||[]).reduce((a,i)=>a+(Number(i.qty)||0)*ingredientCost(i),0);
+ if(!r)return 0;
+ return (Array.isArray(r.items)?r.items:[]).reduce((a,i)=>{if(!i)return a;return a+(Number(i.qty)||0)*ingredientCost(i)},0);
 }
 function recAvailable(r){
- if(!r.items?.length)return 0;
+ if(!r || !Array.isArray(r.items) || !r.items.length)return 0;
  let min=Infinity;
  for(const i of r.items){
+   if(!i)continue;
    const q=Number(i.qty)||0;if(q<=0)continue;
    let stock=0;
    const ing=ingredients.find(x=>String(x.id)===String(i.ingredientId));
@@ -1477,6 +1480,7 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
+   recipeBook=recipeBook.filter(Boolean).map(r=>({...r,items:(Array.isArray(r.items)?r.items.filter(Boolean):[])}));
    write(RK,recipeBook);
    renderRecipeBook();
    m.remove();
