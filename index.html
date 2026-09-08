@@ -1608,24 +1608,20 @@ const ingredients=()=>readArr('lrx_ingredients_v1');
 const preps=()=>readArr('lrx_preparations_v2');
 const productsNow=()=>readArr('lrx_products');
 function allFinalRecipes(){
- const out=[],seen=new Set();
- const add=(r,source)=>{
-  if(!r)return;
-  const name=String(r.name||r.recipeName||'').trim();
-  const key=name.toLowerCase();
-  if(!name||seen.has(key))return;
-  const items=(r.items||r.ingredients||[]).map(i=>({
-    type:i.type==='prep'?'prep':'ingredient',
-    ref:i.ref??i.ingredientId??i.productId,
-    qty:Number(i.qty||0)
-  })).filter(i=>i.ref!==undefined&&i.ref!==null&&i.qty>0);
-  if(!items.length)return;
-  seen.add(key);
-  out.push({...r,id:r.id??(source+'-'+name),name,items,source});
- };
- readArr(FK).forEach(r=>add(r,'final'));
- readArr(RBK).forEach(r=>add(r,'recipebook'));
- return out;
+ // IMPORTANT: every record saved in lrx_finalrecipes_v3 is a final recipe.
+ // Do not discard records just because their component links are incomplete,
+ // and do not deduplicate by name. The dashboard count and this table must
+ // represent the same recipe set (e.g. all 44 final recipes).
+ return readArr(FK).map((r,idx)=>{
+  const name=String(r?.name||r?.recipeName||r?.title||'').trim()||('Receta '+(idx+1));
+  const raw=(r?.items||r?.ingredients||r?.components||r?.recipeItems||[]);
+  const items=Array.isArray(raw)?raw.map(i=>({
+    type:i?.type==='prep'?'prep':'ingredient',
+    ref:i?.ref??i?.ingredientId??i?.productId??i?.id,
+    qty:Number(i?.qty??i?.quantity??0)
+  })).filter(i=>i.ref!==undefined&&i.ref!==null&&i.qty>0):[];
+  return {...r,id:r?.id??('final-'+idx+'-'+name),name,items,source:'final'};
+ });
 }
 let finals=allFinalRecipes();
 let finalPage=1;
@@ -1648,6 +1644,8 @@ function finalCost(r){
    if(h&&Number(h.cost)>0)return Number(h.cost);
   }
  }catch(e){}
+ const stored=Number(r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount);
+ if(Number.isFinite(stored)&&stored>0)return stored;
  return (r.items||[]).reduce((a,i)=>a+itemCost(i),0);
 }
 function ordersAvailable(r){
@@ -1702,7 +1700,7 @@ window.LRXFinal={
  state:finals
 };
 window.LRXFinals=finals;
-document.addEventListener('DOMContentLoaded',()=>{const sec=document.getElementById('recetario');if(!sec)return;if(document.getElementById('finalRecipePanel'))return;const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p><button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button><div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div><div id="finalPagination" class="lrx-pagination"></div>`;sec.appendChild(p);renderFinal();setInterval(renderFinal,1000);});
+document.addEventListener('DOMContentLoaded',()=>{const sec=document.getElementById('recetario');if(!sec)return;if(document.getElementById('finalRecipePanel'))return;const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p><button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button><div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div><div id="finalPagination" class="lrx-pagination"></div>`;sec.appendChild(p);renderFinal();});
 })();
 </script>
 
@@ -5916,7 +5914,7 @@ window.addEventListener('pageshow',()=>setTimeout(bind,50));
   const DEFAULT_SIZE=20;
   const sizes=[20,50,100];
   const state=new Map();
-  const excluded=new Set(['cfCatRows','closeTable','closedMonths']);
+  const excluded=new Set(['cfCatRows','closeTable','closedMonths','finalRows']);
   const esc2=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   function getSize(){let n=Number(localStorage.getItem(PAGE_KEY)||DEFAULT_SIZE);return sizes.includes(n)?n:DEFAULT_SIZE}
   function key(tb){return tb.id||('tb_'+Array.from(document.querySelectorAll('tbody')).indexOf(tb))}
