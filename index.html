@@ -6146,5 +6146,31 @@ window.LRXMenuPlatformBridge={refresh:inject};
   if(window.LRXPurchaseLedger){window.LRXPurchaseLedger.open=openPurchase;window.LRXPurchaseLedger.save=window.LRXPurchaseFix?.save||window.LRXPurchaseLedger.save;}
 })();
 </script>
+<script>
+/* V57.7 FIX 6.1 — Manual Movement Ledger Fix (isolated)
+   Keeps the V57.5 UI. Manual Entrada/Salida/Merma now persist to both
+   legacy lrx_movements (visible Movimientos) and advanced inventory ledger. */
+(function(){
+  function read(key, fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v==null?fallback:v}catch(e){return fallback}}
+  function write(key,v){localStorage.setItem(key,JSON.stringify(v))}
+  window.saveMovement=function(type){
+    const ps=read('lrx_products',[]); const idx=Number(document.getElementById('mp')?.value); const q=Number(document.getElementById('mq')?.value)||0; const note=(document.getElementById('mn')?.value||'').trim(); const p=ps[idx];
+    if(!p||!(q>0)){alert('Producto y cantidad son obligatorios.');return}
+    const t=String(type||'entrada').toLowerCase();
+    const sign=t==='entrada'?1:-1;
+    p.stock=Math.max(0,Number(p.stock||0)+sign*q);
+    write('lrx_products',ps);
+    const now=new Date();
+    const legacy=read('lrx_movements',[]); legacy.push({date:now.toLocaleString(),type:t,product:p.name,qty:q,cost:Number(p.cost||0),note}); write('lrx_movements',legacy);
+    const adv=read('lrx_inventory_moves_v10',[]); adv.push({id:Date.now(),date:now.toISOString(),type:t,productId:p.id,productName:p.name,qty:q,unit:p.unit||'unidad',note,cost:Number(p.cost||0),total:q*Number(p.cost||0)}); write('lrx_inventory_moves_v10',adv);
+    try{products=ps;movements=legacy}catch(e){}
+    try{closeModal()}catch(e){}
+    try{refresh()}catch(e){try{renderMovements()}catch(_){}
+    }
+    alert((t==='entrada'?'Entrada':t==='salida'?'Salida':'Merma')+' registrada correctamente.');
+  };
+})();
+</script>
+
 </body>
 </html>
