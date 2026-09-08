@@ -1593,6 +1593,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 .lrx-final-grid label{font-size:12px;font-weight:700;color:#667085}
 .lrx-final-grid input,.lrx-final-grid select{width:100%;padding:9px;border:1px solid #d0d5dd;border-radius:8px;margin-top:4px}
 .lrx-final-table{width:100%;border-collapse:collapse;margin-top:10px}.lrx-final-table th,.lrx-final-table td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+#finalRecipePanel table th,#finalRecipePanel table td{display:table-cell !important;white-space:nowrap}
+#finalRecipePanel > div{overflow-x:auto !important}
 .lrx-pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f5e8ef;color:#9b2456}
 </style>
 <script>
@@ -1637,8 +1639,8 @@ function renderFinal(){
  const tb=document.getElementById('finalRows');if(!tb)return;
  tb.innerHTML=finals.map(r=>{
   const c=finalCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,o=ordersAvailable(r);
-  return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${c.toFixed(2)}</td><td>$${price.toFixed(2)}</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
- }).join('')||'<tr><td colspan="7">No hay recetas finales.</td></tr>';
+  const profit=Math.max(0,price-c),margin=price?profit/price*100:0; return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${price.toFixed(2)}</td><td>$${c.toFixed(2)}</td><td>$${profit.toFixed(2)}</td><td>${margin.toFixed(1)}%</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
+ }).join('')||'<tr><td colspan="9">No hay recetas finales.</td></tr>';
 }
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
@@ -1684,7 +1686,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  const p=document.createElement('div');p.id='finalRecipePanel';p.className='lrx-final';
  p.innerHTML=`<h2>🍽️ Recetas finales</h2><p class="muted">Combina ingredientes y pre-elaborados. El sistema calcula Food Cost, margen y órdenes disponibles según el inventario actual.</p>
  <button class="primary" onclick="LRXFinal.add()">＋ Nueva receta final</button>
- <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Costo</th><th>Venta</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div>`;
+ <div style="overflow:auto;margin-top:12px"><table class="lrx-final-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Precio venta</th><th>Costo</th><th>Utilidad</th><th>Margen</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="finalRows"></tbody></table></div>`;
  sec.appendChild(p);renderFinal();
  setInterval(renderFinal,1000);
 });
