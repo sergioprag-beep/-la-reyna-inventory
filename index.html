@@ -5951,8 +5951,10 @@ window.addEventListener('pageshow',()=>setTimeout(bind,50));
     st.page=Math.min(Math.max(1,st.page),pages); st.size=size; state.set(k,st);
     rs.forEach((r,i)=>{r.style.display=(i>=(st.page-1)*size && i<st.page*size)?'':'none'});
     const c=ensureControls(tb); if(!c)return;
-    if(rs.length<=size){c.innerHTML='';return;}
-    const start=(st.page-1)*size+1, end=Math.min(st.page*size,rs.length);
+    // Keep the pagination/size controls visible even when the selected page size
+    // is larger than the current record count. This lets the user change back
+    // to 20/50/100 without the control disappearing.
+    const start=rs.length?((st.page-1)*size+1):0, end=Math.min(st.page*size,rs.length);
     let nums='';
     const lo=Math.max(1,st.page-2), hi=Math.min(pages,st.page+2);
     for(let i=lo;i<=hi;i++) nums+=`<button type="button" class="lrx-page-num ${i===st.page?'active':''}" data-page="${i}">${i}</button>`;
