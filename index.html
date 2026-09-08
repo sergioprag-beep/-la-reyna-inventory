@@ -983,7 +983,47 @@ body{font-family:Arial;padding:20px}h1{color:#244b93}table{border-collapse:colla
 </style></head><body><h1>La Reyna Xpress — ${type}</h1>
 <p>Generado: ${new Date().toLocaleString()}</p>${(type==='compras'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Total compras: ${money(purchaseTotals().total)}</b><b>Registros: ${purchaseTotals().count}</b></div>`:type==='inventario'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Valor inventario: ${money(products.reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b><b>Productos: ${products.length}</b></div>`:type==='movimientos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Movimientos: ${movements.length}</b><b>Valor: ${money(movements.reduce((a,m)=>a+Number(m.qty||0)*Number(m.cost||0),0))}</b></div>`:type==='criticos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Críticos: ${products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).length}</b><b>Valor: ${money(products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b></div>`:`<div style="margin:12px 0"><b>Registros: ${data.length}</b></div>`)}<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
 ${data.map(r=>"<tr>"+r.map(x=>`<td>${esc(x)}</td>`).join("")+"</tr>").join("")}
-</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}</body></html>`);
+</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>`);
 w.document.close();
 }
 </script>
@@ -2026,7 +2066,47 @@ document.addEventListener('DOMContentLoaded',()=>{
  <h3>Top Menu Items</h3><div style="overflow:auto"><table class="lrx-dash-table"><thead><tr><th>Item</th><th>Units</th><th>Class</th><th>Unit Margin</th><th>Food Cost</th></tr></thead><tbody id="topItems"></tbody></table></div>`;
  sec.appendChild(p);dashboard();setInterval(dashboard,1000);
 });
-window.LRXDashboard={print(){const el=document.getElementById('managementDashboard');if(!el)return;const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress - Management Dashboard</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style></head><body>'+el.innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300);}};
+window.LRXDashboard={print(){const el=document.getElementById('managementDashboard');if(!el)return;const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress - Management Dashboard</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style></head><body>'+el.innerHTML+'
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300);}};
 })();
 </script>
 
@@ -2557,7 +2637,47 @@ function render(){
  document.getElementById('fcAlerts').innerHTML=alerts.map(r=>`<div><b>${esc(r.name)}</b><span>Food Cost ${r.fc.toFixed(1)}% · ${money(r.margin)} unit margin</span></div>`).join('')||'<div>No high-food-cost menu items detected.</div>';
 }
 function exportCSV(){const d=compute(),rows=[['Recipe','Units Sold','Revenue','Unit Cost','COGS','Food Cost %','Unit Margin','Gross Profit'],...d.rows.map(r=>[r.name,r.units,r.revenue,r.cost,r.cogs,r.fc,r.margin,r.gross])];const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='lrx_food_cost_profitability_v15.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
-function print(){const d=compute();const w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print the report.');w.document.write('<html><head><title>La Reyna Xpress Food Cost & Profitability</title><style>body{font-family:Arial;padding:24px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #ddd;text-align:left}.k{display:inline-block;margin:8px;padding:12px;border:1px solid #ddd;border-radius:8px}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>La Reyna Xpress</h1><h2>Food Cost & Profitability Report</h2><div class="k">Sales '+money(d.totalRevenue)+'</div><div class="k">COGS '+money(d.totalCOGS)+'</div><div class="k">Food Cost '+d.fc.toFixed(1)+'%</div><div class="k">Profit After Waste '+money(d.netAfterWaste)+'</div><table><tr><th>Recipe</th><th>Units</th><th>Sales</th><th>Unit Cost</th><th>Food Cost</th><th>Gross Profit</th></tr>'+d.rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.units.toFixed(0)+'</td><td>'+money(r.revenue)+'</td><td>'+money(r.cost)+'</td><td>'+r.fc.toFixed(1)+'%</td><td>'+money(r.gross)+'</td></tr>').join('')+'</table></body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)}
+function print(){const d=compute();const w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print the report.');w.document.write('<html><head><title>La Reyna Xpress Food Cost & Profitability</title><style>body{font-family:Arial;padding:24px}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #ddd;text-align:left}.k{display:inline-block;margin:8px;padding:12px;border:1px solid #ddd;border-radius:8px}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>La Reyna Xpress</h1><h2>Food Cost & Profitability Report</h2><div class="k">Sales '+money(d.totalRevenue)+'</div><div class="k">COGS '+money(d.totalCOGS)+'</div><div class="k">Food Cost '+d.fc.toFixed(1)+'%</div><div class="k">Profit After Waste '+money(d.netAfterWaste)+'</div><table><tr><th>Recipe</th><th>Units</th><th>Sales</th><th>Unit Cost</th><th>Food Cost</th><th>Gross Profit</th></tr>'+d.rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.units.toFixed(0)+'</td><td>'+money(r.revenue)+'</td><td>'+money(r.cost)+'</td><td>'+r.fc.toFixed(1)+'%</td><td>'+money(r.gross)+'</td></tr>').join('')+'</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)}
 window.LRXProfitability={refresh:render,exportCSV,print};
 document.addEventListener('DOMContentLoaded',()=>{const sec=document.getElementById('dashboard');if(!sec||document.getElementById('profitabilityPanel'))return;const st=document.createElement('style');st.textContent=`.lrx-profit{margin-top:24px}.lrx-fc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.lrx-fc-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.lrx-fc-table{width:100%;border-collapse:collapse}.lrx-fc-table th,.lrx-fc-table td{padding:8px;border-bottom:1px solid #eee;text-align:left;white-space:nowrap}.fcbadge{padding:4px 8px;border-radius:999px;font-weight:700;font-size:11px}.fcbadge.good{background:#dff5e5}.fcbadge.warn{background:#fff0c2}.fcbadge.bad{background:#ffdede}.lrx-fc-alerts{display:grid;gap:7px}.lrx-fc-alerts div{display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid #eee;border-radius:8px}.lrx-fc-alerts span{opacity:.75}@media(max-width:900px){.lrx-fc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lrx-fc-table{font-size:12px}}`;document.head.appendChild(st);const p=document.createElement('div');p.id='profitabilityPanel';p.className='lrx-profit';p.innerHTML=`<h2>💰 Food Cost & Profitability Control</h2><p>Connects recipe costs, actual sales and recorded waste to show the real profitability of your menu.</p><div id="fcKpis" class="lrx-fc-kpis"></div><div class="lrx-fc-actions"><button class="primary" onclick="LRXProfitability.refresh()">↻ Refresh</button><button onclick="LRXProfitability.exportCSV()">⬇️ Export CSV</button><button onclick="LRXProfitability.print()">🖨️ Print / PDF</button></div><h3>Menu Profitability</h3><div style="overflow:auto"><table class="lrx-fc-table"><thead><tr><th>Recipe</th><th>Units</th><th>Sales</th><th>Unit Cost</th><th>COGS</th><th>Food Cost</th><th>Unit Margin</th><th>Gross Profit</th><th>Status</th></tr></thead><tbody id="fcRows"></tbody></table></div><h3>⚠️ Items Requiring Attention</h3><div id="fcAlerts" class="lrx-fc-alerts"></div>`;sec.appendChild(p);render();['storage','pageshow','visibilitychange'].forEach(ev=>window.addEventListener(ev,render));setInterval(render,5000);});
 })();
@@ -2611,7 +2731,47 @@ function sim(){
 function exportCSV(){
  const rows=recipes().map(calc); const head=['Recipe','Cost','Current Price','Food Cost %','Gross Margin','Minimum Price FC','Minimum Price Margin','Recommended Price']; const lines=[head,...rows.map(r=>[r.name,r.c.toFixed(2),r.current.toFixed(2),r.fc.toFixed(2),r.gross.toFixed(2),r.fcFloor.toFixed(2),Number.isFinite(r.marginFloor)?r.marginFloor.toFixed(2):'',r.rec.toFixed(2)])].map(a=>a.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lrx_pricing_optimizer_v16.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
-function print(){const rows=recipes().map(calc);const html=`<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: ${cfg.targetFC}% | Margen objetivo: ${cfg.targetMargin}% | Comisión: ${cfg.commission}%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.rec)}</td></tr>`).join('')}</tbody></table></body></html>`;const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)} }
+function print(){const rows=recipes().map(calc);const html=`<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: ${cfg.targetFC}% | Margen objetivo: ${cfg.targetMargin}% | Comisión: ${cfg.commission}%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.rec)}</td></tr>`).join('')}</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>`;const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)} }
 window.LRXPricing={recalculate:sync,apply:applyPrice,exportCSV,print};
 document.addEventListener('DOMContentLoaded',()=>{
  const sec=document.getElementById('pricingOptimizer');if(!sec)return;
@@ -2711,7 +2871,47 @@ function renderOpex(){
  const all=expenses();document.getElementById('oxRows').innerHTML=all.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(e.category)}</td><td>${esc(e.description)}</td><td>${esc(e.vendor)}</td><td>${money(e.amount)}</td><td><button type="button" data-oxreverse="${esc(e.id)}">Reverse</button></td></tr>`).join('')||'<tr><td colspan="6">No operating expenses.</td></tr>';
 }
 function exportOpex(){const rows=[['Date','Category','Description','Vendor','Amount'],...expenses().map(e=>[e.date,e.category,e.description,e.vendor,e.amount])];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n')],{type:'text/csv'}));a.download='La_Reyna_V20_Operating_Expenses.csv';a.click()}
-function printOpex(){const x=periodData(30),w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress — Operating Expenses</title></head><body><h1>La Reyna Xpress — Operating Expenses</h1><p>Revenue: '+money(x.rev)+'<br>Food Cost: '+money(x.fc)+'<br>Labor Cost: '+money(x.lc)+'<br>Operating Expenses: '+money(x.oe)+'<br><b>Net Profit: '+money(x.net)+'</b></p></body></html>');w.document.close();w.focus();w.print()}
+function printOpex(){const x=periodData(30),w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress — Operating Expenses</title></head><body><h1>La Reyna Xpress — Operating Expenses</h1><p>Revenue: '+money(x.rev)+'<br>Food Cost: '+money(x.fc)+'<br>Labor Cost: '+money(x.lc)+'<br>Operating Expenses: '+money(x.oe)+'<br><b>Net Profit: '+money(x.net)+'</b></p>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();w.print()}
 
 function mountPL(){
  if(document.getElementById('pnlDashboard'))return;
@@ -2721,7 +2921,47 @@ function mountPL(){
 }
 function renderPL(){if(!document.getElementById('pnlDashboard'))return;const x=periodData(Number(document.getElementById('pnlPeriod')?.value||30));document.getElementById('pnlRevenue').textContent=money(x.rev);document.getElementById('pnlFood').textContent=money(x.fc);document.getElementById('pnlLabor').textContent=money(x.lc);document.getElementById('pnlPrime').textContent=money(x.prime);document.getElementById('pnlOpex').textContent=money(x.oe);document.getElementById('pnlNet').textContent=money(x.net);const pct=v=>x.rev?(v/x.rev*100).toFixed(1)+'%':'0.0%';document.getElementById('pnlDetails').innerHTML=`<tr><td>Revenue</td><td>${money(x.rev)}</td><td>100.0%</td></tr><tr><td>Food Cost</td><td>${money(x.fc)}</td><td>${pct(x.fc)}</td></tr><tr><td>Labor Cost</td><td>${money(x.lc)}</td><td>${pct(x.lc)}</td></tr><tr><td>Prime Cost</td><td>${money(x.prime)}</td><td>${pct(x.prime)}</td></tr><tr><td>Operating Expenses</td><td>${money(x.oe)}</td><td>${pct(x.oe)}</td></tr><tr><td><b>Net Operating Profit</b></td><td><b>${money(x.net)}</b></td><td><b>${pct(x.net)}</b></td></tr>`}
 function exportPL(){const x=periodData(Number(document.getElementById('pnlPeriod')?.value||30));const rows=[['Metric','Amount','Percent'],['Revenue',x.rev,100],['Food Cost',x.fc,x.rev?x.fc/x.rev*100:0],['Labor Cost',x.lc,x.rev?x.lc/x.rev*100:0],['Prime Cost',x.prime,x.rev?x.prime/x.rev*100:0],['Operating Expenses',x.oe,x.rev?x.oe/x.rev*100:0],['Net Operating Profit',x.net,x.rev?x.net/x.rev*100:0]];const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));a.download='La_Reyna_V20_P&L.csv';a.click()}
-function printPL(){const x=periodData(Number(document.getElementById('pnlPeriod')?.value||30)),w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress — Complete P&L</title></head><body><h1>La Reyna Xpress — Complete P&L</h1><table border="1" cellpadding="7" cellspacing="0"><tr><th>Metric</th><th>Amount</th></tr><tr><td>Revenue</td><td>'+money(x.rev)+'</td></tr><tr><td>Food Cost</td><td>'+money(x.fc)+'</td></tr><tr><td>Labor Cost</td><td>'+money(x.lc)+'</td></tr><tr><td>Prime Cost</td><td>'+money(x.prime)+'</td></tr><tr><td>Operating Expenses</td><td>'+money(x.oe)+'</td></tr><tr><td>Net Operating Profit</td><td>'+money(x.net)+'</td></tr></table></body></html>');w.document.close();w.focus();w.print()}
+function printPL(){const x=periodData(Number(document.getElementById('pnlPeriod')?.value||30)),w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress — Complete P&L</title></head><body><h1>La Reyna Xpress — Complete P&L</h1><table border="1" cellpadding="7" cellspacing="0"><tr><th>Metric</th><th>Amount</th></tr><tr><td>Revenue</td><td>'+money(x.rev)+'</td></tr><tr><td>Food Cost</td><td>'+money(x.fc)+'</td></tr><tr><td>Labor Cost</td><td>'+money(x.lc)+'</td></tr><tr><td>Prime Cost</td><td>'+money(x.prime)+'</td></tr><tr><td>Operating Expenses</td><td>'+money(x.oe)+'</td></tr><tr><td>Net Operating Profit</td><td>'+money(x.net)+'</td></tr></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();w.print()}
 
 function wireCompactDetails(){
  const navEl=document.getElementById('nav'); if(!navEl || navEl.dataset.detailsWired==='1') return;
@@ -3273,7 +3513,47 @@ function edit(id){const a=rows(),x=a.find(z=>String(z.id)===String(id));if(!x)re
 function del(id){const a=rows(),x=a.find(z=>String(z.id)===String(id));if(!x)return;if(!confirm(`¿Eliminar este movimiento de ${money(x.amount)}?`))return;save(a.filter(z=>String(z.id)!==String(id)));render();}
 function clearAll(){if(!rows().length)return;if(!confirm('¿Vaciar TODOS los movimientos de caja? Esta acción no se puede deshacer.'))return;save([]);render();}
 function exportCSV(){const a=rows(),lines=['Fecha,Tipo,Categoria,Descripcion,Método,Cuenta,Proveedor,Monto,Nota',...a.map(x=>[x.date,x.type,x.category,x.description,x.method,x.account,x.vendor,x.amount,x.note].map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(','))];const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),ael=document.createElement('a');ael.href=u;ael.download='lrx-cash-flow-v30.csv';ael.click();URL.revokeObjectURL(u);}
-function print(){const all=rows(),ins=all.filter(x=>x.type==='in').reduce((t,x)=>t+Number(x.amount||0),0),outs=all.filter(x=>x.type==='out').reduce((t,x)=>t+Number(x.amount||0),0),opening=Number(localStorage.getItem('lrx_cash_opening_v30')||0);const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress - Cash Flow</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px;text-align:left}.tot{font-weight:bold}</style></head><body><h1>La Reyna Xpress — Cash Flow</h1><p>Generado: '+new Date().toLocaleString()+'</p><p>Saldo inicial: '+money(opening)+' | Entradas: '+money(ins)+' | Salidas: '+money(outs)+' | Saldo final: '+money(opening+ins-outs)+'</p><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th>Método</th><th>Monto</th></tr></thead><tbody>'+all.sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.category)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.method)+'</td><td>'+money(x.amount)+'</td></tr>').join('')+'</tbody></table></body></html>');w.document.close();w.print();}
+function print(){const all=rows(),ins=all.filter(x=>x.type==='in').reduce((t,x)=>t+Number(x.amount||0),0),outs=all.filter(x=>x.type==='out').reduce((t,x)=>t+Number(x.amount||0),0),opening=Number(localStorage.getItem('lrx_cash_opening_v30')||0);const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>La Reyna Xpress - Cash Flow</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px;text-align:left}.tot{font-weight:bold}</style></head><body><h1>La Reyna Xpress — Cash Flow</h1><p>Generado: '+new Date().toLocaleString()+'</p><p>Saldo inicial: '+money(opening)+' | Entradas: '+money(ins)+' | Salidas: '+money(outs)+' | Saldo final: '+money(opening+ins-outs)+'</p><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th>Método</th><th>Monto</th></tr></thead><tbody>'+all.sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.category)+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.method)+'</td><td>'+money(x.amount)+'</td></tr>').join('')+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.print();}
 function setOpening(){const cur=Number(localStorage.getItem('lrx_cash_opening_v30')||0),v=prompt('Saldo inicial de caja/banco',cur);if(v===null)return;localStorage.setItem('lrx_cash_opening_v30',String(Number(v)||0));render();}
 window.LRXCash={render,edit:edit,del:del,clearAll,exportCSV,print,setOpening};
 document.addEventListener('DOMContentLoaded',()=>{const f=document.getElementById('cfForm');if(f)f.addEventListener('submit',submit);formReset();document.getElementById('cfSearch')?.addEventListener('input',render);document.getElementById('cfFilterType')?.addEventListener('change',render);const k=document.querySelector('#cashFlow .section-title');if(k&&!document.getElementById('cfOpeningBtn')){const b=document.createElement('button');b.id='cfOpeningBtn';b.type='button';b.textContent='⚙️ Saldo inicial';b.onclick=setOpening;k.appendChild(b)}render();});
@@ -3463,7 +3743,47 @@ document.addEventListener('DOMContentLoaded',()=>{const f=document.getElementByI
   }
   function editCategory(c){const x=budgets().find(b=>normMonth(b.month)===currentMonth()&&normCat(b.category)===normCat(c));if(x)edit(x.id)}
   function csv(){const m=currentMonth(),a=actuals(m),bs=budgets().filter(x=>normMonth(x.month)===m),by={};bs.forEach(x=>by[normCat(x.category)]=(by[normCat(x.category)]||0)+(Number(x.amount)||0));let s='Month,Category,Budget,Actual,Variance,Variance %\n';[...new Set([...cats,...Object.keys(by),...Object.keys(a)])].forEach(c=>{const b=by[c]||0,v=a[c]||0;s+=`"${m}","${c}",${b.toFixed(2)},${v.toFixed(2)},${(b-v).toFixed(2)},${b?((b-v)/b*100).toFixed(2):''}\n`});const u=URL.createObjectURL(new Blob([s],{type:'text/csv'})),ael=document.createElement('a');ael.href=u;ael.download='lrx_budget_'+m+'.csv';ael.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
-  function print(){const m=currentMonth(),a=actuals(m),bs=budgets().filter(x=>normMonth(x.month)===m),by={};bs.forEach(x=>by[normCat(x.category)]=(by[normCat(x.category)]||0)+(Number(x.amount)||0));const rows=[...new Set([...cats,...Object.keys(by),...Object.keys(a)])].map(c=>`<tr><td>${esc(c)}</td><td>${money(by[c]||0)}</td><td>${money(a[c]||0)}</td><td>${money((by[c]||0)-(a[c]||0))}</td></tr>`).join('');const w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>Budget ${esc(m)}</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Xpress — Budget vs Actual</h1><p>Mes: ${esc(m)}</p><table><tr><th>Categoría</th><th>Budget</th><th>Actual</th><th>Variance</th></tr>${rows}</table></body></html>`);w.document.close();w.print()}
+  function print(){const m=currentMonth(),a=actuals(m),bs=budgets().filter(x=>normMonth(x.month)===m),by={};bs.forEach(x=>by[normCat(x.category)]=(by[normCat(x.category)]||0)+(Number(x.amount)||0));const rows=[...new Set([...cats,...Object.keys(by),...Object.keys(a)])].map(c=>`<tr><td>${esc(c)}</td><td>${money(by[c]||0)}</td><td>${money(a[c]||0)}</td><td>${money((by[c]||0)-(a[c]||0))}</td></tr>`).join('');const w=window.open('','_blank');if(!w)return;w.document.write(`<html><head><title>Budget ${esc(m)}</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Xpress — Budget vs Actual</h1><p>Mes: ${esc(m)}</p><table><tr><th>Categoría</th><th>Budget</th><th>Actual</th><th>Variance</th></tr>${rows}</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>`);w.document.close();w.print()}
   window.LRXBudget={save,edit,del,copyPrevious,exportCSV:csv,print,editCategory,render};
   document.addEventListener('DOMContentLoaded',()=>{const m=document.getElementById('budMonth');if(m){m.value=monthNow();m.addEventListener('change',render)}render()});
   window.addEventListener('pageshow',()=>setTimeout(render,100));window.addEventListener('storage',e=>{if(e.key===K||e.key===OLD||e.key==='lrx_opex_v20'||e.key==='lrx_operating_expenses_v20'||e.key==='lrx_opex_v19')setTimeout(render,50)});
@@ -3552,7 +3872,47 @@ document.getElementById('auditSummary').innerHTML='<h2>'+(bad?'⚠️ Hay elemen
 document.getElementById('auditResults').innerHTML='<div style="overflow:auto"><table><thead><tr><th>Módulo</th><th>Registros</th><th>Problemas</th><th>Estado</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.count+'</td><td>'+r.problems+'</td><td>'+r.status+'</td></tr>').join('')+'</tbody></table></div>';
 }
 function exportCSV(){if(!last.length)audit();let s='Modulo,Registros,Problemas,Estado\n';last.forEach(r=>s+='"'+r.name.replace(/"/g,'""')+'",'+r.count+','+r.problems+',"'+r.status+'"\n');const u=URL.createObjectURL(new Blob([s],{type:'text/csv'})),a=document.createElement('a');a.href=u;a.download='La_Reyna_Xpress_Auditoria.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
-function print(){if(!last.length)audit();const rows=last.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.count+'</td><td>'+r.problems+'</td><td>'+esc(r.status)+'</td></tr>').join('');const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Auditoría La Reyna Xpress</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Xpress — Auditoría</h1><table><tr><th>Módulo</th><th>Registros</th><th>Problemas</th><th>Estado</th></tr>'+rows+'</table></body></html>');w.document.close();w.print()}
+function print(){if(!last.length)audit();const rows=last.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+r.count+'</td><td>'+r.problems+'</td><td>'+esc(r.status)+'</td></tr>').join('');const w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Auditoría La Reyna Xpress</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Xpress — Auditoría</h1><table><tr><th>Módulo</th><th>Registros</th><th>Problemas</th><th>Estado</th></tr>'+rows+'</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.print()}
 window.LRXAudit=Object.assign(window.LRXAudit||{},{run:audit,exportCSV,print});document.addEventListener('DOMContentLoaded',()=>setTimeout(audit,300));
 })();
 </script><script>
@@ -3586,7 +3946,47 @@ function closeMonth(){let m=current();if(closed().some(x=>x.month===m))return al
 function reopen(){let m=current();if(!closed().some(x=>x.month===m))return alert('Este mes ya está abierto.');if(!confirm('¿Reabrir '+m+'?'))return;write(K,closed().filter(x=>x.month!==m));calc();document.getElementById('closeMsg').textContent='🔓 Mes reabierto.'}
 function select(m){document.getElementById('closeMonth').value=m;calc()}
 function csv(){calc();let m=current(),rows=[...document.querySelectorAll('#closeTable tr')],s='Indicador,Resultado\n';rows.forEach(r=>s+='"'+r.children[0].textContent+'","'+r.children[1].textContent+'"\n');let u=URL.createObjectURL(new Blob([s],{type:'text/csv'})),a=document.createElement('a');a.href=u;a.download='La_Reyna_Xpress_Cierre_'+m+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
-function print(){calc();let w=window.open('','_blank');if(!w)return;w.document.write('<html><body><h1>La Reyna Xpress — Cierre Mensual</h1><h2>'+current()+'</h2><table border="1" cellpadding="8">'+document.getElementById('closeTable').innerHTML+'</table></body></html>');w.document.close();w.print()}
+function print(){calc();let w=window.open('','_blank');if(!w)return;w.document.write('<html><body><h1>La Reyna Xpress — Cierre Mensual</h1><h2>'+current()+'</h2><table border="1" cellpadding="8">'+document.getElementById('closeTable').innerHTML+'</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.print()}
 window.LRXClose={calculate:calc,close:closeMonth,reopen,select,exportCSV:csv,print};
 document.addEventListener('DOMContentLoaded',()=>{let e=document.getElementById('closeMonth');if(e){e.value=month(new Date());e.addEventListener('change',calc)}calc()});
 window.addEventListener('pageshow',()=>setTimeout(calc,100));
@@ -4050,7 +4450,47 @@ const SA={
     w.document.write('<!doctype html><html><head><title>Sales Analytics</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}h1{margin-bottom:5px}</style></head><body>'+
       '<h1>La Reyna Mexican Food Xpress</h1><h2>Sales Analytics</h2><p>Período: '+this.esc(this.bounds().from||'inicio')+' — '+this.esc(this.bounds().to||'hoy')+'</p>'+
       '<p><b>Ingresos:</b> '+this.money(x.revenue)+' &nbsp; <b>Unidades:</b> '+x.units+' &nbsp; <b>Ventas:</b> '+x.orders+' &nbsp; <b>Ticket promedio:</b> '+this.money(x.avg)+'</p>'+
-      '<table><thead><tr><th>Plato</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+      '<table><thead><tr><th>Plato</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -4256,7 +4696,47 @@ const ME={
     const x=this.analyze(),w=window.open('','_blank');
     if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const rows=x.rows.map(r=>'<tr><td>'+this.esc(r.name)+'</td><td>'+r.units+'</td><td>'+this.money(r.revenue)+'</td><td>'+this.money(r.cost)+'</td><td>'+this.money(r.profit)+'</td><td>'+r.classification+'</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>Menu Engineering</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Menu Engineering</h2><p>Ingresos: '+this.money(x.totalRevenue)+' | Ganancia estimada: '+this.money(x.totalProfit)+'</p><table><thead><tr><th>Plato</th><th>Unidades</th><th>Ingresos</th><th>Food Cost</th><th>Ganancia</th><th>Clasificación</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>Menu Engineering</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Menu Engineering</h2><p>Ingresos: '+this.money(x.totalRevenue)+' | Ganancia estimada: '+this.money(x.totalProfit)+'</p><table><thead><tr><th>Plato</th><th>Unidades</th><th>Ingresos</th><th>Food Cost</th><th>Ganancia</th><th>Clasificación</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -4456,7 +4936,47 @@ const V38={
   print(){
     const x=this.analyze(),w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const rows=x.rows.map(r=>'<tr><td>'+this.esc(r.name)+'</td><td>'+r.units+'</td><td>'+this.money(r.revenue)+'</td><td>'+this.money(r.cost)+'</td><td>'+this.money(r.contribution)+'</td><td>'+r.classification+'</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>Menu Engineering V38</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Menu Engineering</h2><p>Ventas: '+this.money(x.totalRevenue)+' | Unidades: '+x.totalUnits+'</p><table><thead><tr><th>Plato</th><th>Unidades</th><th>Ventas</th><th>Food Cost</th><th>Contribución</th><th>Clasificación</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>Menu Engineering V38</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Menu Engineering</h2><p>Ventas: '+this.money(x.totalRevenue)+' | Unidades: '+x.totalUnits+'</p><table><thead><tr><th>Plato</th><th>Unidades</th><th>Ventas</th><th>Food Cost</th><th>Contribución</th><th>Clasificación</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -4640,7 +5160,47 @@ const V39={
     const rows=this.recipes(),w=window.open('','_blank');
     if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const tr=rows.map(r=>'<tr><td>'+this.esc(r.name)+'</td><td>'+this.money(r.price)+'</td><td>'+this.money(r.cost)+'</td><td>'+((r.foodCostPct)*100).toFixed(1)+'%</td><td>'+this.money(r.profit)+'</td><td>'+((r.marginPct)*100).toFixed(1)+'%</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>Food Cost & Profitability</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Food Cost & Recipe Profitability</h2><table><thead><tr><th>Receta</th><th>Precio</th><th>Costo</th><th>Food Cost</th><th>Ganancia</th><th>Margen</th></tr></thead><tbody>'+tr+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>Food Cost & Profitability</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Food Cost & Recipe Profitability</h2><table><thead><tr><th>Receta</th><th>Precio</th><th>Costo</th><th>Food Cost</th><th>Ganancia</th><th>Margen</th></tr></thead><tbody>'+tr+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
 
@@ -4981,7 +5541,47 @@ const V41={
    if(!this.last)this.run();
    const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
    const rows=this.last.modules.map(m=>'<tr><td>'+this.esc(m.name)+'</td><td>'+this.esc(m.key)+'</td><td>'+m.count+'</td></tr>').join('');
-   w.document.write('<!doctype html><html><head><title>LRX V41 System Audit</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>System Audit V41</h2><p>Registros revisados: '+this.last.total+'</p><table><thead><tr><th>Módulo</th><th>Clave</th><th>Registros</th></tr></thead><tbody>'+rows+'</tbody></table><h3>Problemas</h3><p>'+(this.last.issues.length?this.last.issues.join('<br>'):'Ninguno detectado automáticamente')+'</p></body></html>');
+   w.document.write('<!doctype html><html><head><title>LRX V41 System Audit</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>System Audit V41</h2><p>Registros revisados: '+this.last.total+'</p><table><thead><tr><th>Módulo</th><th>Clave</th><th>Registros</th></tr></thead><tbody>'+rows+'</tbody></table><h3>Problemas</h3><p>'+(this.last.issues.length?this.last.issues.join('<br>'):'Ninguno detectado automáticamente')+'</p>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
    w.document.close();w.focus();setTimeout(()=>w.print(),300);
  },
 
@@ -5163,7 +5763,47 @@ const V43={
     if(!this.last.length)this.run();
     const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const rows=this.last.map(x=>'<tr><td>'+x.name+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+x.detail+'</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>LRX V43 Integration Audit</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>System Integration Audit V43</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>LRX V43 Integration Audit</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>System Integration Audit V43</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -5303,7 +5943,47 @@ const V44={
     if(!this.last.length)this.run();
     const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>LRX V44 Production Readiness</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Production Readiness V44</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>LRX V44 Production Readiness</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Production Readiness V44</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -5459,7 +6139,47 @@ const V45={
     if(!this.last.length)this.run();
     const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
     const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');
-    w.document.write('<!doctype html><html><head><title>LRX V45.3 Final Hardening</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Final System Hardening V45.4</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');
+    w.document.write('<!doctype html><html><head><title>LRX V45.3 Final Hardening</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Final System Hardening V45.4</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');
     w.document.close();w.focus();setTimeout(()=>w.print(),300);
   },
   init(){
@@ -5527,7 +6247,47 @@ const V46={last:[],
     document.getElementById('v46Checks').innerHTML='<div style="overflow:auto"><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+checks.map(x=>'<tr><td><b>'+this.esc(x.name)+'</b></td><td>'+(x.pass?'🟢 OK':'🔴 REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('')+'</tbody></table></div>';
   },
   csv(){if(!this.last.length)this.run();const rows=[['Comprobación','Estado','Detalle'],...this.last.map(x=>[x.name,x.pass?'OK':'REVISAR',x.detail])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LRX-V46-Final-Integration.csv';a.click();},
-  print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');w.document.write('<!doctype html><html><head><title>LRX V46 Final Integration</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Final System Integration V46</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300);},
+  print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');w.document.write('<!doctype html><html><head><title>LRX V46 Final Integration</title><style>body{font-family:Arial;padding:30px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Final System Integration V46</h2><table><thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+rows+'</tbody></table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300);},
   init(){document.getElementById('v46Run')?.addEventListener('click',()=>this.run());document.getElementById('v46Csv')?.addEventListener('click',()=>this.csv());document.getElementById('v46Print')?.addEventListener('click',()=>this.print());this.run();}
 };
 window.LRXFinalIntegrationV46=V46;
@@ -5624,7 +6384,47 @@ const V50={last:[],matrix:[],
    document.getElementById('v50Checks').innerHTML=this.last.map(x=>'<tr><td><b>'+esc(x.name)+'</b></td><td>'+(x.pass?'🟢 OK':'🔴 REVISAR')+'</td><td>'+esc(x.detail)+'</td></tr>').join('');
  },
  csv(){if(!this.last.length)this.run();const rows=[['Comprobación','Estado','Detalle'],...this.last.map(x=>[x.name,x.pass?'OK':'REVISAR',x.detail])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='LRX-V50-CRUD-Audit.csv';a.click()},
- print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w)return;const rows=this.last.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+esc(x.detail)+'</td></tr>').join('');w.document.write('<html><head><title>LRX V50 CRUD Audit</title></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>CRUD & Data Persistence V50</h2><table border="1" cellpadding="8" cellspacing="0"><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr>'+rows+'</table></body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)},
+ print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w)return;const rows=this.last.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+esc(x.detail)+'</td></tr>').join('');w.document.write('<html><head><title>LRX V50 CRUD Audit</title></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>CRUD & Data Persistence V50</h2><table border="1" cellpadding="8" cellspacing="0"><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr>'+rows+'</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)},
  init(){document.getElementById('v50Run')?.addEventListener('click',()=>this.run());document.getElementById('v50Csv')?.addEventListener('click',()=>this.csv());document.getElementById('v50Print')?.addEventListener('click',()=>this.print());this.run()}
 };
 window.LRXCRUDV50=V50; window.LRXCrudAuditV42=V50;
@@ -5679,7 +6479,47 @@ const V51={last:[],
  },
  render(){const ok=this.last.filter(x=>x.pass).length,bad=this.last.length-ok;document.getElementById('v51Total').textContent=this.last.length;document.getElementById('v51Ok').textContent=ok;document.getElementById('v51Bad').textContent=bad;document.getElementById('v51State').textContent=bad?'REQUIERE CORRECCIÓN':'PRODUCTION READY';document.getElementById('v51Checks').innerHTML=this.last.map(x=>'<tr><td><b>'+this.esc(x.name)+'</b></td><td>'+(x.pass?'🟢 OK':'🔴 REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('')},
  csv(){if(!this.last.length)this.run();const rows=[['Comprobación','Estado','Detalle'],...this.last.map(x=>[x.name,x.pass?'OK':'REVISAR',x.detail])];const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LRX-V51-Production-QC.csv';a.click()},
- print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');w.document.write('<html><head><title>LRX V51 Production QC</title></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Production Quality Control V51</h2><table border="1" cellpadding="8" cellspacing="0"><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr>'+rows+'</table></body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)},
+ print(){if(!this.last.length)this.run();const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}const rows=this.last.map(x=>'<tr><td>'+this.esc(x.name)+'</td><td>'+(x.pass?'OK':'REVISAR')+'</td><td>'+this.esc(x.detail)+'</td></tr>').join('');w.document.write('<html><head><title>LRX V51 Production QC</title></head><body><h1>La Reyna Mexican Food Xpress</h1><h2>Production Quality Control V51</h2><table border="1" cellpadding="8" cellspacing="0"><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr>'+rows+'</table>
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
+</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),300)},
  init(){document.getElementById('v51Run')?.addEventListener('click',()=>this.run());document.getElementById('v51Csv')?.addEventListener('click',()=>this.csv());document.getElementById('v51Print')?.addEventListener('click',()=>this.print());this.run()}
 };
 window.LRXProductionQCV51=V51;if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>V51.init(),{once:true});else V51.init();
@@ -6222,5 +7062,45 @@ window.LRXMenuPlatformBridge={refresh:inject};
   setTimeout(repaint,250);
 })();
 </script>
+
+<script>
+/* V58.4 — POS search hardening + movement normalization */
+(function(){
+  function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+  function forceSearch(){
+    const el=document.getElementById('posSearch');
+    if(!el || typeof window.LRXPOS?.refresh!=='function')return;
+    try{window.LRXPOS.refresh()}catch(e){console.error('POS search refresh:',e)}
+  }
+  document.addEventListener('input',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('change',function(e){if(e.target?.id==='posSearch')forceSearch()},true);
+  document.addEventListener('focusin',function(e){if(e.target?.id==='posSearch' && !e.target.dataset.lrxSearchReady){e.target.dataset.lrxSearchReady='1';forceSearch()}},true);
+
+  function fmtDate(v){
+    if(!v)return '';
+    const d=new Date(v);
+    if(Number.isNaN(d.getTime()))return String(v);
+    return d.toLocaleString('en-US',{month:'numeric',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+  }
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const read=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const money=v=>'$'+Number(v||0).toFixed(2);
+    const typeMap={entry:'Entrada',exit:'Salida',waste:'Merma','physical count':'Conteo físico','physical_count':'Conteo físico','salida/venta':'Salida / Venta','compra/entrada':'Compra / Entrada',entrada:'Entrada',salida:'Salida',merma:'Merma'};
+    const rows=[],seen=new Set();
+    [...read('lrx_movements'),...read('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key);
+      rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${esc(fmtDate(m.date))}</td><td>${esc(typeMap[String(m.type||'').toLowerCase()]||m.type||'')}</td><td>${esc(m.product)}</td><td>${m.qty}</td><td>${money(m.cost)}</td><td>${esc(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.renderMovements=drawMoves;
+  setTimeout(()=>{drawMoves();forceSearch()},100);
+})();
+</script>
+
 </body>
 </html>
