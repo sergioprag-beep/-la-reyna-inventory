@@ -1497,6 +1497,7 @@ LRXRec.open=function(id=null){
    if(x)Object.assign(x,r);else recipeBook.push(r);
    write(RK,recipeBook);
    renderRecipeBook();
+   if(window.LRXUniversalPaginationV57?.resetTable)window.LRXUniversalPaginationV57.resetTable('recipeBookRows');
    m.remove();
    return true;
  });
@@ -1519,7 +1520,7 @@ function renderRecipeBook(){
  document.getElementById('prepCount').textContent=pre;document.getElementById('finalCount').textContent=fin;
  document.getElementById('recipeAvailableTotal').textContent=recipeBook.filter(r=>r.type!=='pre').reduce((a,r)=>a+recAvailable(r),0);
  document.getElementById('recipeFcAvg').textContent=(recipeBook.filter(r=>r.type!=='pre').length?recipeBook.filter(r=>r.type!=='pre').reduce((a,r)=>a+fc(r),0)/recipeBook.filter(r=>r.type!=='pre').length:0).toFixed(1)+'%';
- rows.innerHTML=recipeBook.map(r=>{const c=recCost(r),f=fc(r),a=recAvailable(r);return `<tr><td><span class="lrx-pill">${r.type==='pre'?'PRE-ELABORADO':'FINAL'}</span></td><td><b>${esc2(r.name)}</b></td><td>${r.yieldQty} ${esc2(r.yieldUnit)}</td><td>${money(c)}</td><td>${r.type==='pre'?'—':f.toFixed(1)+'%'}</td><td>${r.type==='pre'?'—':a}</td><td><button onclick="LRXRec.open('${r.id}')">✏️ Editar</button> <button onclick="LRXRec.delete('${r.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="7">No hay recetas. Crea primero tus pre-elaborados y luego tus recetas finales.</td></tr>';
+ rows.innerHTML=recipeBook.slice().reverse().map(r=>{const c=recCost(r),f=fc(r),a=recAvailable(r);return `<tr><td><span class="lrx-pill">${r.type==='pre'?'PRE-ELABORADO':'FINAL'}</span></td><td><b>${esc2(r.name)}</b></td><td>${r.yieldQty} ${esc2(r.yieldUnit)}</td><td>${money(c)}</td><td>${r.type==='pre'?'—':f.toFixed(1)+'%'}</td><td>${r.type==='pre'?'—':a}</td><td><button onclick="LRXRec.open('${r.id}')">✏️ Editar</button> <button onclick="LRXRec.delete('${r.id}')">🗑️ Eliminar</button></td></tr>`}).join('')||'<tr><td colspan="7">No hay recetas. Crea primero tus pre-elaborados y luego tus recetas finales.</td></tr>';
 }
 window.renderIngredients=renderIngredients;window.renderRecipeBook=renderRecipeBook;
 window.renderRecipes=function(){}; // compatibility with the existing legacy refresh
@@ -1661,7 +1662,7 @@ function ordersAvailable(r){
 }
 function renderFinal(){
  const tb=document.getElementById('finalRows');if(!tb)return;
- tb.innerHTML=finals.map(r=>{
+ tb.innerHTML=finals.slice().reverse().map(r=>{
   const c=finalCost(r),price=Number(r.salePrice||0),fc=price?c/price*100:0,o=ordersAvailable(r);
   return `<tr><td><span class="lrx-pill">FINAL</span></td><td><b>${esc(r.name)}</b></td><td>$${c.toFixed(2)}</td><td>$${price.toFixed(2)}</td><td>${fc.toFixed(1)}%</td><td>${o}</td><td><button onclick="LRXFinal.edit('${r.id}')">✏️ Editar</button> <button onclick="LRXFinal.del('${r.id}')">🗑️ Eliminar</button></td></tr>`
  }).join('')||'<tr><td colspan="7">No hay recetas finales.</td></tr>';
@@ -1685,7 +1686,7 @@ function modal(r){
   const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);
   if(!items.length)return alert('Agrega al menos un componente.');
   const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};
-  if(r)Object.assign(r,v);else finals.push(v);saveF();m.remove();renderFinal();
+  if(r)Object.assign(r,v);else finals.push(v);saveF();m.remove();renderFinal();if(window.LRXUniversalPaginationV57?.resetTable)window.LRXUniversalPaginationV57.resetTable('finalRows');
  };
  (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty)); if(!r)LRXFinal.row();
 }
@@ -5991,7 +5992,7 @@ window.addEventListener('pageshow',()=>setTimeout(bind,50));
   document.head.appendChild(css);
   function boot(){scan();const main=document.querySelector('main')||document.body;new MutationObserver(()=>scan()).observe(main,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.LRXUniversalPaginationV57={refresh:()=>{scan();document.querySelectorAll('tbody').forEach(tb=>render(tb,true))}};
+  window.LRXUniversalPaginationV57={refresh:()=>{scan();document.querySelectorAll('tbody').forEach(tb=>render(tb,true))},resetTable:(id)=>{const tb=typeof id==='string'?document.getElementById(id):id;if(!tb)return;state.set(key(tb),{page:1,size:getSize()});render(tb,false)}};
 })();
 </script>
 
