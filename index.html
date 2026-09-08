@@ -25,7 +25,9 @@ th,td{padding:11px;border-bottom:1px solid #edf0f4;text-align:left;font-size:14p
 .modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.show{display:flex}.modalbox{background:#fff;border-radius:18px;padding:20px;max-width:700px;width:100%;max-height:90vh;overflow:auto}
 .img{width:48px;height:48px;object-fit:cover;border-radius:9px;background:#eee}
 .alert{padding:12px;border-radius:12px;margin:8px 0;background:#fff0cf}
-@media(max-width:700px){main{padding:12px}th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
+@media(max-width:700px){main{padding:12px}}
+.lrx-recipebook-table{min-width:720px}
+.lrx-recipebook-table th,.lrx-recipebook-table td{white-space:nowrap}
 </style>
 <style>
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:15px}
@@ -150,7 +152,7 @@ nav.lrx-compact .lrx-submenu button.active{background:var(--pink);color:#fff}
     <div class="card"><small>Órdenes disponibles</small><div class="metric" id="recipeAvailableTotal">0</div></div>
     <div class="card"><small>Food Cost promedio</small><div class="metric" id="recipeFcAvg">0%</div></div>
   </div>
-  <div style="overflow:auto"><table><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
+  <div style="overflow:auto"><table class="lrx-recipebook-table"><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
 </section>
 
 <section id="movimientos" class="page">
@@ -1390,22 +1392,35 @@ window.LRXIng={};
 window.LRXRec={};
 
 function esc2(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function productFor(i){if(!i)return null;return (typeof products!=='undefined'?products:[]).find(p=>String(p.id)===String(i.productId))||null}
+function productFor(i){
+ const ps=(typeof products!=='undefined'?products:[]);
+ let p=ps.find(x=>String(x.id)===String(i?.productId));
+ if(p)return p;
+ const ings=(typeof ingredients!=='undefined'?ingredients:[]);
+ const ing=ings.find(x=>String(x.id)===String(i?.ingredientId));
+ if(ing){
+   p=ps.find(x=>String(x.id)===String(ing.productId));
+   if(p)return p;
+   const n=String(ing.productName||ing.product||ing.name||'').trim().toLowerCase();
+   if(n)p=ps.find(x=>String(x.name||'').trim().toLowerCase()===n);
+ }
+ return p||null;
+}
 function ingredientCost(i){
- if(!i)return 0;
- const p=productFor(i);
- if(window.LRXUnits && p) return window.LRXUnits.costPerUsage(i,p);
- return Number(i.costPerUnit??(p?.cost??0))||0;
+ const ings=(typeof ingredients!=='undefined'?ingredients:[]);
+ const ing=ings.find(a=>String(a.id)===String(i?.ingredientId));
+ const source=ing||i||{};
+ const p=productFor(source);
+ if(window.LRXUnits && p && typeof window.LRXUnits.costPerUsage==='function'){try{return Number(window.LRXUnits.costPerUsage(source,p))||0}catch(e){}}
+ return Number(source.costPerUnit??p?.cost??0)||0;
 }
 function recCost(r){
- if(!r)return 0;
- return (Array.isArray(r.items)?r.items:[]).reduce((a,i)=>{if(!i)return a;return a+(Number(i.qty)||0)*ingredientCost(i)},0);
+ return (r.items||[]).reduce((a,i)=>a+(Number(i.qty)||0)*ingredientCost(i),0);
 }
 function recAvailable(r){
- if(!r || !Array.isArray(r.items) || !r.items.length)return 0;
+ if(!r.items?.length)return 0;
  let min=Infinity;
  for(const i of r.items){
-   if(!i)continue;
    const q=Number(i.qty)||0;if(q<=0)continue;
    let stock=0;
    const ing=ingredients.find(x=>String(x.id)===String(i.ingredientId));
@@ -1480,7 +1495,6 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
-   recipeBook=recipeBook.filter(Boolean).map(r=>({...r,items:(Array.isArray(r.items)?r.items.filter(Boolean):[])}));
    write(RK,recipeBook);
    renderRecipeBook();
    m.remove();
