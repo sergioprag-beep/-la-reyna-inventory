@@ -1607,32 +1607,50 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const ingredients=()=>readArr('lrx_ingredients_v1');
 const preps=()=>readArr('lrx_preparations_v2');
 const productsNow=()=>readArr('lrx_products');
+const legacyState=()=>{try{const v=JSON.parse(localStorage.getItem('LRX_FINAL_STATE_V1')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return {}}};
 function allFinalRecipes(){
- // Unified recipe view: the dashboard's 44 final recipes are stored in
- // lrx_recipebook_v1, while newer final recipes are stored in
- // lrx_finalrecipes_v3. Read BOTH stores without deleting or migrating data.
- // Deduplicate only when the same recipe has the same id or the same name,
- // so the table represents the complete set shown by the dashboard.
  const out=[], seenIds=new Set(), seenNames=new Set();
- const add=(r,idx,source)=>{
-  const name=String(r?.name||r?.recipeName||r?.title||'').trim()||('Receta '+(idx+1));
-  const id=r?.id??(source+'-'+idx+'-'+name);
-  const idKey=String(id);
-  const nameKey=name.toLowerCase().replace(/\s+/g,' ').trim();
-  if(seenIds.has(idKey)||seenNames.has(nameKey)) return;
-  const raw=(r?.items||r?.ingredients||r?.components||r?.recipeItems||[]);
-  const items=Array.isArray(raw)?raw.map(i=>({
-    type:i?.type==='prep'?'prep':'ingredient',
-    ref:i?.ref??i?.ingredientId??i?.productId??i?.id,
-    qty:Number(i?.qty??i?.quantity??0)
-  })).filter(i=>i.ref!==undefined&&i.ref!==null&&i.qty>0):[];
-  out.push({...r,id,name,items,source});
-  seenIds.add(idKey); seenNames.add(nameKey);
+ const ingNow=ingredients(), prodNow=productsNow();
+ const findRef=(name)=>{
+   const n=String(name??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+   if(!n)return null;
+   const ing=ingNow.find(x=>String(x.name||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')===n);
+   if(ing)return ing.id;
+   const prod=prodNow.find(x=>String(x.name||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')===n);
+   return prod?.id??null;
  };
- // Recipe Book is the legacy/master recipe list used by the dashboard.
+ const add=(r,idx,source)=>{
+   if(!r)return;
+   const name=String(r?.name||r?.recipeName||r?.title||'').trim()||('Receta '+(idx+1));
+   const id=r?.id??(source+'-'+idx+'-'+name);
+   const idKey=String(id);
+   const nameKey=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+   if(seenIds.has(idKey)||seenNames.has(nameKey))return;
+   const raw=(r?.items||r?.ingredients||r?.components||r?.recipeItems||[]);
+   const items=Array.isArray(raw)?raw.map(i=>{
+     const rawRef=i?.ref??i?.ingredientId??i?.productId??i?.id;
+     const namedRef=rawRef??findRef(i?.product||i?.productName||i?.ingredient||i?.name);
+     return {
+       type:i?.type==='prep'?'prep':'ingredient',
+       ref:namedRef,
+       qty:Number(i?.qty??i?.quantity??0),
+       unitCost:Number(i?.unitCost??i?.costPerUnit??0)||0,
+       productName:i?.productName||i?.product||i?.ingredientName||i?.name||''
+     };
+   }).filter(i=>(i.ref!==undefined&&i.ref!==null)||i.unitCost>0).filter(i=>i.qty>0):[];
+   const legacyCost=Number(r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount)||0;
+   const price=Number(r?.salePrice??r?.price??0)||0;
+   out.push({...r,id,name,items,source,legacyCost, salePrice:price});
+   seenIds.add(idKey); seenNames.add(nameKey);
+ };
+ // Master recipe book and newer final recipes.
  readArr(RBK).forEach((r,i)=>{if(r?.type!=='pre')add(r,i,'recipebook')});
- // Add any final recipes that exist only in the newer final-recipe store.
  readArr(FK).forEach((r,i)=>add(r,i,'final'));
+ // Older V1 recipe state can contain recipes created before the newer recipe stores.
+ const st=legacyState();
+ (Array.isArray(st.recipes)?st.recipes:[]).forEach((r,i)=>add(r,i,'legacy-state'));
+ // Legacy standalone recipe store, if present.
+ readArr('lrx_recipes').forEach((r,i)=>add(r,i,'legacy-recipes'));
  return out;
 }
 let finals=allFinalRecipes();
@@ -1644,7 +1662,7 @@ function prepCostUnit(p){const ing=ingredients();let c=0;(p?.items||[]).forEach(
 function itemCost(i){
  if(i.type==='prep'){const p=preps().find(x=>String(x.id)===String(i.ref));return Number(i.qty||0)*prepCostUnit(p||{})}
  const a=ingredients().find(x=>String(x.id)===String(i.ref));
- let c=Number(a?.costPerUnit||0);
+ let c=Number(i?.unitCost||0)||Number(a?.costPerUnit||0);
  if(window.LRXUnits&&a){try{c=Number(window.LRXUnits.costPerUsage(a,productsNow().find(z=>String(z.id)===String(a.productId))))||c}catch(e){}}
  return Number(i.qty||0)*c;
 }
@@ -1656,7 +1674,7 @@ function finalCost(r){
    if(h&&Number(h.cost)>0)return Number(h.cost);
   }
  }catch(e){}
- const stored=Number(r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount);
+ const stored=Number(r?.legacyCost??r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount);
  if(Number.isFinite(stored)&&stored>0)return stored;
  return (r.items||[]).reduce((a,i)=>a+itemCost(i),0);
 }
