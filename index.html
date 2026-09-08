@@ -966,7 +966,51 @@ body{font-family:Arial;padding:20px}h1{color:#244b93}table{border-collapse:colla
 </style></head><body><h1>La Reyna Xpress — ${type}</h1>
 <p>Generado: ${new Date().toLocaleString()}</p>${(type==='compras'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Total compras: ${money(purchaseTotals().total)}</b><b>Registros: ${purchaseTotals().count}</b></div>`:type==='inventario'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Valor inventario: ${money(products.reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b><b>Productos: ${products.length}</b></div>`:type==='movimientos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Movimientos: ${movements.length}</b><b>Valor: ${money(movements.reduce((a,m)=>a+Number(m.qty||0)*Number(m.cost||0),0))}</b></div>`:type==='criticos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Críticos: ${products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).length}</b><b>Valor: ${money(products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b></div>`:`<div style="margin:12px 0"><b>Registros: ${data.length}</b></div>`)}<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
 ${data.map(r=>"<tr>"+r.map(x=>`<td>${esc(x)}</td>`).join("")+"</tr>").join("")}
-</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}</body></html>`);
+</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}
+<script>
+/* V57.7 FIX 6.2 — MOVEMENTS FINAL
+   Force the visible Movimientos table to use the persisted legacy ledger.
+   Keeps the V57.5 UI unchanged. */
+(function(){
+  function read(key, fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return Array.isArray(v)?v:fallback}catch(e){return fallback}}
+  function escv(v){try{return typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}catch(e){return String(v??'')}}
+  function moneyv(v){try{return typeof money==='function'?money(v):('$'+Number(v||0).toFixed(2))}catch(e){return '$'+Number(v||0).toFixed(2)}}
+  window.renderMovements=function(){
+    const box=document.getElementById('movementRows'); if(!box)return;
+    const rows=read('lrx_movements',[]).slice().reverse();
+    box.innerHTML=rows.map(m=>`<tr><td>${escv(m.date||'')}</td><td>${escv(m.type||'')}</td><td>${escv(m.product||m.productName||'')}</td><td>${Number(m.qty||0)}</td><td>${moneyv(m.cost||0)}</td><td>${escv(m.note||'')}</td></tr>`).join('');
+  };
+  window.saveMovement=function(type){
+    const ps=read('lrx_products',[]);
+    const idx=Number(document.getElementById('mp')?.value);
+    const qty=Number(document.getElementById('mq')?.value)||0;
+    const note=(document.getElementById('mn')?.value||'').trim();
+    const p=ps[idx];
+    if(!p || qty<=0){alert('Producto y cantidad son obligatorios.');return false;}
+    const t=String(type||'entrada').toLowerCase();
+    const isEntry=t==='entrada';
+    p.stock=Math.max(0,Number(p.stock||0)+(isEntry?qty:-qty));
+    localStorage.setItem('lrx_products',JSON.stringify(ps));
+    const now=new Date();
+    const legacy=read('lrx_movements',[]);
+    legacy.push({date:now.toLocaleString(),type:t,product:p.name,qty:qty,cost:Number(p.cost||0),note:note});
+    localStorage.setItem('lrx_movements',JSON.stringify(legacy));
+    const adv=read('lrx_inventory_moves_v10',[]);
+    adv.push({id:Date.now(),date:now.toISOString(),type:t,productId:p.id,productName:p.name,qty:qty,unit:p.unit||'unidad',note:note,cost:Number(p.cost||0),total:qty*Number(p.cost||0)});
+    localStorage.setItem('lrx_inventory_moves_v10',JSON.stringify(adv));
+    try{products=ps;movements=legacy}catch(e){}
+    try{closeModal()}catch(e){}
+    window.renderMovements();
+    try{setTimeout(function(){if(typeof dashboard==='function')dashboard(); if(typeof renderProducts==='function')renderProducts(); window.renderMovements();},50)}catch(e){}
+    alert((isEntry?'Entrada':t==='salida'?'Salida':'Merma')+' registrada correctamente.');
+    return true;
+  };
+  window.__LRX_MOVEMENTS_FIX='6.2';
+  setTimeout(window.renderMovements,100);
+})();
+</script>
+
+</body></html>`);
 w.document.close();
 }
 </script>
@@ -1174,7 +1218,7 @@ refresh();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=57.4').catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=57.7.6.2').catch(console.error);
   });
 }
 </script>
@@ -1366,7 +1410,7 @@ if ('serviceWorker' in navigator) {
 
 <script>
 if("serviceWorker" in navigator){
- window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=57.4",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{}));
+ window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=57.7.6.2",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{}));
 }
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{});}</script>
