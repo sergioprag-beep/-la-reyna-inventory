@@ -1,4 +1,4 @@
-const CACHE='lrx-v57.7-6-pos-prices-discounts';
+const CACHE='lrx-v58.3-movements-engineering-final';
 const CORE=['./','./index.html','./offline.html'];
 
 self.addEventListener('install',event=>{

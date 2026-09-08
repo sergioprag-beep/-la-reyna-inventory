@@ -1191,7 +1191,7 @@ refresh();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=57.4').catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=58.3').catch(console.error);
   });
 }
 </script>
@@ -6165,6 +6165,61 @@ window.LRXMenuPlatformBridge={refresh:inject};
   // CRITICAL: V55.6 redefines LRXPurchaseLedger after the earlier purchase fix.
   // The purchase modal uses product IDs, so it must use the ID-based V57.7 save handler.
   if(window.LRXPurchaseLedger){window.LRXPurchaseLedger.open=openPurchase;window.LRXPurchaseLedger.save=window.LRXPurchaseFix?.save||window.LRXPurchaseLedger.save;}
+})();
+</script>
+<script>
+/* V58.3 — MOVEMENTS + MENU ENGINEERING FINAL FIX */
+(function(){
+  const R=(k,d=[])=>{try{const v=JSON.parse(localStorage.getItem(k)||JSON.stringify(d));return Array.isArray(v)?v:d}catch(e){return d}};
+  const W=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const M=v=>'$'+Number(v||0).toFixed(2);
+  function drawMoves(){
+    const tb=document.getElementById('movementRows'); if(!tb)return;
+    const rows=[],seen=new Set();
+    [...R('lrx_movements'),...R('lrx_inventory_moves_v10')].forEach(m=>{
+      const product=m.product||m.productName||'';
+      const key=[m.id||'',m.date||'',m.type||'',product,m.qty||0].join('|');
+      if(seen.has(key))return; seen.add(key); rows.push({...m,product,qty:Number(m.qty||0),cost:Number(m.cost||0),note:m.note||''});
+    });
+    tb.innerHTML=rows.reverse().map(m=>`<tr><td>${E(m.date)}</td><td>${E(m.type)}</td><td>${E(m.product)}</td><td>${m.qty}</td><td>${M(m.cost)}</td><td>${E(m.note)}</td></tr>`).join('')||'<tr><td colspan="6">No hay movimientos registrados.</td></tr>';
+  }
+  window.saveMovement=function(type){
+    const ps=R('lrx_products'), sel=document.getElementById('mp'), q=Number(document.getElementById('mq')?.value||0), note=document.getElementById('mn')?.value||'';
+    const p=ps[Number(sel?.value)]; if(!p)return alert('Selecciona un producto.'); if(!(q>0))return alert('La cantidad debe ser mayor que 0.');
+    p.stock=type==='entrada'?Number(p.stock||0)+q:Math.max(0,Number(p.stock||0)-q); W('lrx_products',ps);
+    const now=new Date(), rec={id:'MOV-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date:now.toISOString(),type:type==='entrada'?'entrada':type==='salida'?'salida':'merma',productId:p.id,productName:p.name,product:p.name,qty:q,cost:Number(p.cost||0),unit:p.unit||'unidad',note,total:q*Number(p.cost||0)};
+    const legacy=R('lrx_movements'); legacy.push({...rec,date:now.toLocaleString()}); W('lrx_movements',legacy);
+    const canon=R('lrx_inventory_moves_v10'); canon.push(rec); W('lrx_inventory_moves_v10',canon);
+    drawMoves(); try{reloadPersistentState();renderProducts();}catch(e){} try{closeModal();}catch(e){}
+  };
+  window.renderMovements=drawMoves;
+  function drawEngineering(){
+    const root=document.getElementById('lrxExtra'); if(!root)return;
+    const recipes=[]; const seen=new Set();
+    for(const arr of [R('lrx_finalrecipes_v3'),R('lrx_recipebook_v1')]) for(const r of arr){
+      const name=String(r.name||r.recipeName||'').trim(), key=name.toLowerCase(); if(!name||seen.has(key))continue;
+      const items=r.items||r.ingredients||[]; if(!Array.isArray(items)||!items.length)continue; seen.add(key); recipes.push({id:r.id,name,price:Number(r.salePrice??r.price??0)||0,items});
+    }
+    if(!recipes.length)return;
+    const ing=R('lrx_ingredients_v1'),ps=R('lrx_products'),sales=R('lrx_sales_v5');
+    const rows=recipes.map(r=>{
+      const sr=sales.filter(x=>String(x.recipeId)===String(r.id)||String(x.recipeName||x.name||'').trim().toLowerCase()===r.name.toLowerCase());
+      const sold=sr.reduce((a,x)=>a+Number(x.qty||x.quantity||1),0);
+      const revenue=sr.reduce((a,x)=>a+Number(x.revenue||x.total||((Number(x.salePrice||r.price||0))*Number(x.qty||x.quantity||1))),0);
+      let c=Number(r.cost||r.totalCost||r.recipeCost||0);
+      if(!c)c=r.items.reduce((a,i)=>{const q=Number(i.qty||0);const z=ing.find(x=>String(x.id)===String(i.ref??i.ingredientId));const p=ps.find(x=>String(x.id)===String(z?.productId??i.productId))||ps.find(x=>String(x.name||'').toLowerCase()===String(z?.productName||z?.name||i.productName||'').toLowerCase());return a+q*Number(z?.costPerUnit??p?.cost??i.costPerUnit??0)},0);
+      return {...r,sold,revenue,c,margin:r.price-c,fc:r.price?100*c/r.price:0};
+    });
+    const sold=rows.filter(r=>r.sold>0), avgS=sold.length?sold.reduce((a,r)=>a+r.sold,0)/sold.length:0, avgM=sold.length?sold.reduce((a,r)=>a+r.margin,0)/sold.length:0;
+    const body=rows.map(r=>{let cls='⚪ SIN VENTAS';if(r.sold>0){const pop=r.sold>=avgS,prof=r.margin>=avgM;cls=pop?(prof?'⭐ ESTRELLA':'🐄 PLOWHORSE'):(prof?'❓ PUZZLE':'🐶 DOG');}return `<tr><td><b>${E(r.name)}</b></td><td>${r.sold}</td><td>${M(r.revenue)}</td><td>${M(r.margin)}</td><td>${r.fc.toFixed(1)}%</td><td><b>${cls}</b></td></tr>`}).join('');
+    const panel=[...root.querySelectorAll('.lr-panel')].find(x=>/Ingeniería de Menú|Ingenieria de Menu/.test(x.textContent));
+    if(panel)panel.innerHTML=`<h2>📈 Ingeniería de Menú</h2><p class="lr-small">Clasificación basada en ventas reales del POS. Puede haber varios platos con la misma clasificación.</p><table class="lr-table"><thead><tr><th>Plato</th><th>Órdenes</th><th>Ventas</th><th>Margen/orden</th><th>Food Cost</th><th>Clasificación</th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+  function repaint(){setTimeout(()=>{drawMoves();drawEngineering()},0)}
+  const old=window.refresh; if(typeof old==='function')window.refresh=function(){old();repaint()};
+  document.addEventListener('DOMContentLoaded',repaint);
+  setTimeout(repaint,250);
 })();
 </script>
 </body>
