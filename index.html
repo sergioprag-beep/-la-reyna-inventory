@@ -1418,8 +1418,13 @@ function fc(r){const c=recCost(r);const per=Number(r.yieldQty)||1;const price=Nu
 function openBox(title,body,saveFn){
  let m=document.getElementById('lrxMasterModal');if(m)m.remove();
  m=document.createElement('div');m.id='lrxMasterModal';m.className='modal show';
- m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button class="primary" id="lrxMasterSave">Guardar</button> <button onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
- document.body.appendChild(m);m.querySelector('#lrxMasterSave').onclick=()=>saveFn(m);
+ m.innerHTML=`<div class="modalbox"><h2>${title}</h2>${body}<br><button type="button" class="primary" id="lrxMasterSave">Guardar</button> <button type="button" onclick="document.getElementById('lrxMasterModal').remove()">Cancelar</button></div>`;
+ document.body.appendChild(m);
+ const saveBtn=m.querySelector('#lrxMasterSave');
+ saveBtn.addEventListener('click',function(ev){
+   ev.preventDefault(); ev.stopPropagation();
+   try{ saveFn(m); }catch(err){ console.error(err); alert('No se pudo guardar la receta: '+(err?.message||err)); }
+ });
 }
 LRXIng.open=function(id=null){
  const x=id?ingredients.find(a=>String(a.id)===String(id)):null;
@@ -1472,7 +1477,10 @@ LRXRec.open=function(id=null){
    if(!rows.length)return alert('Agrega al menos un ingrediente.'),false;
    const r={id:x?.id||Date.now(),type:m.querySelector('#rrType').value,name,category:m.querySelector('#rrCat').value.trim(),yieldQty:Number(m.querySelector('#rrYield').value)||1,yieldUnit:m.querySelector('#rrYieldUnit').value.trim()||'orden',salePrice:Number(m.querySelector('#rrPrice').value)||0,items:rows};
    if(x)Object.assign(x,r);else recipeBook.push(r);
-   write(RK,recipeBook);renderRecipeBook();m.remove();return true;
+   write(RK,recipeBook);
+   renderRecipeBook();
+   m.remove();
+   return true;
  });
  const m=document.getElementById('lrxMasterModal');
  (x?.items||[]).forEach(i=>LRXRec.addRow(i.ingredientId,i.qty));
