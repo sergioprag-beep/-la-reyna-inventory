@@ -2587,61 +2587,23 @@ const money=v=>'$'+Number(v||0).toFixed(2);
 const n=v=>Number(v||0);
 const load=()=>{let x=read(KEY,{});return Object.assign({targetFC:30,targetMargin:70,commission:0,round:0.05},x)};
 let cfg=load();
-function ingredients(){return read('lrx_ingredients_v1',[])}
-function preps(){return read('lrx_preparations_v2',[])}
-function products(){return read('lrx_products',[])}
-function norm(v){return String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-function productForIngredient(ing){
- const ps=products(); if(!ing)return null;
- let p=ps.find(x=>String(x.id)===String(ing.productId));
- if(!p){const q=norm(ing.productName||ing.product||ing.name); if(q)p=ps.find(x=>norm(x.name)===q); if(!p&&q.length>=4)p=ps.find(x=>norm(x.name).includes(q)||q.includes(norm(x.name)))}
- return p||null;
-}
-function ingredientUnitCost(ing){
- const p=productForIngredient(ing);
- if(window.LRXUnits&&p&&typeof window.LRXUnits.costPerUsage==='function'){try{const v=n(window.LRXUnits.costPerUsage(ing,p));if(v>0)return v}catch(e){}}
- return n(ing?.costPerUnit??ing?.unitCost??p?.cost);
-}
-function prepUnitCost(pr,seen=new Set()){
- if(!pr||seen.has(String(pr.id)))return 0; seen.add(String(pr.id));
- let total=0; const ings=ingredients(), prs=preps();
- for(const i of (pr.items||[])){
-   const q=n(i.qty); if(q<=0)continue;
-   if(i.type==='prep'){
-     const child=prs.find(x=>String(x.id)===String(i.prepId??i.ref)); if(child)total+=q*prepUnitCost(child,new Set(seen));
-   }else{
-     const ing=ings.find(x=>String(x.id)===String(i.ingredientId??i.ref)); if(ing)total+=q*ingredientUnitCost(ing);
-   }
- }
- return total/(n(pr.yieldQty)||1);
-}
-function cost(r){
- try{if(window.LRXFoodCostFixed&&typeof window.LRXFoodCostFixed.recipes==='function'){const rows=window.LRXFoodCostFixed.recipes();const hit=rows.find(x=>String(x.id)===String(r?.id))||rows.find(x=>norm(x.name)===norm(r?.name));if(hit&&n(hit.cost)>0)return n(hit.cost)}}catch(e){}
- const stored=n(r?.foodCost??r?.costPerPortion??r?.legacyCost??r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount); if(stored>0)return stored;
- let total=0;
- for(const i of (r?.items||r?.ingredients||[])){
-   const q=n(i.qty); if(q<=0)continue;
-   if(i.type==='prep'){const pr=preps().find(x=>String(x.id)===String(i.ref??i.prepId));if(pr)total+=q*prepUnitCost(pr)}
-   else {const ing=ingredients().find(x=>String(x.id)===String(i.ref??i.ingredientId));if(ing)total+=q*ingredientUnitCost(ing)}
- }
- return total;
-}
+function cost(r){return n(r.cost??r.totalCost??r.recipeCost)}
 function roundUp(v,step){step=n(step);return step>0?Math.ceil((v-1e-9)/step)*step:v}
 function calc(r){
- const c=cost(r), current=n(r.salePrice??r.price), fc=current&&c>=0?c/current*100:0;
- const fcFloor=c>0&&cfg.targetFC>0?c/(cfg.targetFC/100):null;
- const marginFloor=c>0&&cfg.targetMargin<100?c/(1-cfg.targetMargin/100):null;
- // Recommended price: first achieve the target gross margin after the delivery
- // commission, then enforce the Food Cost ceiling. Commission is grossed up.
- const comm=Math.min(Math.max(cfg.commission,0),99.9)/100;
- const margin= Math.min(Math.max(cfg.targetMargin,0),99.9)/100;
- const netRequired=c>0&&margin<1?c/(1-margin):null;
- const recMargin=netRequired!==null&&comm<1?netRequired/(1-comm):null;
- const base= c>0 ? Math.max(fcFloor||0,recMargin||0) : null;
- const rec=base!==null&&base>0&&Number.isFinite(base)?roundUp(base,cfg.round):null;
- const gross=current-c, afterComm=current*(1-comm)-c;
- const netMarginAtRec=rec>0?(rec*(1-comm)-c)/rec*100:null;
- return {id:r.id,name:r.name||'Unnamed Recipe',c,current,fc,gross,afterComm,fcFloor,marginFloor,rec,marginPossible:recMargin!==null,netMarginAtRec};
+ const c=cost(r), current=n(r.salePrice??r.price), fc=current?c/current*100:0;
+ const fcFloor=cfg.targetFC>0?c/(cfg.targetFC/100):0;
+ // 'Margen bruto objetivo' is calculated before delivery commission.
+ // Commission is shown separately through afterComm; it must not be added to the
+ // gross-margin denominator, otherwise common settings such as 70% margin + 40%
+ // commission incorrectly produce Infinity. Never expose Infinity to the user.
+ const denom=1-(cfg.targetMargin/100);
+ const marginPossible=denom>1e-9;
+ const marginFloor=marginPossible?c/denom:null;
+ const base=marginPossible?Math.max(fcFloor,marginFloor):fcFloor;
+ const rec=base>0&&Number.isFinite(base)?roundUp(base,cfg.round):null;
+ const gross=current-c, afterComm=current*(1-cfg.commission/100)-c;
+ const netMarginAtRec=rec>0?(rec*(1-cfg.commission/100)-c)/rec*100:null;
+ return {id:r.id,name:r.name||'Unnamed Recipe',c,current,fc,gross,afterComm,fcFloor,marginFloor,rec,marginPossible,netMarginAtRec};
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(cfg))}
 function sync(){
@@ -3929,7 +3891,15 @@ const POS={
       for(const item of r.items){const use=this.num(item.qty)*this.num(line.qty);if(use<=0)continue;if(item.type==='prep')consumedPreps.push({prepId:item.ref,qty:use});else{const ing=this.ingredients().find(x=>String(x.id)===String(item.ref));const p=ing?this.findProduct(ing):null;if(p)consumedProducts.push({productId:p.id,productName:p.name,usageQty:use,qty:this.usageToStock(use,ing,p),unit:ing.unit})}}
       records.push({id:stamp+i,transactionId,recipeId:r.id,recipeName:r.name,qty:line.qty,baseSalePrice:this.num(line.basePrice??r.salePrice),salePrice:this.num(line.salePrice),grossRevenue:lineGross,discountAmount:lineDiscount,discountPercent:subtotal?(discount/subtotal*100):0,discountType:dtype,discountValue:dval,discountReason:reason,revenue:netRevenue,channel,date:new Date().toISOString(),consumedProducts,consumedPreps});
     });
-    this.write('lrx_sales_v5',sales.concat(records)); this.cart=[];this.renderCart();
+    this.write('lrx_sales_v5',sales.concat(records));
+    // Actualización inmediata: los módulos de ventas/Menu Engineering leen localStorage,
+    // pero el evento 'storage' no se dispara dentro de la misma pestaña que hizo el guardado.
+    // Refrescamos explícitamente todos los módulos conectados sin requerir recargar la app.
+    try{if(window.LRXMenuEngineering&&typeof window.LRXMenuEngineering.render==='function')window.LRXMenuEngineering.render()}catch(e){console.error(e)}
+    try{if(window.LRXMenuEngineeringV38&&typeof window.LRXMenuEngineeringV38.render==='function')window.LRXMenuEngineeringV38.render()}catch(e){console.error(e)}
+    try{if(typeof window.LRXRefreshUnifiedProfitability==='function')window.LRXRefreshUnifiedProfitability()}catch(e){console.error(e)}
+    try{if(window.LRXSalesAnalytics&&typeof window.LRXSalesAnalytics.render==='function')window.LRXSalesAnalytics.render()}catch(e){console.error(e)}
+    this.cart=[];this.renderCart();
     const msg=document.getElementById('posMsg');if(msg)msg.innerHTML='✅ Venta guardada. Inventario actualizado. Descuento: '+this.money(discount)+' • Total: '+this.money(subtotal-discount);
     try{if(typeof window.refresh==='function')window.refresh()}catch(e){} try{if(typeof window.render==='function')window.render()}catch(e){}
   },
