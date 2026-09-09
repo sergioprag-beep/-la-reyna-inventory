@@ -3624,34 +3624,26 @@ const POS={
 
   // Return every sellable recipe from either canonical recipe store.
   recipes(){
+    // POS must use the same complete recipe population restored in Recetas.
+    // Keep every stored recipe record; never deduplicate by name.
     const finals=this.read('lrx_finalrecipes_v3',[]);
     const book=this.read('lrx_recipebook_v1',[]);
     const out=[];
-    const seen=new Set();
-
-    const add=(r,source)=>{
-      if(!r)return;
-      const name=String(r.name||r.recipeName||'').trim();
+    const add=(r,source,idx)=>{
+      if(!r||typeof r!=='object')return;
+      const name=String(r.name||r.recipeName||r.title||'').trim();
       if(!name)return;
-
-      const id=String(r.id??(source+'_'+name));
       const type=this.norm(r.type);
-      if(source==='book' && ['pre','prep','preelaborado','pre-elaborado','pre elaborado'].includes(type))return;
-
-      const items=(r.items||[]).map(i=>{
-        const ref=i.ref??i.ingredientId??i.productId;
-        const itemType=i.type==='prep'?'prep':'ingredient';
-        return {type:itemType,ref,ingredientId:i.ingredientId??ref,qty:this.num(i.qty)};
-      }).filter(i=>i.ref!==undefined&&i.ref!==null&&String(i.ref)!==''&&i.qty>0);
-
-      if(!items.length)return;
-
-      // Prefer a final recipe already present; otherwise use the recipe-book record.
-      const key=this.norm(name);
-      if(seen.has(key))return;
-      seen.add(key);
+      if(['pre','prep','preelaborado','pre-elaborado','pre elaborado'].includes(type))return;
+      const raw=(r.items||r.ingredients||r.components||r.recipeItems||[]);
+      const items=Array.isArray(raw)?raw.map(i=>{
+        const ref=i?.ref??i?.ingredientId??i?.productId??i?.id;
+        return {type:i?.type==='prep'?'prep':'ingredient',ref,ingredientId:i?.ingredientId??ref,qty:this.num(i?.qty??i?.quantity),productName:i?.productName||i?.product||i?.ingredientName||i?.name||''};
+      }).filter(i=>i.ref!==undefined&&i.ref!==null&&String(i.ref)!==''&&i.qty>0):[];
       out.push({
-        id:r.id??(source+'_'+Date.now()+'_'+out.length),
+        ...r,
+        id:source+':'+idx+':'+String(r.id??idx),
+        _originalId:r.id,
         name,
         category:r.category||r.menuCategory||'Menú',
         salePrice:this.num(r.salePrice??r.price),
@@ -3660,10 +3652,8 @@ const POS={
         items
       });
     };
-
-    finals.forEach(r=>add(r,'final'));
-    book.forEach(r=>add(r,'book'));
-
+    finals.forEach((r,i)=>add(r,'final',i));
+    book.forEach((r,i)=>add(r,'book',i));
     return out;
   },
 
@@ -6194,5 +6184,12 @@ window.LRXMenuPlatformBridge={refresh:inject};
 })();
 </script>
 
+
+<style>
+/* POS menu: keep the screen compact while allowing all recipes to be browsed */
+#posMenu{max-height:560px;overflow-y:auto;overflow-x:hidden;padding-right:6px;-webkit-overflow-scrolling:touch}
+#posMenu h3{position:sticky;top:0;z-index:2;background:#fff;padding:8px 0;margin:0;font-size:16px}
+@media(max-width:600px){#posMenu{max-height:500px}#posMenu>div{padding:10px 0!important}}
+</style>
 </body>
 </html>
