@@ -966,7 +966,25 @@ body{font-family:Arial;padding:20px}h1{color:#244b93}table{border-collapse:colla
 </style></head><body><h1>La Reyna Xpress — ${type}</h1>
 <p>Generado: ${new Date().toLocaleString()}</p>${(type==='compras'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Total compras: ${money(purchaseTotals().total)}</b><b>Registros: ${purchaseTotals().count}</b></div>`:type==='inventario'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Valor inventario: ${money(products.reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b><b>Productos: ${products.length}</b></div>`:type==='movimientos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Movimientos: ${movements.length}</b><b>Valor: ${money(movements.reduce((a,m)=>a+Number(m.qty||0)*Number(m.cost||0),0))}</b></div>`:type==='criticos'?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><b>Críticos: ${products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).length}</b><b>Valor: ${money(products.filter(p=>Number(p.stock||0)<=Number(p.emergency||0)).reduce((a,p)=>a+Number(p.stock||0)*Number(p.cost||0),0))}</b></div>`:`<div style="margin:12px 0"><b>Registros: ${data.length}</b></div>`)}<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>
 ${data.map(r=>"<tr>"+r.map(x=>`<td>${esc(x)}</td>`).join("")+"</tr>").join("")}
-</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}</body></html>`);
+</tbody></table>${"\x3Cscript>window.print()\x3C/script>"}<script>
+/* FIX 21 — authoritative immediate refresh after sales and SPA navigation */
+(function(){
+  'use strict';
+  function refreshAll(){
+    try{window.LRXSalesAnalytics&&typeof window.LRXSalesAnalytics.render==='function'&&window.LRXSalesAnalytics.render()}catch(e){}
+    try{window.LRXMenuEngineering&&typeof window.LRXMenuEngineering.render==='function'&&window.LRXMenuEngineering.render()}catch(e){}
+    try{window.LRXMenuEngineeringV38&&typeof window.LRXMenuEngineeringV38.render==='function'&&window.LRXMenuEngineeringV38.render()}catch(e){}
+    try{typeof window.LRXRefreshUnifiedProfitability==='function'&&window.LRXRefreshUnifiedProfitability()}catch(e){}
+    try{window.LRXFoodCostProfitability&&typeof window.LRXFoodCostProfitability.render==='function'&&window.LRXFoodCostProfitability.render()}catch(e){}
+    try{window.LRXProfitability&&typeof window.LRXProfitability.refresh==='function'&&window.LRXProfitability.refresh()}catch(e){}
+    try{typeof window.render17==='function'&&window.render17()}catch(e){}
+    try{typeof window.renderPL==='function'&&window.renderPL()}catch(e){}
+  }
+  window.LRXRefreshAfterSale=function(){setTimeout(refreshAll,25);};
+  window.addEventListener('lrx:sale-saved',function(){setTimeout(refreshAll,25);});
+})();
+</script>
+</body></html>`);
 w.document.close();
 }
 </script>
@@ -1360,7 +1378,10 @@ if ('serviceWorker' in navigator) {
         ${eng.map(r=>{let fc=r.price?100*r.c/r.price:0;let cls=r.sold>=5&&fc<=35?'⭐ ESTRELLA':r.sold>=5?'📈 POPULAR':fc<=35?'💰 RENTABLE':'⚠️ REVISAR';return `<tr><td>${esc(r.name)}</td><td>${r.sold}</td><td>$${r.revenue.toFixed(2)}</td><td>$${r.margin.toFixed(2)}</td><td>${fc.toFixed(1)}%</td><td><b>${cls}</b></td></tr>`}).join('')}</tbody></table>`:'<p class="lr-small">Registra ventas de recetas para generar la ingeniería de menú.</p>'}
       </div>`;
   }
+  // Expose this legacy/embedded Menu Engineering panel so sales can refresh it immediately.
+  window.LRXLegacyMenuEngineering={render:renderExtra};
   document.addEventListener('DOMContentLoaded',renderExtra);
+  window.addEventListener('lrx:sale-saved',renderExtra);
 })();
 </script>
 
@@ -1917,6 +1938,7 @@ function modal(recipeId){
   const result=applySale(r,q);if(!result.ok)return alert(result.msg);
   sales.push({id:Date.now(),recipeId:r.id,recipeName:r.name,qty:q,salePrice:Number(r.salePrice||0),revenue:q*Number(r.salePrice||0),channel:m.querySelector('#sc').value,date:new Date().toISOString(),consumedProducts:result.products,consumedPreps:result.preps});
   save();m.remove();render();
+  try{window.LRXRefreshAfterSale&&window.LRXRefreshAfterSale()}catch(e){console.error(e)}
  };
 }
 function render(){
@@ -3911,6 +3933,7 @@ const POS={
     this.cart=[];this.renderCart();
     const msg=document.getElementById('posMsg');if(msg)msg.innerHTML='✅ Venta guardada. Inventario actualizado. Descuento: '+this.money(discount)+' • Total: '+this.money(subtotal-discount);
     try{if(typeof window.refresh==='function')window.refresh()}catch(e){} try{if(typeof window.render==='function')window.render()}catch(e){}
+    try{window.LRXRefreshAfterSale&&window.LRXRefreshAfterSale()}catch(e){console.error(e)}
   },
 
   init(){
@@ -4446,7 +4469,16 @@ const V38={
       if(b.from&&d<b.from)return;if(b.to&&d>b.to)return;
       const name=String(s.recipeName||s.name||'').trim(),key=this.norm(name);if(!name)return;
       const q=this.num(s.qty||s.quantity||1);
-      const rev=this.num(s.revenue||s.total||q*this.num(s.salePrice));
+      // Use the recorded net revenue first. If an older/alternate POS record
+      // omitted revenue or saved it as zero, fall back to the sale price on
+      // the matching recipe so the report does not show stale sales totals.
+      const matchedRecipe=rm.find(r=>this.norm(r.name)===key);
+      let rev=this.num(s.revenue);
+      if(!(rev>0)) rev=this.num(s.total);
+      if(!(rev>0)) rev=this.num(s.amount);
+      if(!(rev>0)) rev=this.num(s.unitPrice)*q;
+      if(!(rev>0)) rev=this.num(s.salePrice)*q;
+      if(!(rev>0)&&matchedRecipe&&matchedRecipe.price>0) rev=matchedRecipe.price*q;
       if(!agg[key])agg[key]={name,units:0,revenue:0};
       agg[key].units+=q;agg[key].revenue+=rev;
     });
@@ -4531,6 +4563,7 @@ const V38={
   }
 };
 window.LRXMenuEngineeringV38=V38;
+window.addEventListener('lrx:sale-saved',function(){setTimeout(function(){try{V38.render()}catch(e){console.error(e)}},0)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>V38.init(),{once:true});else V38.init();
 })();
 </script>
@@ -5760,6 +5793,7 @@ window.LRXProductionQCV51=V51;if(document.readyState==='loading')document.addEve
         document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
         page.classList.add('active');
         try{if(typeof window.refresh==='function') window.refresh();}catch(err){console.error(err);}
+        setTimeout(function(){try{window.LRXRefreshAfterSale&&window.LRXRefreshAfterSale();}catch(err){console.error(err);}},0);
         n.querySelectorAll('details').forEach(d=>d.open=false);
       });
       n.dataset.lrxDelegated='1';
@@ -6250,5 +6284,36 @@ window.LRXMenuPlatformBridge={refresh:inject};
 #posMenu h3{position:sticky;top:0;z-index:2;background:#fff;padding:8px 0;margin:0;font-size:16px}
 @media(max-width:600px){#posMenu{max-height:500px}#posMenu>div{padding:10px 0!important}}
 </style>
+<script>
+/* FIX 22 — immediate sales refresh across all live report/menu-engineering panels */
+(function(){
+  'use strict';
+  function refreshAfterSale(){
+    const run=(fn)=>{try{if(typeof fn==='function')fn()}catch(e){console.error(e)}};
+    // The visible Ingeniería de Menú panel in Recetas.
+    run(window.LRXLegacyMenuEngineering&&window.LRXLegacyMenuEngineering.render);
+    // Other report modules.
+    run(window.LRXMenuEngineering&&window.LRXMenuEngineering.render);
+    run(window.LRXMenuEngineeringV38&&window.LRXMenuEngineeringV38.render);
+    run(window.LRXSalesAnalytics&&window.LRXSalesAnalytics.render);
+    run(window.LRXProfitability&&window.LRXProfitability.refresh);
+    run(window.LRXFoodCostProfitability&&window.LRXFoodCostProfitability.render);
+    run(window.LRXRefreshUnifiedProfitability);
+    run(window.dashboard);
+    // Re-render the base SPA screens without a browser reload.
+    run(window.refresh);
+    // A second pass catches panels that render after the SPA refresh.
+    setTimeout(function(){
+      run(window.LRXLegacyMenuEngineering&&window.LRXLegacyMenuEngineering.render);
+      run(window.LRXMenuEngineering&&window.LRXMenuEngineering.render);
+      run(window.LRXMenuEngineeringV38&&window.LRXMenuEngineeringV38.render);
+      run(window.LRXSalesAnalytics&&window.LRXSalesAnalytics.render);
+      run(window.LRXProfitability&&window.LRXProfitability.refresh);
+    },100);
+  }
+  window.LRXRefreshAfterSale=refreshAfterSale;
+  window.addEventListener('lrx:sale-saved',refreshAfterSale);
+})();
+</script>
 </body>
 </html>
