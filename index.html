@@ -1609,7 +1609,7 @@ const preps=()=>readArr('lrx_preparations_v2');
 const productsNow=()=>readArr('lrx_products');
 const legacyState=()=>{try{const v=JSON.parse(localStorage.getItem('LRX_FINAL_STATE_V1')||'{}');return v&&typeof v==='object'?v:{}}catch(e){return {}}};
 function allFinalRecipes(){
- const out=[], seenIds=new Set(), seenNames=new Set();
+ const out=[];
  const ingNow=ingredients(), prodNow=productsNow();
  const findRef=(name)=>{
    const n=String(name??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1620,36 +1620,25 @@ function allFinalRecipes(){
    return prod?.id??null;
  };
  const add=(r,idx,source)=>{
-   if(!r)return;
-   const name=String(r?.name||r?.recipeName||r?.title||'').trim()||('Receta '+(idx+1));
-   const id=r?.id??(source+'-'+idx+'-'+name);
-   const idKey=String(id);
-   const nameKey=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
-   if(seenIds.has(idKey)||seenNames.has(nameKey))return;
-   const raw=(r?.items||r?.ingredients||r?.components||r?.recipeItems||[]);
+   if(!r || typeof r!=='object')return;
+   const name=String(r.name||r.recipeName||r.title||'').trim()||('Receta '+(idx+1));
+   const raw=(r.items||r.ingredients||r.components||r.recipeItems||[]);
    const items=Array.isArray(raw)?raw.map(i=>{
      const rawRef=i?.ref??i?.ingredientId??i?.productId??i?.id;
      const namedRef=rawRef??findRef(i?.product||i?.productName||i?.ingredient||i?.name);
-     return {
-       type:i?.type==='prep'?'prep':'ingredient',
-       ref:namedRef,
-       qty:Number(i?.qty??i?.quantity??0),
-       unitCost:Number(i?.unitCost??i?.costPerUnit??0)||0,
-       productName:i?.productName||i?.product||i?.ingredientName||i?.name||''
-     };
-   }).filter(i=>(i.ref!==undefined&&i.ref!==null)||i.unitCost>0).filter(i=>i.qty>0):[];
-   const legacyCost=Number(r?.cost??r?.recipeCost??r?.totalCost??r?.foodCostAmount)||0;
-   const price=Number(r?.salePrice??r?.price??0)||0;
-   out.push({...r,id,name,items,source,legacyCost, salePrice:price});
-   seenIds.add(idKey); seenNames.add(nameKey);
+     return {type:i?.type==='prep'?'prep':'ingredient',ref:namedRef,qty:Number(i?.qty??i?.quantity??0),unitCost:Number(i?.unitCost??i?.costPerUnit??0)||0,productName:i?.productName||i?.product||i?.ingredientName||i?.name||''};
+   }).filter(i=>i.qty>0):[];
+   const legacyCost=Number(r.cost??r.recipeCost??r.totalCost??r.foodCostAmount)||0;
+   const price=Number(r.salePrice??r.price??0)||0;
+   // IMPORTANT: every stored record is kept. Do not deduplicate by name or id.
+   // The diagnostic confirmed that the recipebook contains many more records than the old screen displayed.
+   const viewId=source+':'+idx+':'+String(r.id??idx);
+   out.push({...r,id:viewId,_originalId:r.id,_sourceIndex:idx,name,items,source,legacyCost,salePrice:price});
  };
- // Master recipe book and newer final recipes.
- readArr(RBK).forEach((r,i)=>{if(r?.type!=='pre')add(r,i,'recipebook')});
+ readArr(RBK).forEach((r,i)=>add(r,i,'recipebook'));
  readArr(FK).forEach((r,i)=>add(r,i,'final'));
- // Older V1 recipe state can contain recipes created before the newer recipe stores.
  const st=legacyState();
  (Array.isArray(st.recipes)?st.recipes:[]).forEach((r,i)=>add(r,i,'legacy-state'));
- // Legacy standalone recipe store, if present.
  readArr('lrx_recipes').forEach((r,i)=>add(r,i,'legacy-recipes'));
  return out;
 }
@@ -1717,7 +1706,7 @@ function modal(r){
  m=document.createElement('div');m.className='modal show';m.id='lrxFinalModal';
  m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
  document.body.appendChild(m);m.querySelector('#fcancel').onclick=()=>m.remove();m.querySelector('#addFinalComponent').onclick=()=>LRXFinal.row();
- m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r.id));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
+ m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else if(r&&r.source==='recipebook'){const arr=readArr(RBK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(RBK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
  (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty));if(!r)LRXFinal.row();
 }
 window.LRXFinal={
@@ -1726,7 +1715,7 @@ window.LRXFinal={
  edit(id){const r=allFinalRecipes().find(x=>String(x.id)===String(id));if(r)modal(r)},
  goPage(n){syncFinals();const pages=Math.max(1,Math.ceil(finals.length/finalPageSize));finalPage=Math.max(1,Math.min(pages,Number(n)||1));renderFinal()},
  setPageSize(n){finalPageSize=Math.max(1,Number(n)||20);finalPage=1;renderFinal()},
- del(id){const r=allFinalRecipes().find(x=>String(x.id)===String(id));if(!r||!confirm('¿Eliminar "'+r.name+'"?'))return;if(r.source==='final'){localStorage.setItem(FK,JSON.stringify(readArr(FK).filter(x=>String(x.id)!==String(id))))}else{localStorage.setItem(RBK,JSON.stringify(readArr(RBK).filter(x=>String(x.id)!==String(id))))}renderFinal()},
+ del(id){const r=allFinalRecipes().find(x=>String(x.id)===String(id));if(!r||!confirm('¿Eliminar "'+r.name+'"?'))return;if(r.source==='final'){localStorage.setItem(FK,JSON.stringify(readArr(FK).filter(x=>String(x.id)!==String(r._originalId))))}else if(r.source==='recipebook'){localStorage.setItem(RBK,JSON.stringify(readArr(RBK).filter(x=>String(x.id)!==String(r._originalId))))}renderFinal()},
  state:finals
 };
 window.LRXFinals=finals;
