@@ -2592,10 +2592,18 @@ function roundUp(v,step){step=n(step);return step>0?Math.ceil((v-1e-9)/step)*ste
 function calc(r){
  const c=cost(r), current=n(r.salePrice??r.price), fc=current?c/current*100:0;
  const fcFloor=cfg.targetFC>0?c/(cfg.targetFC/100):0;
- const marginFloor=(1-(cfg.targetMargin/100)-(cfg.commission/100))>0?c/(1-cfg.targetMargin/100-cfg.commission/100):Infinity;
- const rec=roundUp(Math.max(fcFloor,marginFloor),cfg.round);
+ // 'Margen bruto objetivo' is calculated before delivery commission.
+ // Commission is shown separately through afterComm; it must not be added to the
+ // gross-margin denominator, otherwise common settings such as 70% margin + 40%
+ // commission incorrectly produce Infinity. Never expose Infinity to the user.
+ const denom=1-(cfg.targetMargin/100);
+ const marginPossible=denom>1e-9;
+ const marginFloor=marginPossible?c/denom:null;
+ const base=marginPossible?Math.max(fcFloor,marginFloor):fcFloor;
+ const rec=base>0&&Number.isFinite(base)?roundUp(base,cfg.round):null;
  const gross=current-c, afterComm=current*(1-cfg.commission/100)-c;
- return {id:r.id,name:r.name||'Unnamed Recipe',c,current,fc,gross,afterComm,fcFloor,marginFloor,rec};
+ const netMarginAtRec=rec>0?(rec*(1-cfg.commission/100)-c)/rec*100:null;
+ return {id:r.id,name:r.name||'Unnamed Recipe',c,current,fc,gross,afterComm,fcFloor,marginFloor,rec,marginPossible,netMarginAtRec};
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(cfg))}
 function sync(){
@@ -2604,16 +2612,16 @@ function sync(){
 }
 function applyPrice(id){
  const rs=recipes(), r=rs.find(x=>String(x.id)===String(id)); if(!r)return;
- const row=calc(r); if(!confirm('Aplicar '+money(row.rec)+' como nuevo precio de venta para '+(r.name||'esta receta')+'?'))return;
+ const row=calc(r); if(row.rec===null){alert('No se puede calcular un precio que cumpla simultáneamente el Food Cost objetivo, la comisión y el margen objetivo. Ajusta esos valores.');return;} if(!confirm('Aplicar '+money(row.rec)+' como nuevo precio de venta para '+(r.name||'esta receta')+'?'))return;
  r.salePrice=Number(row.rec.toFixed(2)); localStorage.setItem('lrx_finalrecipes_v3',JSON.stringify(rs)); render(); alert('Precio actualizado a '+money(r.salePrice));
 }
 function render(){
  const rs=recipes(), rows=rs.map(calc);
  document.getElementById('poPricingCount').textContent=rows.length;
  document.getElementById('poAvgCurrent').textContent=money(rows.length?rows.reduce((a,r)=>a+r.current,0)/rows.length:0);
- document.getElementById('poAvgRecommended').textContent=money(rows.length?rows.reduce((a,r)=>a+r.rec,0)/rows.length:0);
+ document.getElementById('poAvgRecommended').textContent=money(rows.length?(()=>{const v=rows.filter(r=>Number.isFinite(r.rec));return v.length?v.reduce((a,r)=>a+r.rec,0)/v.length:0})():0);
  document.getElementById('poGoodCount').textContent=rows.filter(r=>r.fc<=cfg.targetFC && r.current>0).length;
- document.getElementById('poPricingRows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.gross)}</td><td>${money(r.fcFloor)}</td><td>${Number.isFinite(r.marginFloor)?money(r.marginFloor):'N/A'}</td><td><b>${money(r.rec)}</b></td><td><button onclick="LRXPricing.apply('${esc(r.id)}')">Aplicar</button></td></tr>`).join('')||'<tr><td colspan="9">No hay recetas finales registradas.</td></tr>';
+ document.getElementById('poPricingRows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.gross)}</td><td>${money(r.fcFloor)}</td><td>${Number.isFinite(r.marginFloor)?money(r.marginFloor):'N/A'}</td><td><b>${r.rec===null?'N/A':money(r.rec)}</b>${r.marginPossible?'':'<br><small style=\"color:#b42318\">FC + comisión + margen no son alcanzables simultáneamente</small>'}</td><td>${r.rec===null?'—':`<button onclick=\"LRXPricing.apply('${esc(r.id)}')\">Aplicar</button>`}</td></tr>`).join('')||'<tr><td colspan="9">No hay recetas finales registradas.</td></tr>';
  const sel=document.getElementById('poSimRecipe'), old=sel.value;
  sel.innerHTML='<option value="">Selecciona una receta</option>'+rows.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join(''); if(rows.some(r=>String(r.id)===old))sel.value=old;
  sim();
@@ -2621,10 +2629,10 @@ function render(){
 function sim(){
  const id=document.getElementById('poSimRecipe').value, p=n(document.getElementById('poSimPrice').value), r=recipes().find(x=>String(x.id)===String(id)); const box=document.getElementById('poSimResult'); if(!r){box.textContent='Selecciona una receta.';return}
  const c=cost(r), fc=p?c/p*100:0, margin=p-c, after=p*(1-cfg.commission/100)-c, target=calc(r);
- box.innerHTML=`<b>Food Cost:</b> ${fc.toFixed(1)}% &nbsp; • &nbsp; <b>Margen bruto:</b> ${money(margin)} &nbsp; • &nbsp; <b>Margen después de comisión:</b> ${money(after)} &nbsp; • &nbsp; <b>Recomendado:</b> ${money(target.rec)}`;
+ box.innerHTML=`<b>Food Cost:</b> ${fc.toFixed(1)}% &nbsp; • &nbsp; <b>Margen bruto:</b> ${money(margin)} &nbsp; • &nbsp; <b>Margen después de comisión:</b> ${money(after)} &nbsp; • &nbsp; <b>Recomendado:</b> ${target.rec===null?'N/A':money(target.rec)}`;
 }
 function exportCSV(){
- const rows=recipes().map(calc); const head=['Recipe','Cost','Current Price','Food Cost %','Gross Margin','Minimum Price FC','Minimum Price Margin','Recommended Price']; const lines=[head,...rows.map(r=>[r.name,r.c.toFixed(2),r.current.toFixed(2),r.fc.toFixed(2),r.gross.toFixed(2),r.fcFloor.toFixed(2),Number.isFinite(r.marginFloor)?r.marginFloor.toFixed(2):'',r.rec.toFixed(2)])].map(a=>a.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lrx_pricing_optimizer_v16.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
+ const rows=recipes().map(calc); const head=['Recipe','Cost','Current Price','Food Cost %','Gross Margin','Minimum Price FC','Minimum Price Margin','Recommended Price']; const lines=[head,...rows.map(r=>[r.name,r.c.toFixed(2),r.current.toFixed(2),r.fc.toFixed(2),r.gross.toFixed(2),r.fcFloor.toFixed(2),Number.isFinite(r.marginFloor)?r.marginFloor.toFixed(2):'',(r.rec===null?'':r.rec.toFixed(2))])].map(a=>a.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lrx_pricing_optimizer_v16.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
 function print(){const rows=recipes().map(calc);const html=`<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: ${cfg.targetFC}% | Margen objetivo: ${cfg.targetMargin}% | Comisión: ${cfg.commission}%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.rec)}</td></tr>`).join('')}</tbody></table></body></html>`;const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)} }
 window.LRXPricing={recalculate:sync,apply:applyPrice,exportCSV,print};
