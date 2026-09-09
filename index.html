@@ -6194,37 +6194,5 @@ window.LRXMenuPlatformBridge={refresh:inject};
 })();
 </script>
 
-<script>
-(function(){
-  function safe(k){try{const v=JSON.parse(localStorage.getItem(k)||'null');return v}catch(e){return null}}
-  function arrCount(v){return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0)}
-  function names(v){if(!Array.isArray(v))return [];return v.map(x=>String(x?.name||x?.recipeName||x?.title||'')).filter(Boolean)}
-  function diagnose(){
-    const keys=['lrx_finalrecipes_v3','lrx_recipebook_v1','lrx_recipes','LRX_FINAL_STATE_V1','lrx_preparations_v2','lrx_ingredients_v1'];
-    let rows=[];
-    keys.forEach(k=>{
-      const v=safe(k); let c=Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0);
-      let ns=names(v); if(k==='LRX_FINAL_STATE_V1'&&v&&typeof v==='object'){
-        const candidates=['finals','recipes','finalRecipes','recipeBook','book','items','data'];
-        candidates.forEach(p=>{if(Array.isArray(v[p])) ns=ns.concat(names(v[p]));});
-      }
-      rows.push({k,c,ns:[...new Set(ns)]});
-    });
-    const allKeys=Object.keys(localStorage).filter(k=>/recipe|receta|final|book/i.test(k));
-    let out='<h2 style="margin:0 0 10px">🔎 Diagnóstico de recetas</h2><p style="margin:0 0 12px;color:#667085">Lectura únicamente. No modifica ni borra datos.</p>';
-    out+='<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Registro</th><th style="padding:8px;border-bottom:1px solid #ddd">Cantidad</th></tr>';
-    rows.forEach(r=>out+=`<tr><td style="padding:8px;border-bottom:1px solid #eee">${r.k}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700">${r.c}</td></tr>`);
-    out+='</table></div>';
-    out+='<h3 style="margin:16px 0 8px">Claves relacionadas encontradas</h3><div style="font-size:13px;line-height:1.5">'+(allKeys.length?allKeys.join('<br>'):'Ninguna')+'</div>';
-    rows.forEach(r=>{if(r.ns.length) out+=`<h3 style="margin:16px 0 8px">Nombres en ${r.k} (${r.ns.length})</h3><div style="font-size:13px;line-height:1.5">${r.ns.map((n,i)=>`${i+1}. ${n}`).join('<br>')}</div>`});
-    let m=document.getElementById('lrxDiagModal'); if(m)m.remove();
-    m=document.createElement('div');m.id='lrxDiagModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px';
-    m.innerHTML='<div style="background:#fff;border-radius:18px;max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:20px;font-family:system-ui;color:#172033"><button id="lrxDiagClose" style="float:right;border:0;border-radius:10px;padding:8px 12px;font-weight:700">✕</button>'+out+'</div>';
-    document.body.appendChild(m);document.getElementById('lrxDiagClose').onclick=()=>m.remove();
-  }
-  function install(){if(document.getElementById('lrxDiagBtn'))return;let b=document.createElement('button');b.id='lrxDiagBtn';b.type='button';b.textContent='🔎 Diagnóstico de recetas';b.style.cssText='position:fixed;right:14px;bottom:18px;z-index:999998;background:#c72d70;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18)';b.onclick=diagnose;document.body.appendChild(b)}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-})();
-</script>
 </body>
 </html>
