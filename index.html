@@ -1704,9 +1704,10 @@ function renderFinal(){
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
  m=document.createElement('div');m.className='modal show';m.id='lrxFinalModal';
- m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
+ m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Departamento<input id="fd" placeholder="Ej. Tacos, Burritos, Enchiladas" value="${esc(r?.department||r?.category||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
  document.body.appendChild(m);m.querySelector('#fcancel').onclick=()=>m.remove();m.querySelector('#addFinalComponent').onclick=()=>LRXFinal.row();
- m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else if(r&&r.source==='recipebook'){const arr=readArr(RBK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(RBK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
+ m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const department=m.querySelector('#fd').value.trim();
+const v={id:r?.id||Date.now(),name,department,category:department,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else if(r&&r.source==='recipebook'){const arr=readArr(RBK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(RBK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
  (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty));if(!r)LRXFinal.row();
 }
 window.LRXFinal={
@@ -3769,32 +3770,62 @@ const POS={
 
     const all=this.recipes();
     const q=this.norm(document.getElementById('posSearch')?.value||'');
-    const filtered=q?all.filter(r=>this.norm(r.name).includes(q)||this.norm(r.category).includes(q)):all;
+    const filtered=q?all.filter(r=>this.norm(r.name).includes(q)||this.norm(r.category).includes(q)||this.norm(r.department).includes(q)):all;
 
     if(!filtered.length){
       box.innerHTML='<div style="padding:14px 0"><b>No hay platos para mostrar.</b><br><small>Recetas encontradas: '+all.length+'. Limpia la búsqueda o crea una receta final en Recetas.</small></div>';
       return;
     }
 
+    // POS organizado por departamentos. Cada departamento es un botón
+    // desplegable; los platos permanecen ocultos hasta tocar el departamento.
     const groups={};
     filtered.forEach(r=>{
-      const g=r.category||'Menú';
+      const g=String(r.department||r.category||'Sin departamento').trim()||'Sin departamento';
       (groups[g]||(groups[g]=[])).push(r);
     });
 
-    box.innerHTML=Object.entries(groups).map(([g,rs])=>
-      '<h3>'+this.esc(g)+'</h3>'+
-      rs.map(r=>
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #ddd;padding:12px 0">'+
-          '<div style="min-width:0"><strong>'+this.esc(r.name)+'</strong><br><small>'+this.money(r.salePrice)+'</small></div>'+
-          '<button type="button" data-pos-add="'+this.esc(String(r.id))+'" class="primary">＋ Agregar</button>'+
-        '</div>'
-      ).join('')
-    ).join('');
+    const esc=this.esc.bind(this), money=this.money.bind(this);
+    box.innerHTML=Object.entries(groups).map(([g,rs],gi)=>{
+      const gid='pos-dept-'+gi+'-'+String(g).replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+      return '<div class="pos-dept" data-dept="'+esc(gid)+'" style="border-bottom:1px solid #e5e7eb">'+
+        '<button type="button" class="pos-dept-toggle" aria-expanded="false" data-dept-toggle="'+esc(gid)+'" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:0;background:transparent;padding:16px 4px;font-size:17px;font-weight:800;text-align:left;cursor:pointer">'+
+          '<span>📂 '+esc(g)+' <small style="font-weight:600;opacity:.65">('+rs.length+')</small></span><span class="pos-dept-arrow">›</span>'+
+        '</button>'+
+        '<div class="pos-dept-items" data-dept-items="'+esc(gid)+'" hidden>'+rs.map(r=>
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #eef0f4;padding:12px 4px 12px 16px">'+
+            '<div style="min-width:0"><strong>'+esc(r.name)+'</strong><br><small>'+money(r.salePrice)+'</small></div>'+
+            '<button type="button" data-pos-add="'+esc(String(r.id))+'" class="primary">＋ Agregar</button>'+
+          '</div>'
+        ).join('')+'</div>'+
+      '</div>';
+    }).join('');
+
+    box.querySelectorAll('[data-dept-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
+      const id=btn.getAttribute('data-dept-toggle');
+      const items=box.querySelector('[data-dept-items="'+CSS.escape(id)+'"]');
+      if(!items)return;
+      const open=!items.hidden;
+      items.hidden=open;
+      btn.setAttribute('aria-expanded',String(!open));
+      const arrow=btn.querySelector('.pos-dept-arrow');
+      if(arrow)arrow.textContent=open?'›':'⌄';
+    }));
 
     box.querySelectorAll('[data-pos-add]').forEach(b=>b.addEventListener('click',()=>{
       this.add(b.getAttribute('data-pos-add'));
     }));
+
+    // Cuando se está buscando un plato, abre automáticamente los
+    // departamentos que contienen resultados para no ocultar la búsqueda.
+    if(q){
+      box.querySelectorAll('.pos-dept-items').forEach(items=>{
+        items.hidden=false;
+        const id=items.getAttribute('data-dept-items');
+        const btn=box.querySelector('[data-dept-toggle="'+CSS.escape(id)+'"]');
+        if(btn){btn.setAttribute('aria-expanded','true');const a=btn.querySelector('.pos-dept-arrow');if(a)a.textContent='⌄';}
+      });
+    }
   },
 
   renderCart(){
