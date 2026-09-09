@@ -1704,9 +1704,10 @@ function renderFinal(){
 function modal(r){
  let m=document.getElementById('lrxFinalModal');if(m)m.remove();
  m=document.createElement('div');m.className='modal show';m.id='lrxFinalModal';
- m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
+ m.innerHTML=`<div class="modalbox"><h2>${r?'Editar':'Nueva'} receta final</h2><div class="lrx-final-grid"><label>Nombre<input id="fn" value="${esc(r?.name||'')}"></label><label>Departamento<input id="fd" placeholder="Ej. Tacos, Burritos, Enchiladas" value="${esc(r?.department||r?.category||'')}"></label><label>Precio de venta<input id="fp" type="number" step=".01" value="${r?.salePrice??r?.price??''}"></label><label>Rendimiento<input id="fy" type="number" step=".001" value="${r?.yieldQty||1}"></label><label>Unidad<input id="fu" value="${esc(r?.yieldUnit||'orden')}"></label></div><h3>Componentes</h3><div id="fi"></div><button type="button" id="addFinalComponent">＋ Agregar ingrediente / pre-elaborado</button><br><br><button class="primary" id="fs">Guardar</button> <button type="button" id="fcancel">Cancelar</button></div>`;
  document.body.appendChild(m);m.querySelector('#fcancel').onclick=()=>m.remove();m.querySelector('#addFinalComponent').onclick=()=>LRXFinal.row();
- m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const v={id:r?.id||Date.now(),name,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else if(r&&r.source==='recipebook'){const arr=readArr(RBK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(RBK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
+ m.querySelector('#fs').onclick=()=>{const name=m.querySelector('#fn').value.trim();if(!name)return alert('Nombre obligatorio.');const items=[...m.querySelectorAll('.fr')].map(x=>({type:x.querySelector('.ft').value,ref:x.querySelector('.frf').value,qty:Number(x.querySelector('.fq').value)||0})).filter(x=>x.ref&&x.qty>0);if(!items.length)return alert('Agrega al menos un componente.');const department=m.querySelector('#fd').value.trim();
+const v={id:r?.id||Date.now(),name,department,category:department,salePrice:Number(m.querySelector('#fp').value)||0,yieldQty:Number(m.querySelector('#fy').value)||1,yieldUnit:m.querySelector('#fu').value.trim()||'orden',items};if(r&&r.source==='final'){const arr=readArr(FK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}else if(r&&r.source==='recipebook'){const arr=readArr(RBK),ix=arr.findIndex(x=>String(x.id)===String(r._originalId));if(ix>=0)arr[ix]=v;else arr.unshift(v);localStorage.setItem(RBK,JSON.stringify(arr))}else{const arr=readArr(FK);arr.unshift(v);localStorage.setItem(FK,JSON.stringify(arr))}m.remove();renderFinal()};
  (r?.items||[]).forEach(i=>LRXFinal.row(i.type,i.ref,i.qty));if(!r)LRXFinal.row();
 }
 window.LRXFinal={
@@ -3624,34 +3625,26 @@ const POS={
 
   // Return every sellable recipe from either canonical recipe store.
   recipes(){
+    // POS must use the same complete recipe population restored in Recetas.
+    // Keep every stored recipe record; never deduplicate by name.
     const finals=this.read('lrx_finalrecipes_v3',[]);
     const book=this.read('lrx_recipebook_v1',[]);
     const out=[];
-    const seen=new Set();
-
-    const add=(r,source)=>{
-      if(!r)return;
-      const name=String(r.name||r.recipeName||'').trim();
+    const add=(r,source,idx)=>{
+      if(!r||typeof r!=='object')return;
+      const name=String(r.name||r.recipeName||r.title||'').trim();
       if(!name)return;
-
-      const id=String(r.id??(source+'_'+name));
       const type=this.norm(r.type);
-      if(source==='book' && ['pre','prep','preelaborado','pre-elaborado','pre elaborado'].includes(type))return;
-
-      const items=(r.items||[]).map(i=>{
-        const ref=i.ref??i.ingredientId??i.productId;
-        const itemType=i.type==='prep'?'prep':'ingredient';
-        return {type:itemType,ref,ingredientId:i.ingredientId??ref,qty:this.num(i.qty)};
-      }).filter(i=>i.ref!==undefined&&i.ref!==null&&String(i.ref)!==''&&i.qty>0);
-
-      if(!items.length)return;
-
-      // Prefer a final recipe already present; otherwise use the recipe-book record.
-      const key=this.norm(name);
-      if(seen.has(key))return;
-      seen.add(key);
+      if(['pre','prep','preelaborado','pre-elaborado','pre elaborado'].includes(type))return;
+      const raw=(r.items||r.ingredients||r.components||r.recipeItems||[]);
+      const items=Array.isArray(raw)?raw.map(i=>{
+        const ref=i?.ref??i?.ingredientId??i?.productId??i?.id;
+        return {type:i?.type==='prep'?'prep':'ingredient',ref,ingredientId:i?.ingredientId??ref,qty:this.num(i?.qty??i?.quantity),productName:i?.productName||i?.product||i?.ingredientName||i?.name||''};
+      }).filter(i=>i.ref!==undefined&&i.ref!==null&&String(i.ref)!==''&&i.qty>0):[];
       out.push({
-        id:r.id??(source+'_'+Date.now()+'_'+out.length),
+        ...r,
+        id:source+':'+idx+':'+String(r.id??idx),
+        _originalId:r.id,
         name,
         category:r.category||r.menuCategory||'Menú',
         salePrice:this.num(r.salePrice??r.price),
@@ -3660,10 +3653,8 @@ const POS={
         items
       });
     };
-
-    finals.forEach(r=>add(r,'final'));
-    book.forEach(r=>add(r,'book'));
-
+    finals.forEach((r,i)=>add(r,'final',i));
+    book.forEach((r,i)=>add(r,'book',i));
     return out;
   },
 
@@ -3788,12 +3779,12 @@ const POS={
 
     const groups={};
     filtered.forEach(r=>{
-      const g=r.category||'Menú';
+      const g=String(r.department||r.category||'Sin departamento').trim()||'Sin departamento';
       (groups[g]||(groups[g]=[])).push(r);
     });
 
     box.innerHTML=Object.entries(groups).map(([g,rs])=>
-      '<h3>'+this.esc(g)+'</h3>'+
+      '<h3>'+this.esc(g)+' <small style="font-weight:500;opacity:.65">('+rs.length+')</small></h3>'+
       rs.map(r=>
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #ddd;padding:12px 0">'+
           '<div style="min-width:0"><strong>'+this.esc(r.name)+'</strong><br><small>'+this.money(r.salePrice)+'</small></div>'+
@@ -6194,37 +6185,12 @@ window.LRXMenuPlatformBridge={refresh:inject};
 })();
 </script>
 
-<script>
-(function(){
-  function safe(k){try{const v=JSON.parse(localStorage.getItem(k)||'null');return v}catch(e){return null}}
-  function arrCount(v){return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0)}
-  function names(v){if(!Array.isArray(v))return [];return v.map(x=>String(x?.name||x?.recipeName||x?.title||'')).filter(Boolean)}
-  function diagnose(){
-    const keys=['lrx_finalrecipes_v3','lrx_recipebook_v1','lrx_recipes','LRX_FINAL_STATE_V1','lrx_preparations_v2','lrx_ingredients_v1'];
-    let rows=[];
-    keys.forEach(k=>{
-      const v=safe(k); let c=Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:0);
-      let ns=names(v); if(k==='LRX_FINAL_STATE_V1'&&v&&typeof v==='object'){
-        const candidates=['finals','recipes','finalRecipes','recipeBook','book','items','data'];
-        candidates.forEach(p=>{if(Array.isArray(v[p])) ns=ns.concat(names(v[p]));});
-      }
-      rows.push({k,c,ns:[...new Set(ns)]});
-    });
-    const allKeys=Object.keys(localStorage).filter(k=>/recipe|receta|final|book/i.test(k));
-    let out='<h2 style="margin:0 0 10px">🔎 Diagnóstico de recetas</h2><p style="margin:0 0 12px;color:#667085">Lectura únicamente. No modifica ni borra datos.</p>';
-    out+='<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Registro</th><th style="padding:8px;border-bottom:1px solid #ddd">Cantidad</th></tr>';
-    rows.forEach(r=>out+=`<tr><td style="padding:8px;border-bottom:1px solid #eee">${r.k}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:center;font-weight:700">${r.c}</td></tr>`);
-    out+='</table></div>';
-    out+='<h3 style="margin:16px 0 8px">Claves relacionadas encontradas</h3><div style="font-size:13px;line-height:1.5">'+(allKeys.length?allKeys.join('<br>'):'Ninguna')+'</div>';
-    rows.forEach(r=>{if(r.ns.length) out+=`<h3 style="margin:16px 0 8px">Nombres en ${r.k} (${r.ns.length})</h3><div style="font-size:13px;line-height:1.5">${r.ns.map((n,i)=>`${i+1}. ${n}`).join('<br>')}</div>`});
-    let m=document.getElementById('lrxDiagModal'); if(m)m.remove();
-    m=document.createElement('div');m.id='lrxDiagModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px';
-    m.innerHTML='<div style="background:#fff;border-radius:18px;max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:20px;font-family:system-ui;color:#172033"><button id="lrxDiagClose" style="float:right;border:0;border-radius:10px;padding:8px 12px;font-weight:700">✕</button>'+out+'</div>';
-    document.body.appendChild(m);document.getElementById('lrxDiagClose').onclick=()=>m.remove();
-  }
-  function install(){if(document.getElementById('lrxDiagBtn'))return;let b=document.createElement('button');b.id='lrxDiagBtn';b.type='button';b.textContent='🔎 Diagnóstico de recetas';b.style.cssText='position:fixed;right:14px;bottom:18px;z-index:999998;background:#c72d70;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.18)';b.onclick=diagnose;document.body.appendChild(b)}
-  // FIX 11: diagnostic tool retained internally but hidden from normal UI.
-})();
-</script>
+
+<style>
+/* POS menu: keep the screen compact while allowing all recipes to be browsed */
+#posMenu{max-height:560px;overflow-y:auto;overflow-x:hidden;padding-right:6px;-webkit-overflow-scrolling:touch}
+#posMenu h3{position:sticky;top:0;z-index:2;background:#fff;padding:8px 0;margin:0;font-size:16px}
+@media(max-width:600px){#posMenu{max-height:500px}#posMenu>div{padding:10px 0!important}}
+</style>
 </body>
 </html>
