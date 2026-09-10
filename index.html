@@ -816,6 +816,7 @@ function updateUIImmediately(){
   try{ if(typeof reloadPersistentState==="function") reloadPersistentState(); }catch(e){}
   try{ if(typeof fillCats==="function") fillCats(); }catch(e){}
   try{ if(typeof renderProducts==="function") renderProducts(); }catch(e){}
+  try{ if(typeof renderIngredients==="function") renderIngredients(); }catch(e){}
   try{ if(typeof renderMovements==="function") renderMovements(); }catch(e){}
   try{ if(typeof renderPurchases==="function") renderPurchases(); }catch(e){}
   try{ if(typeof renderRecipes==="function") renderRecipes(); }catch(e){}
@@ -5210,5 +5211,143 @@ window.LRXMenuPlatformBridge={refresh:inject};
   window.addEventListener('lrx:sale-saved',refreshAfterSale);
 })();
 </script>
+
+<script>
+/* FIX 23 — Ingredients catalog + product import
+   Restores the missing LRXIng API used by the Ingredients screen.
+   Canonical storage: lrx_ingredients_v1. Products remain in lrx_products.
+*/
+(function(){
+  'use strict';
+  const IK='lrx_ingredients_v1';
+  const read=(k,d=[])=>{try{const v=JSON.parse(localStorage.getItem(k)||JSON.stringify(d));return v}catch(e){return d}};
+  const arr=(k)=>{const v=read(k,[]);return Array.isArray(v)?v:[]};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const money=v=>'$'+(Number(v)||0).toFixed(4);
+  const norm=v=>String(v??'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+  function products(){return arr('lrx_products')}
+  function ingredients(){return arr(IK)}
+  function productFor(i){
+    const ps=products();
+    if(!i)return null;
+    let p=ps.find(x=>String(x.id)===String(i.productId));
+    if(p)return p;
+    const n=norm(i.productName||i.product||i.name);
+    return n?ps.find(x=>norm(x.name)===n)||null:null;
+  }
+  function unitCost(i,p){
+    if(!p)return Number(i.costPerUnit)||0;
+    try{
+      if(window.LRXUnits&&typeof window.LRXUnits.costPerUsage==='function'){
+        return Number(window.LRXUnits.costPerUsage({unit:i.unit||p.unit},p))||0;
+      }
+    }catch(e){}
+    return Number(i.costPerUnit??p.cost)||0;
+  }
+  function render(){
+    const rows=ingredients();
+    const linked=rows.filter(i=>!!productFor(i));
+    const withCost=rows.filter(i=>Number(unitCost(i,productFor(i)))>0);
+    const c=document.getElementById('ingCount');
+    const cc=document.getElementById('ingCostCount');
+    const cl=document.getElementById('ingLinkedCount');
+    const tb=document.getElementById('ingredientRows');
+    if(c)c.textContent=rows.length;
+    if(cc)cc.textContent=withCost.length;
+    if(cl)cl.textContent=linked.length;
+    if(tb){
+      tb.innerHTML=rows.map(i=>{
+        const p=productFor(i), cost=unitCost(i,p);
+        return `<tr>
+          <td><b>${esc(i.name)}</b>${p?`<br><small>Producto: ${esc(p.name)}</small>`:''}</td>
+          <td>${esc(i.category||'')}</td>
+          <td>${esc(i.unit||'unidad')}</td>
+          <td>${money(cost)}</td>
+          <td>${p?`✅ ${esc(p.name)}${Number(p.stock||0)>0?`<br><small>Stock: ${Number(p.stock||0)}</small>`:''}`:'— Sin vínculo'}</td>
+          <td><button type="button" onclick="LRXIng.edit('${esc(i.id)}')">✏️</button>
+              <button type="button" onclick="LRXIng.del('${esc(i.id)}')">🗑️</button></td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6">No hay ingredientes registrados. Usa “Importar productos como ingredientes” o “Nuevo ingrediente”.</td></tr>';
+    }
+  }
+  function open(){
+    const cats=(typeof window.cats!=='undefined'&&Array.isArray(window.cats)?window.cats:['Carnes','Pollo','Mariscos','Vegetales','Frutas','Lácteos','Tortillas','Secos','Salsas','Especias','Bebidas','Desechables','Limpieza','Otros']);
+    const ps=products();
+    show(`<h2>Nuevo ingrediente</h2>
+      <div class="form">
+        <label>Nombre<input id="ingName" placeholder="Ej. Cilantro"></label>
+        <label>Categoría<select id="ingCat"><option value="">Sin categoría</option>${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select></label>
+        <label>Unidad de uso<input id="ingUnit" placeholder="oz, lb, kg, unidad..."></label>
+        <label>Producto de inventario vinculado<select id="ingProduct"><option value="">— Sin vínculo —</option>${ps.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
+        <label>Costo por unidad de uso<input id="ingCost" type="number" step="0.0001" min="0" placeholder="0.0000"></label>
+      </div><br>
+      <button class="primary" type="button" onclick="LRXIng.save()">Guardar ingrediente</button>
+      <button type="button" onclick="closeModal()">Cancelar</button>`);
+  }
+  function save(){
+    const name=(document.getElementById('ingName')?.value||'').trim();
+    if(!name)return alert('Escribe el nombre del ingrediente.');
+    let a=ingredients();
+    if(a.some(x=>norm(x.name)===norm(name)))return alert('Ese ingrediente ya existe.');
+    const pid=document.getElementById('ingProduct')?.value||null;
+    const p=products().find(x=>String(x.id)===String(pid));
+    const unit=(document.getElementById('ingUnit')?.value||p?.unit||'unidad').trim();
+    let cpu=Number(document.getElementById('ingCost')?.value)||0;
+    const obj={id:'ING-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name,category:document.getElementById('ingCat')?.value||'',unit,costPerUnit:cpu,productId:p?.id||null,productName:p?.name||''};
+    if(p && !cpu)cpu=unitCost(obj,p),obj.costPerUnit=cpu;
+    a.push(obj);write(IK,a);closeModal();render();
+    try{if(typeof logAudit==='function')logAudit('Ingrediente creado',name)}catch(e){}
+  }
+  function edit(id){
+    const i=ingredients().find(x=>String(x.id)===String(id)); if(!i)return;
+    const p=productFor(i);
+    show(`<h2>Editar ingrediente</h2><div class="form">
+      <label>Nombre<input id="eIngName" value="${esc(i.name)}"></label>
+      <label>Categoría<input id="eIngCat" value="${esc(i.category||'')}"></label>
+      <label>Unidad de uso<input id="eIngUnit" value="${esc(i.unit||'unidad')}"></label>
+      <label>Producto vinculado<select id="eIngProduct"><option value="">— Sin vínculo —</option>${products().map(x=>`<option value="${esc(x.id)}" ${p&&String(p.id)===String(x.id)?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+      <label>Costo por unidad de uso<input id="eIngCost" type="number" step="0.0001" min="0" value="${esc(i.costPerUnit||0)}"></label>
+    </div><br><button class="primary" type="button" onclick="LRXIng.update('${esc(id)}')">Guardar cambios</button> <button type="button" onclick="closeModal()">Cancelar</button>`);
+  }
+  function update(id){
+    const a=ingredients(),i=a.find(x=>String(x.id)===String(id));if(!i)return;
+    const name=(document.getElementById('eIngName')?.value||'').trim();if(!name)return alert('Escribe el nombre.');
+    const pid=document.getElementById('eIngProduct')?.value||null,p=products().find(x=>String(x.id)===String(pid));
+    i.name=name;i.category=(document.getElementById('eIngCat')?.value||'').trim();i.unit=(document.getElementById('eIngUnit')?.value||p?.unit||'unidad').trim();i.productId=p?.id||null;i.productName=p?.name||'';
+    i.costPerUnit=Number(document.getElementById('eIngCost')?.value)||0;if(p&&!i.costPerUnit)i.costPerUnit=unitCost(i,p);
+    write(IK,a);closeModal();render();
+  }
+  function del(id){
+    const a=ingredients(),i=a.find(x=>String(x.id)===String(id));if(!i)return;
+    if(!confirm(`¿Eliminar el ingrediente "${i.name}"?`))return;
+    write(IK,a.filter(x=>String(x.id)!==String(id)));render();
+  }
+  function seedFromProducts(){
+    const ps=products();
+    if(!ps.length)return alert('No hay productos registrados en Inventario para importar.');
+    const a=ingredients(),seen=new Set(a.map(x=>norm(x.name)));
+    let added=0;
+    ps.forEach(p=>{
+      const n=norm(p.name);if(!n||seen.has(n))return;
+      const obj={id:'ING-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name:p.name,category:p.category||'',unit:p.unit||'unidad',costPerUnit:0,productId:p.id,productName:p.name};
+      obj.costPerUnit=unitCost(obj,p);
+      a.push(obj);seen.add(n);added++;
+    });
+    write(IK,a);render();
+    alert(added?`Se importaron ${added} producto(s) como ingrediente(s). Los existentes no se duplicaron.`:'No había productos nuevos para importar.');
+  }
+  window.LRXIng={open,save,edit,update,del,seedFromProducts,render,ingredients};
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(render,50));
+})();
+</script>
+
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+
 </body>
 </html>
