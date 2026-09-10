@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v57-fix23';
+const CACHE='lrx-pro-v57-cloud-sync-1';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
