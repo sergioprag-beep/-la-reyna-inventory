@@ -5528,11 +5528,23 @@ function seedOfficialRecipes(){
     for(const n of names){const nt=tokens(n);const hit=ings.find(x=>{const xt=tokens(x.name);return nt.length>0 && nt.every(t=>xt.includes(t));});if(hit)return hit;}
     return null;
   };
+  const ensureProduct=(names,canonical,category,unit,costPerUnit)=>{
+    let p=findProduct(...names);
+    if(p)return p;
+    p={id:'prod-auto-'+norm(canonical).replace(/[^a-z0-9]+/g,'-'),name:canonical,category:category||'Insumos',supplier:'',sku:'',brand:'',packaging:'',packQty:1,unit,cost:Number(costPerUnit)||0,stock:0,minStock:0,emergencyStock:0,active:true};
+    products.push(p);
+    return p;
+  };
   const ensureIng=(names,canonical,category,unit,costPerUnit)=>{
     let x=findIng(...names);
-    if(x)return x;
-    const product=findProduct(...names);
-    x={id:'ing-auto-'+norm(canonical).replace(/[^a-z0-9]+/g,'-'),name:canonical,category,unit,costPerUnit,productId:product?.id||null,productName:product?.name||''};
+    const product=ensureProduct(names,canonical,category,unit,costPerUnit);
+    if(x){
+      if(!x.productId || !products.some(p=>String(p.id)===String(x.productId))){x.productId=product.id;x.productName=product.name;}
+      if(!x.unit)x.unit=unit;
+      if(x.costPerUnit==null)x.costPerUnit=costPerUnit;
+      return x;
+    }
+    x={id:'ing-auto-'+norm(canonical).replace(/[^a-z0-9]+/g,'-'),name:canonical,category,unit,costPerUnit,productId:product.id,productName:product.name};
     ings.push(x);
     return x;
   };
@@ -5551,6 +5563,7 @@ function seedOfficialRecipes(){
   const salsaChunky=ensureIng(['Salsa Chunky','Chunky Salsa'],'Salsa Chunky','Salsas','oz',0.18);
   const salsaJalapeno=ensureIng(['Salsa Jalapeno','Salsa Jalapeño','Jalapeno Salsa'],'Salsa Jalapeno','Salsas','oz',0.18);
   const salsaMorita=ensureIng(['Salsa Morita','Salsa morita','Morita Salsa'],'Salsa Morita','Salsas','oz',0.12);
+  write('lrx_products',products);
   write(IK,ings);
   const ing=(x,qty,unit)=>({type:'ingredient',ref:x.id,ingredientId:x.id,qty,unit});
   // Pico de Gallo — pre-elaborado, rendimiento 9 lb.

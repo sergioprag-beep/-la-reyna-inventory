@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v63-nested-prep-units';
+const CACHE='lrx-pro-v64-auto-link-products';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
