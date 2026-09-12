@@ -2548,7 +2548,10 @@ function calc(){
  const m=current(),sales=read('lrx_sales_v5'),purchases=read('lrx_purchases_v8'),labor=read('lrx_labor_v18'),opex=read('lrx_opex_v20'),budget=read('lrx_budgets_v31'),recipes=read('lrx_finalrecipes_v3');
  let s=0,o=0,p=0,l=0,b=0,c=0,orders=0,units=0;
  const rm=new Map((Array.isArray(recipes)?recipes:[]).map(x=>[String(x.id),x]));
- (Array.isArray(sales)?sales:[]).forEach(x=>{if(month(x.date||x.rawDate||x.createdAt)!==m)return;const q=num(x,'quantity','qty')||1;const price=num(x,'salePrice','unitPrice','price');s+=num(x,'revenue','total','amount')||q*price;orders++;units+=q;const rid=x.recipeId||x.finalRecipeId||x.recipe;const r=rm.get(String(rid));c+=q*(num(x,'unitCost','costPerUnit')||num(r||{},'cost','recipeCost','totalCost','unitCost'))});
+ let costRows=[];
+ try{ if(window.LRXFoodCostFixed&&typeof window.LRXFoodCostFixed.recipes==='function') costRows=window.LRXFoodCostFixed.recipes()||[]; }catch(e){ costRows=[]; }
+ const cm=new Map(); costRows.forEach(r=>{if(r?.id!=null)cm.set('id:'+String(r.id),Number(r.cost)||0);const n=String(r?.name||'').trim().toLowerCase();if(n)cm.set('name:'+n,Number(r.cost)||0)});
+ (Array.isArray(sales)?sales:[]).forEach(x=>{if(month(x.date||x.rawDate||x.createdAt)!==m)return;const q=num(x,'quantity','qty')||1;const price=num(x,'salePrice','unitPrice','price');s+=num(x,'revenue','total','amount')||q*price;orders++;units+=q;const rid=x.recipeId||x.finalRecipeId||x.recipe;const r=rm.get(String(rid));let unitCost=num(x,'unitCost','costPerUnit');if(!(unitCost>0))unitCost=cm.get('id:'+String(rid))||cm.get('name:'+String(x.recipeName||x.name||r?.name||'').trim().toLowerCase())||num(r||{},'cost','recipeCost','totalCost','unitCost');c+=q*unitCost});
  (Array.isArray(purchases)?purchases:[]).forEach(x=>{if(month(x.rawDate||x.date)===m)p+=num(x,'total')||num(x,'qty','quantity')*num(x,'unitCost','costPerUnit')});
  const laborRows=Array.isArray(labor)?labor:(labor&&Array.isArray(labor.entries)?labor.entries:[]);
  laborRows.forEach(x=>{if(month(x.date)===m){const h=Number(x.hours)||0,r=Number(x.rate)||0;l+=(x.cost!=null||x.laborCost!=null||x.total!=null)?(Number(x.cost??x.laborCost??x.total)||0):(Math.min(h,40)*r+Math.max(0,h-40)*r*1.5+(Number(x.otherCost)||0))}});
