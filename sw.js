@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v61-recipes-seed-fix';
+const CACHE='lrx-pro-v58-2-recipe-cost-fix';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
