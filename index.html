@@ -5472,10 +5472,10 @@ function render(){
  const finals=read(FK,[]), preps=read(PK,[]), all=[];
  preps.forEach(r=>all.push({...r,type:'pre'})); finals.forEach(r=>all.push({...r,type:'final'}));
  const f=finals.length, p=preps.length;
- const costs=finals.map(r=>{const c=num(r.cost)||calcCost(r.items);const price=num(r.salePrice??r.price);return price>0?c/price*100:0});
+ const costs=finals.map(r=>{const lot=num(r.cost)||calcCost(r.items);const yieldQty=Math.max(1,num(r.yieldQty||r.yield||1));const c=lot/yieldQty;const price=num(r.salePrice??r.price);return price>0?c/price*100:0});
  const fc=costs.length?costs.reduce((a,b)=>a+b,0)/costs.length:0;
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v}; set('prepCount',p);set('finalCount',f);set('recipeFcAvg',fc.toFixed(1)+'%');
- tb.innerHTML=all.map(r=>{const c=num(r.cost)||calcCost(r.items), price=num(r.salePrice??r.price), food=price>0?c/price*100:0;return `<tr><td>${r.type==='pre'?'Pre-elaborado':'Final'}</td><td><b>${esc(r.name)}</b></td><td>${num(r.yieldQty||r.yield||1)} ${esc(r.yieldUnit||'orden')}</td><td>${money(c)}</td><td>${food.toFixed(1)}%</td><td>—</td><td><button onclick="LRXRec.edit('${esc(r.id)}')">✏️</button> <button onclick="LRXRec.del('${esc(r.id)}')">🗑️</button></td></tr>`}).join('')||'<tr><td colspan="7">No hay recetas todavía.</td></tr>';
+ tb.innerHTML=all.map(r=>{const lot=num(r.cost)||calcCost(r.items), yieldQty=Math.max(1,num(r.yieldQty||r.yield||1)), c=lot/yieldQty, price=num(r.salePrice??r.price), food=price>0&&r.type==='final'?c/price*100:0;return `<tr><td>${r.type==='pre'?'Pre-elaborado':'Final'}</td><td><b>${esc(r.name)}</b></td><td>${yieldQty} ${esc(r.yieldUnit||'orden')}</td><td>${money(c)}</td><td>${r.type==='final'?food.toFixed(1)+'%':'—'}</td><td>—</td><td><button onclick="LRXRec.edit('${esc(r.id)}')">✏️</button> <button onclick="LRXRec.del('${esc(r.id)}')">🗑️</button></td></tr>`}).join('')||'<tr><td colspan="7">No hay recetas todavía.</td></tr>';
 }
 function open(existing){
  let m=document.getElementById('lrxRecipeModal');if(m)m.remove();
