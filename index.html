@@ -5471,6 +5471,54 @@ function calcCost(items){
   const ings=read(IK,[]), preps=read(PK,[]); let c=0;
   (items||[]).forEach(i=>{const q=num(i.qty);if(!q)return;if(i.type==='prep'){const r=preps.find(x=>String(x.id)===String(i.ref));c+=q*(num(r?.costPerUnit)||num(r?.cost)||0)}else{const r=ings.find(x=>String(x.id)===String(i.ref));c+=q*unitCost(r)}});return c;
 }
+function seedOfficialRecipes(){
+  const norm=x=>String(x||'').trim().toLowerCase();
+  const ings=read(IK,[]), preps=read(PK,[]), finals=read(FK,[]);
+  const findIng=(...names)=>ings.find(x=>names.some(n=>norm(x.name)===norm(n)));
+  const missing=[];
+  const ing=(names,qty)=>{const x=findIng(...names);if(!x){missing.push(names[0]);return null}return {type:'ingredient',ref:x.id,qty};};
+  const prepItem=(names,qty)=>{const x=preps.find(x=>names.some(n=>norm(x.name)===norm(n)));if(!x){missing.push(names[0]);return null}return {type:'prep',ref:x.id,qty};};
+  // Pico de Gallo — pre-elaborado, rendimiento 9 lb.
+  if(!preps.some(x=>norm(x.name)==='pico de gallo')){
+    const items=[
+      ing(['White Onion','Cebolla blanca'],3),
+      ing(['Tomate plum','Plum Tomato'],5),
+      ing(['Cilantro'],1),
+      ing(['Lime','Limón','Limon'],5),
+      ing(['White salt','Sal blanca','Salt','Sal'],6),
+      ing(['Black pepper','Pimienta negra'],3)
+    ];
+    if(items.every(Boolean)) preps.unshift({id:'prep-pico-420',type:'pre',name:'Pico de Gallo',category:'Salsas / Complementos',yieldQty:9,yieldUnit:'lb',salePrice:0,cost:15.53,items});
+  }
+  const pico=preps.find(x=>norm(x.name)==='pico de gallo');
+  // Guacamole — pre-elaborado, rendimiento 6 lb (8 x 12 oz), costo implícito $13.12.
+  if(!preps.some(x=>norm(x.name)==='guacamole')){
+    const items=[
+      ing(['Avocado Hass','Aguacate Hass'],10),
+      pico?{type:'prep',ref:pico.id,qty:30}:null,
+      ing(['Lime','Limón','Limon'],4),
+      ing(['White salt','Sal blanca','Salt','Sal'],4),
+      ing(['Cilantro'],3)
+    ];
+    if(items.every(Boolean)) preps.unshift({id:'prep-guacamole-421',type:'pre',name:'Guacamole',category:'Entradas / Aperitivos',yieldQty:6,yieldUnit:'lb',salePrice:0,cost:13.12,items});
+  }
+  const guac=preps.find(x=>norm(x.name)==='guacamole');
+  // Guacamole & Chips — receta final, 1 porción. Salsas se cargan solo si existen como ingredientes.
+  if(!finals.some(x=>norm(x.name)==='guacamole & chips')){
+    const items=[
+      guac?{type:'prep',ref:guac.id,qty:0.75}:null,
+      ing(['Flour tortilla 10','Tortilla de harina 10','Tortilla harina 10'],1),
+      ing(['Yellow chips 4.5 oz','Chips amarillo 4.5 oz','Yellow chips','Chips amarillo'],4.5),
+      ing(['Salsa Chunky','Salsa chunky'],3),
+      ing(['Salsa Jalapeno','Salsa Jalapeño','Salsa jalapeno'],3),
+      ing(['Salsa Morita','Salsa morita'],3)
+    ];
+    if(items.every(Boolean)) finals.unshift({id:'final-guacamole-chips-421',type:'final',name:'Guacamole & Chips',category:'Entradas / Aperitivos',yieldQty:1,yieldUnit:'porción',salePrice:0,cost:3.74,items});
+  }
+  write(PK,preps); write(FK,finals);
+  if(missing.length && !window.__lrxRecipeSeedWarned){window.__lrxRecipeSeedWarned=true;console.warn('Ingredientes no encontrados para cargar recetas:',[...new Set(missing)])}
+}
+
 function render(){
  const tb=document.getElementById('recipeBookRows'); if(!tb)return;
  const finals=read(FK,[]), preps=read(PK,[]), all=[];
@@ -5507,7 +5555,7 @@ function open(existing){
  m.querySelector('#rxSave').onclick=()=>{const name=m.querySelector('#rxName').value.trim();if(!name)return alert('El nombre de la receta es obligatorio.');const items=[...tbody.children].map(tr=>{const v=tr.querySelector('.rxRef').value,q=num(tr.querySelector('.rxQty').value);if(!v||q<=0)return null;return {type:v.startsWith('prep:')?'prep':'ingredient',ref:v.split(':').slice(1).join(':'),qty:q}}).filter(Boolean);if(!items.length)return alert('Agrega al menos un ingrediente.');const type=m.querySelector('#rxType').value;const key=type==='pre'?PK:FK;let arr=read(key,[]);if(existing){const idx=arr.findIndex(x=>String(x.id)===String(existing.id));if(idx<0)return alert('No encontré la receta.');arr[idx]={...arr[idx],name,category:m.querySelector('#rxCat').value.trim(),yieldQty:num(m.querySelector('#rxYield').value)||1,yieldUnit:m.querySelector('#rxYieldUnit').value.trim()||'orden',salePrice:num(m.querySelector('#rxPrice').value),items,type};}else{arr.unshift({id:Date.now(),type,name,category:m.querySelector('#rxCat').value.trim(),yieldQty:num(m.querySelector('#rxYield').value)||1,yieldUnit:m.querySelector('#rxYieldUnit').value.trim()||'orden',salePrice:num(m.querySelector('#rxPrice').value),items});}write(key,arr);m.remove();render();alert(existing?'Receta actualizada correctamente.':'Receta creada correctamente.');};
 }
 window.LRXRec={open:()=>open(null),edit:id=>{const r=read(FK,[]).find(x=>String(x.id)===String(id))||read(PK,[]).find(x=>String(x.id)===String(id));if(r)open(r)},del:id=>{if(!confirm('¿Eliminar esta receta?'))return;let a=read(FK,[]),n=a.filter(x=>String(x.id)!==String(id));if(n.length!==a.length)write(FK,n);else{a=read(PK,[]);write(PK,a.filter(x=>String(x.id)!==String(id)))}render()}};
-document.addEventListener('DOMContentLoaded',render);window.addEventListener('pageshow',render);
+document.addEventListener('DOMContentLoaded',()=>{seedOfficialRecipes();render()});window.addEventListener('pageshow',render);
 })();
 </script>
 <style>

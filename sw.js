@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v60-pos-discount-fix-1';
+const CACHE='lrx-pro-v60-recipes-loaded';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
