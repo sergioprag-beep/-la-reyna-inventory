@@ -648,7 +648,7 @@ Seguridad: RLS activado; cada usuario solo puede leer/escribir su propia fila.</
 <p>Consulta y cierra un mes sin borrar ni modificar los registros originales.</p>
 <label>Mes</label><input id="closeMonth" type="month">
 <div style="margin-top:14px">
-<button id="closeCalcBtn" class="primary" type="button" onclick="LRXClose.calculate()">🔄 Calcular mes</button>
+<button class="primary" type="button" onclick="LRXClose.calculate()">🔄 Calcular mes</button>
 <button type="button" onclick="LRXClose.close()">🔒 Cerrar mes</button>
 <button type="button" onclick="LRXClose.reopen()">🔓 Reabrir</button>
 <button type="button" onclick="LRXClose.print()">🖨️ Imprimir / PDF</button>
@@ -2548,10 +2548,7 @@ function calc(){
  const m=current(),sales=read('lrx_sales_v5'),purchases=read('lrx_purchases_v8'),labor=read('lrx_labor_v18'),opex=read('lrx_opex_v20'),budget=read('lrx_budgets_v31'),recipes=read('lrx_finalrecipes_v3');
  let s=0,o=0,p=0,l=0,b=0,c=0,orders=0,units=0;
  const rm=new Map((Array.isArray(recipes)?recipes:[]).map(x=>[String(x.id),x]));
- let costRows=[];
- try{ if(window.LRXFoodCostFixed&&typeof window.LRXFoodCostFixed.recipes==='function') costRows=window.LRXFoodCostFixed.recipes()||[]; }catch(e){ costRows=[]; }
- const cm=new Map(); costRows.forEach(r=>{if(r?.id!=null)cm.set('id:'+String(r.id),Number(r.cost)||0);const n=String(r?.name||'').trim().toLowerCase();if(n)cm.set('name:'+n,Number(r.cost)||0)});
- (Array.isArray(sales)?sales:[]).forEach(x=>{if(month(x.date||x.rawDate||x.createdAt)!==m)return;const q=num(x,'quantity','qty')||1;const price=num(x,'salePrice','unitPrice','price');s+=num(x,'revenue','total','amount')||q*price;orders++;units+=q;const rid=x.recipeId||x.finalRecipeId||x.recipe;const r=rm.get(String(rid));let unitCost=num(x,'unitCost','costPerUnit');if(!(unitCost>0))unitCost=cm.get('id:'+String(rid))||cm.get('name:'+String(x.recipeName||x.name||r?.name||'').trim().toLowerCase())||num(r||{},'cost','recipeCost','totalCost','unitCost');c+=q*unitCost});
+ (Array.isArray(sales)?sales:[]).forEach(x=>{if(month(x.date||x.rawDate||x.createdAt)!==m)return;const q=num(x,'quantity','qty')||1;const price=num(x,'salePrice','unitPrice','price');s+=num(x,'revenue','total','amount')||q*price;orders++;units+=q;const rid=x.recipeId||x.finalRecipeId||x.recipe;const r=rm.get(String(rid));c+=q*(num(x,'unitCost','costPerUnit')||num(r||{},'cost','recipeCost','totalCost','unitCost'))});
  (Array.isArray(purchases)?purchases:[]).forEach(x=>{if(month(x.rawDate||x.date)===m)p+=num(x,'total')||num(x,'qty','quantity')*num(x,'unitCost','costPerUnit')});
  const laborRows=Array.isArray(labor)?labor:(labor&&Array.isArray(labor.entries)?labor.entries:[]);
  laborRows.forEach(x=>{if(month(x.date)===m){const h=Number(x.hours)||0,r=Number(x.rate)||0;l+=(x.cost!=null||x.laborCost!=null||x.total!=null)?(Number(x.cost??x.laborCost??x.total)||0):(Math.min(h,40)*r+Math.max(0,h-40)*r*1.5+(Number(x.otherCost)||0))}});
@@ -2560,9 +2557,6 @@ function calc(){
  const gross=s-c,net=gross-l-o;
  const set=(id,v)=>{let e=document.getElementById(id);if(e)e.textContent=v};
  set('closeSales',money(s));set('closePurchases',money(p));set('closeCOGS',money(c));set('closeLabor',money(l));set('closeOpex',money(o));set('closeBudget',money(b));set('closeGross',money(gross));set('closeNet',money(net));set('closeSalesMeta',orders+' ventas • '+units+' unidades');
- const stamp=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
- const status=document.getElementById('closeMsg');
- if(status){status.textContent='✅ Cálculo actualizado: '+m+' • '+stamp;status.style.display='block';status.style.fontWeight='700';}
  const rows=[['Ventas',money(s)],['Órdenes',orders],['Unidades vendidas',units],['Compras',money(p)],['Recipe COGS',money(c)],['Food Cost',s?(100*c/s).toFixed(1)+'%':'—'],['Labor',money(l)],['Operating Expenses',money(o)],['Budget',money(b)],['Gross Profit',money(gross)],['Net Profit',money(net)],['Budget vs Actual Opex',money(b-o)]];
  document.getElementById('closeTable').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td><strong>'+r[1]+'</strong></td></tr>').join('');
  let cl=closed().find(x=>x.month===m);set('closeState',cl?'🔒 Cerrado':'🟢 Abierto');
@@ -2573,7 +2567,7 @@ function reopen(){let m=current();if(!closed().some(x=>x.month===m))return alert
 function select(m){document.getElementById('closeMonth').value=m;calc()}
 function csv(){calc();let m=current(),rows=[...document.querySelectorAll('#closeTable tr')],s='Indicador,Resultado\n';rows.forEach(r=>s+='"'+r.children[0].textContent+'","'+r.children[1].textContent+'"\n');let u=URL.createObjectURL(new Blob([s],{type:'text/csv'})),a=document.createElement('a');a.href=u;a.download='La_Reyna_Xpress_Cierre_'+m+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
 function print(){calc();let w=window.open('','_blank');if(!w)return;w.document.write('<html><body><h1>La Reyna Xpress — Cierre Mensual</h1><h2>'+current()+'</h2><table border="1" cellpadding="8">'+document.getElementById('closeTable').innerHTML+'</table></body></html>');w.document.close();w.print()}
-window.LRXClose={calculate:function(){const b=document.getElementById('closeCalcBtn');if(b){b.disabled=true;b.textContent='⏳ Calculando…';}try{calc()}finally{if(b){setTimeout(()=>{b.disabled=false;b.textContent='🔄 Calcular mes'},250)}}},close:closeMonth,reopen,select,exportCSV:csv,print};
+window.LRXClose={calculate:calc,close:closeMonth,reopen,select,exportCSV:csv,print};
 document.addEventListener('DOMContentLoaded',()=>{let e=document.getElementById('closeMonth');if(e){e.value=month(new Date());e.addEventListener('change',calc)}calc()});
 window.addEventListener('pageshow',()=>setTimeout(calc,100));
 })();
@@ -2863,9 +2857,12 @@ const POS={
     try{if(typeof window.LRXRefreshUnifiedProfitability==='function')window.LRXRefreshUnifiedProfitability()}catch(e){console.error(e)}
     try{if(window.LRXSalesAnalytics&&typeof window.LRXSalesAnalytics.render==='function')window.LRXSalesAnalytics.render()}catch(e){console.error(e)}
     this.cart=[];this.renderCart();
-    const msg=document.getElementById('posMsg');if(msg)msg.innerHTML='✅ Venta guardada. Inventario actualizado. Descuento: '+this.money(discount)+' • Total: '+this.money(subtotal-discount);
+    // Refrescar primero. Algunos módulos pueden reconstruir el DOM del POS;
+    // por eso el mensaje de confirmación debe escribirse AL FINAL para no
+    // quedar con datos de una venta anterior.
     try{if(typeof window.refresh==='function')window.refresh()}catch(e){} try{if(typeof window.render==='function')window.render()}catch(e){}
     try{window.LRXRefreshAfterSale&&window.LRXRefreshAfterSale()}catch(e){console.error(e)}
+    const msg=document.getElementById('posMsg');if(msg)msg.innerHTML='✅ Venta guardada. Inventario actualizado. Descuento: '+this.money(discount)+' • Total: '+this.money(subtotal-discount);
   },
 
   init(){
