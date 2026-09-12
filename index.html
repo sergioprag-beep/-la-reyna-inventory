@@ -4750,7 +4750,23 @@ const sales=()=>read('lrx_sales_v5');
 const today=()=>new Date().toISOString().slice(0,10);
 function resolveProduct(a){const ps=products();if(!a)return null;let p=ps.find(x=>String(x.id)===String(a.productId));if(p)return p;const n=String(a.name||'').trim().toLowerCase();return ps.find(x=>String(x.name||'').trim().toLowerCase()===n)||null}
 function stockFor(use,a,p){return window.LRXUnits&&typeof window.LRXUnits.stockUnitsForUsage==='function'?Number(window.LRXUnits.stockUnitsForUsage(use,a,p)):Number(use||0)}
-function prepCostUnit(p){let c=0;for(const i of (p?.items||[])){const ref=i.ingredientId??i.ref;const a=ings().find(x=>String(x.id)===String(ref));const pr=resolveProduct(a);c+=Number(i.qty||0)*(window.LRXUnits&&a?Number(window.LRXUnits.costPerUsage(a,pr)):Number(a?.costPerUnit||pr?.cost||0))}return c/(Number(p?.yieldQty)||1)}
+function prepCostUnit(p,stack){
+ stack=stack||new Set();if(!p||stack.has(String(p.id)))return 0;stack.add(String(p.id));
+ let c=0;
+ for(const i of (p.items||[])){
+  const qty=Number(i.qty||0);if(qty<=0)continue;
+  const type=String(i.type||'ingredient').toLowerCase();
+  if(type==='prep'||type==='pre'||type==='preparacion'||type==='pre-elaborado'){
+   const ref=i.ref??i.prepId??i.ingredientId;const child=preps().find(x=>String(x.id)===String(ref));if(!child)continue;
+   const childQty=window.LRXUnits?.convert?window.LRXUnits.convert(qty,i.unit||child.yieldUnit||'unidad',child.yieldUnit||'unidad'):qty;
+   c+=Number(childQty??qty)*prepCostUnit(child,stack);
+  }else{
+   const ref=i.ingredientId??i.ref;const a=ings().find(x=>String(x.id)===String(ref));const pr=resolveProduct(a);
+   c+=qty*(window.LRXUnits&&a?Number(window.LRXUnits.costPerUsage(a,pr)):Number(a?.costPerUnit||pr?.cost||0));
+  }
+ }
+ stack.delete(String(p.id));return c/(Number(p.yieldQty)||1);
+}
 function soldPrep(id){return sales().reduce((a,s)=>(s.consumedPreps||[]).reduce((q,x)=>q+(String(x.prepId)===String(id)?Number(x.qty||0):0),a),0)}
 function prepConsumedByProduction(id,excludeId){return read(PK).filter(b=>String(b.id)!==String(excludeId||'')).reduce((a,b)=>(b.consumedPreps||[]).reduce((q,x)=>q+(String(x.prepId)===String(id)?Number(x.qty||0):0),a),0)}
 function prodTotal(id, excludeId){return read(PK).filter(b=>String(b.prepId)===String(id)&&String(b.id)!==String(excludeId||'')).reduce((a,b)=>a+Number(b.qty||0),0)}
@@ -4782,9 +4798,12 @@ function buildConsumption(p,qty,excludeBatchId){
    const prepId=item.ref??item.prepId??item.ingredientId;
    const prep=preps().find(x=>String(x.id)===String(prepId));
    if(!prep)return {ok:false,msg:'Pre-elaborado no encontrado: '+String(prepId)};
+   const prepUnit=prep.yieldUnit||'unidad';
+   const needBase=window.LRXUnits?.convert?window.LRXUnits.convert(usage,item.unit||prepUnit,prepUnit):usage;
+   const need=Number(needBase??usage);
    const available=prepAvailable(prep.id,excludeBatchId);
-   if(available+1e-9<usage)return {ok:false,msg:'Producción insuficiente: '+prep.name+' — disponible '+available.toFixed(3)+'; necesita '+usage.toFixed(3)+' '+(prep.yieldUnit||'unidad')+'. Primero registra producción de '+prep.name+'.'};
-   consumedPreps.push({prepId:prep.id,prepName:prep.name,qty:usage,unit:prep.yieldUnit||'unidad'});
+   if(available+1e-9<need)return {ok:false,msg:'Producción insuficiente: '+prep.name+' — disponible '+available.toFixed(3)+'; necesita '+need.toFixed(3)+' '+prepUnit+'. Primero registra producción de '+prep.name+'.'};
+   consumedPreps.push({prepId:prep.id,prepName:prep.name,qty:need,unit:prepUnit});
    continue;
   }
   const ref=item.ingredientId??item.ref;const a=ings().find(x=>String(x.id)===String(ref));
