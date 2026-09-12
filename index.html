@@ -150,7 +150,7 @@ nav.lrx-compact .lrx-submenu button.active{background:var(--pink);color:#fff}
     <div class="card"><small>Órdenes disponibles</small><div class="metric" id="recipeAvailableTotal">0</div></div>
     <div class="card"><small>Food Cost promedio</small><div class="metric" id="recipeFcAvg">0%</div></div>
   </div>
-  <div style="overflow:auto"><table><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
+  <div style="overflow:auto"><table id="recipeBookTable"><thead><tr><th>Tipo</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Food Cost</th><th>Órdenes disponibles</th><th>Acciones</th></tr></thead><tbody id="recipeBookRows"></tbody></table></div>
 </section>
 
 <section id="movimientos" class="page">
@@ -5508,6 +5508,7 @@ document.addEventListener('DOMContentLoaded',render);window.addEventListener('pa
 </script>
 <style>
 .lrx-rx-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.lrx-rx-grid label{display:flex;flex-direction:column;gap:5px;font-weight:700}.lrx-rx-grid input,.lrx-rx-grid select,.lrx-rx-items input,.lrx-rx-items select{padding:9px;border:1px solid #d0d5dd;border-radius:8px}.lrx-rx-items{width:100%;border-collapse:collapse;margin:10px 0}.lrx-rx-items th,.lrx-rx-items td{padding:8px;border-bottom:1px solid #eee;text-align:left}@media(max-width:800px){.lrx-rx-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.lrx-rx-grid{grid-template-columns:1fr}}
+@media(max-width:700px){#recipeBookTable{min-width:760px}#recipeBookTable th:nth-child(4),#recipeBookTable td:nth-child(4),#recipeBookTable th:nth-child(5),#recipeBookTable td:nth-child(5){display:table-cell !important}}
 </style>
 </script>
 </body>

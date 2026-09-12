@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v59-cloud-sync-3';
+const CACHE='lrx-pro-v60-recetas-fc-fix';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
