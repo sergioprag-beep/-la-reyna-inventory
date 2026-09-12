@@ -5469,33 +5469,57 @@ function unitCost(ing){
 }
 function calcCost(items){
   const ings=read(IK,[]), preps=read(PK,[]); let c=0;
-  (items||[]).forEach(i=>{const q=num(i.qty);if(!q)return;if(i.type==='prep'){const r=preps.find(x=>String(x.id)===String(i.ref));c+=q*(num(r?.costPerUnit)||num(r?.cost)||0)}else{const r=ings.find(x=>String(x.id)===String(i.ref));c+=q*unitCost(r)}});return c;
+  (items||[]).forEach(i=>{const q=num(i.qty);if(!q)return;if(i.type==='prep'){const r=preps.find(x=>String(x.id)===String(i.ref));const batchCost=num(r?.costPerUnit)||num(r?.cost)||0;const y=num(r?.yieldQty)||1;const u=norm(i.unit||r?.yieldUnit||'unidad');if(u==='oz'&&norm(r?.yieldUnit)==='lb')c+=q*(batchCost/(y*16));else c+=q*(batchCost/y);}else{const r=ings.find(x=>String(x.id)===String(i.ref));c+=q*unitCost(r)}});return c;
 }
 function seedOfficialRecipes(){
-  const norm=x=>String(x||'').trim().toLowerCase();
-  const ings=read(IK,[]), preps=read(PK,[]), finals=read(FK,[]);
-  const tokens=x=>norm(x).replace(/[^a-z0-9áéíóúüñ]+/gi,' ').split(/\s+/).filter(Boolean);
-  const findIng=(...names)=>{
-    for(const n of names){const exact=ings.find(x=>norm(x.name)===norm(n));if(exact)return exact;}
-    for(const n of names){
-      const nt=tokens(n);
-      const hit=ings.find(x=>{const xt=tokens(x.name);return nt.length>0 && nt.every(t=>xt.includes(t));});
-      if(hit)return hit;
-    }
+  const norm=x=>String(x||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let ings=read(IK,[]), preps=read(PK,[]), finals=read(FK,[]);
+  const products=read('lrx_products',[]);
+  const tokens=x=>norm(x).replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(Boolean);
+  const findProduct=(...names)=>{
+    for(const n of names){const exact=products.find(x=>norm(x.name)===norm(n));if(exact)return exact;}
+    for(const n of names){const nt=tokens(n);const hit=products.find(x=>{const xt=tokens(x.name);return nt.length>0 && nt.every(t=>xt.includes(t));});if(hit)return hit;}
     return null;
   };
-  const missing=[];
-  const ing=(names,qty)=>{const x=findIng(...names);if(!x){missing.push(names[0]);return null}return {type:'ingredient',ref:x.id,qty};};
-  const prepItem=(names,qty)=>{const x=preps.find(x=>names.some(n=>norm(x.name)===norm(n)));if(!x){missing.push(names[0]);return null}return {type:'prep',ref:x.id,qty};};
+  const findIng=(...names)=>{
+    for(const n of names){const exact=ings.find(x=>norm(x.name)===norm(n));if(exact)return exact;}
+    for(const n of names){const nt=tokens(n);const hit=ings.find(x=>{const xt=tokens(x.name);return nt.length>0 && nt.every(t=>xt.includes(t));});if(hit)return hit;}
+    return null;
+  };
+  const ensureIng=(names,canonical,category,unit,costPerUnit)=>{
+    let x=findIng(...names);
+    if(x)return x;
+    const product=findProduct(...names);
+    x={id:'ing-auto-'+norm(canonical).replace(/[^a-z0-9]+/g,'-'),name:canonical,category,unit,costPerUnit,productId:product?.id||null,productName:product?.name||''};
+    ings.push(x);
+    return x;
+  };
+  // Ingredientes oficiales de las fichas técnicas. Se crean automáticamente si faltan.
+  const picoIngredients={
+    onion:ensureIng(['Cebolla blanca','White Onion'],'Cebolla blanca','Vegetales','lb',1.28),
+    tomato:ensureIng(['Tomate plum','Plum Tomato','Tomato Plum','Roma Tomato'],'Tomate plum','Vegetales','lb',1.12),
+    cilantro:ensureIng(['Cilantro','Fresh Cilantro'],'Cilantro','Vegetales','lb',3.60),
+    lime:ensureIng(['Limón','Limon','Lime','Lemon'],'Limón','Frutas','unidad',0.21),
+    salt:ensureIng(['Sal blanca','White salt','Salt','White Salt'],'Sal blanca','Condimentos','tbsp',0.025),
+    pepper:ensureIng(['Pimienta negra','Black pepper','Black Pepper','Pepper'],'Pimienta negra','Condimentos','tbsp',0.43)
+  };
+  const guacAvocado=ensureIng(['Aguacate Hass','Avocado Hass','Hass Avocado','Avocado'],'Aguacate Hass','Frutas','unidad',1.15);
+  const tortilla10=ensureIng(['Tortilla de harina 10','Flour tortilla 10','Flour Tortilla 10 inch','Tortilla 10'],'Tortilla de harina 10','Tortillas','unidad',0.31);
+  const chips45=ensureIng(['Chips amarillo 4.5 oz','Yellow chips 4.5 oz','Yellow chips','Chips amarillo'],'Chips amarillo 4.5 oz','Acompañantes','oz',0.0777777778);
+  const salsaChunky=ensureIng(['Salsa Chunky','Chunky Salsa'],'Salsa Chunky','Salsas','oz',0.18);
+  const salsaJalapeno=ensureIng(['Salsa Jalapeno','Salsa Jalapeño','Jalapeno Salsa'],'Salsa Jalapeno','Salsas','oz',0.18);
+  const salsaMorita=ensureIng(['Salsa Morita','Salsa morita','Morita Salsa'],'Salsa Morita','Salsas','oz',0.12);
+  write(IK,ings);
+  const ing=(x,qty,unit)=>({type:'ingredient',ref:x.id,ingredientId:x.id,qty,unit});
   // Pico de Gallo — pre-elaborado, rendimiento 9 lb.
   if(!preps.some(x=>norm(x.name)==='pico de gallo')){
     const items=[
-      ing(['White Onion','Cebolla blanca'],3),
-      ing(['Tomate plum','Plum Tomato','Tomato Plum','Plum Tomatoes','Roma Tomato','Tomate Roma'],5),
-      ing(['Cilantro','Fresh Cilantro'],1),
-      ing(['Lime','Limón','Limon','Lemon'],5),
-      ing(['White salt','Sal blanca','Salt','Sal','White Salt'],6),
-      ing(['Black pepper','Pimienta negra','Black Pepper','Pepper'],3)
+      ing(picoIngredients.onion,3,'lb'),
+      ing(picoIngredients.tomato,5,'lb'),
+      ing(picoIngredients.cilantro,1,'lb'),
+      ing(picoIngredients.lime,5,'unidad'),
+      ing(picoIngredients.salt,6,'tbsp'),
+      ing(picoIngredients.pepper,3,'tbsp')
     ];
     if(items.every(Boolean)) preps.unshift({id:'prep-pico-420',type:'pre',name:'Pico de Gallo',category:'Salsas / Complementos',yieldQty:9,yieldUnit:'lb',salePrice:0,cost:15.53,items});
   }
@@ -5503,11 +5527,11 @@ function seedOfficialRecipes(){
   // Guacamole — pre-elaborado, rendimiento 6 lb (8 x 12 oz), costo implícito $13.12.
   if(!preps.some(x=>norm(x.name)==='guacamole')){
     const items=[
-      ing(['Avocado Hass','Aguacate Hass','Hass Avocado','Avocado'],10),
-      pico?{type:'prep',ref:pico.id,qty:30}:null,
-      ing(['Lime','Limón','Limon','Lemon'],4),
-      ing(['White salt','Sal blanca','Salt','Sal','White Salt'],4),
-      ing(['Cilantro'],3)
+      ing(guacAvocado,10,'unidad'),
+      pico?{type:'prep',ref:pico.id,qty:30,unit:'oz'}:null,
+      ing(picoIngredients.lime,4,'unidad'),
+      ing(picoIngredients.salt,4,'tbsp'),
+      ing(picoIngredients.cilantro,3,'oz')
     ];
     if(items.every(Boolean)) preps.unshift({id:'prep-guacamole-421',type:'pre',name:'Guacamole',category:'Entradas / Aperitivos',yieldQty:6,yieldUnit:'lb',salePrice:0,cost:13.12,items});
   }
@@ -5515,17 +5539,16 @@ function seedOfficialRecipes(){
   // Guacamole & Chips — receta final, 1 porción. Salsas se cargan solo si existen como ingredientes.
   if(!finals.some(x=>norm(x.name)==='guacamole & chips')){
     const items=[
-      guac?{type:'prep',ref:guac.id,qty:12}:null,
-      ing(['Flour tortilla 10','Tortilla de harina 10','Tortilla harina 10','Flour Tortilla 10 inch','Tortilla 10'],1),
-      ing(['Yellow chips 4.5 oz','Chips amarillo 4.5 oz','Yellow chips','Chips amarillo','Chips 4.5 oz'],4.5),
-      ing(['Salsa Chunky','Salsa chunky','Chunky Salsa'],3),
-      ing(['Salsa Jalapeno','Salsa Jalapeño','Salsa jalapeno','Jalapeno Salsa'],3),
-      ing(['Salsa Morita','Salsa morita','Morita Salsa'],3)
+      guac?{type:'prep',ref:guac.id,qty:12,unit:'oz'}:null,
+      ing(tortilla10,1,'unidad'),
+      ing(chips45,4.5,'oz'),
+      ing(salsaChunky,3,'oz'),
+      ing(salsaJalapeno,3,'oz'),
+      ing(salsaMorita,3,'oz')
     ];
     if(items.every(Boolean)) finals.unshift({id:'final-guacamole-chips-421',type:'final',name:'Guacamole & Chips',category:'Entradas / Aperitivos',yieldQty:1,yieldUnit:'porción',salePrice:0,cost:3.74,items});
   }
   write(PK,preps); write(FK,finals);
-  if(missing.length && !window.__lrxRecipeSeedWarned){window.__lrxRecipeSeedWarned=true;console.warn('Ingredientes no encontrados para cargar recetas:',[...new Set(missing)])}
 }
 
 function render(){
