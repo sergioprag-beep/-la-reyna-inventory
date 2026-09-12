@@ -1,4 +1,4 @@
-const CACHE='lrx-pro-v64-auto-link-products';
+const CACHE='lrx-pro-v65-inventory-actions-fix';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.add('./')).then(()=>self.skipWaiting()));
 });
