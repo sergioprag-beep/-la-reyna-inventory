@@ -5593,6 +5593,11 @@ function seedOfficialRecipes(){
     if(items.every(Boolean)) preps.unshift({id:'prep-guacamole-421',type:'pre',name:'Guacamole',category:'Entradas / Aperitivos',yieldQty:6,yieldUnit:'lb',salePrice:0,cost:13.12,items});
   }
   const guac=preps.find(x=>norm(x.name)==='guacamole');
+  // Official price: keep existing recipe data intact, but correct the seeded Guacamole & Chips price if it is still 0.
+  const guacChipsExisting=finals.find(x=>norm(x.name)==='guacamole & chips');
+  if(guacChipsExisting && !(Number(guacChipsExisting.salePrice??guacChipsExisting.price)>0)){
+    guacChipsExisting.salePrice=16.99;
+  }
   // Guacamole & Chips — receta final, 1 porción. Salsas se cargan solo si existen como ingredientes.
   if(!finals.some(x=>norm(x.name)==='guacamole & chips')){
     const items=[
@@ -5603,7 +5608,7 @@ function seedOfficialRecipes(){
       ing(salsaJalapeno,3,'oz'),
       ing(salsaMorita,3,'oz')
     ];
-    if(items.every(Boolean)) finals.unshift({id:'final-guacamole-chips-421',type:'final',name:'Guacamole & Chips',category:'Entradas / Aperitivos',yieldQty:1,yieldUnit:'porción',salePrice:0,cost:3.74,items});
+    if(items.every(Boolean)) finals.unshift({id:'final-guacamole-chips-421',type:'final',name:'Guacamole & Chips',category:'Entradas / Aperitivos',yieldQty:1,yieldUnit:'porción',salePrice:16.99,cost:3.74,items});
   }
   write(PK,preps); write(FK,finals);
 }
