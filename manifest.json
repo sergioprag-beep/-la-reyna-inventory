@@ -1,11 +1,1 @@
-{
-  "name": "La Reyna Xpress Management PRO",
-  "short_name": "La Reyna Xpress",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#c92d6f",
-  "description": "Sistema de gestión de La Reyna Xpress",
-  "lang": "es",
-  "orientation": "any"
-}
+{"name":"La Reyna Xpress Management","short_name":"La Reyna Xpress","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#c53b77","icons":[]}

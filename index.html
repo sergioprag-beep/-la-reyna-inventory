@@ -886,7 +886,7 @@ function editProduct(id){
   <label>Stock<input id="estock" type="number" step="0.01" value="${Number(p.stock||0)}"></label>
   <label>Stock mínimo<input id="emin" type="number" step="0.01" value="${Number(p.min||0)}"></label>
   <label>Stock de emergencia<input id="eem" type="number" step="0.01" value="${Number(p.emergency||0)}"></label>
-  </div><br><button class="primary" onclick="saveEditedProduct(${p.id})">Guardar cambios</button> <button onclick="closeModal()">Cancelar</button>`);
+  </div><br><button class="primary" onclick='saveEditedProduct(${JSON.stringify(String(p.id))})'>Guardar cambios</button> <button onclick="closeModal()">Cancelar</button>`);
 }
 function saveEditedProduct(id){
  const p=products.find(x=>String(x.id)===String(id)); if(!p)return;
