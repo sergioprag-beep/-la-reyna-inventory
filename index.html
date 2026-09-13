@@ -2763,7 +2763,7 @@ const POS={
         '<div class="pos-dept-items" data-dept-items="'+esc(gid)+'" hidden>'+rs.map(r=>
           '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #eef0f4;padding:12px 4px 12px 16px">'+
             '<div style="min-width:0"><strong>'+esc(r.name)+'</strong><br><small>'+money(r.salePrice)+'</small></div>'+
-            '<button type="button" data-pos-add="'+esc(String(r.id))+'" onclick="window.LRXPOS && window.LRXPOS.add(this.getAttribute(\'data-pos-add\'))" class="primary">＋ Agregar</button>'+
+            '<button type="button" data-pos-add="'+esc(String(r.id))+'" class="primary">＋ Agregar</button>'+
           '</div>'
         ).join('')+'</div>'+
       '</div>';
