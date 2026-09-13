@@ -2691,7 +2691,12 @@ const POS={
         if(use<=0)continue;
 
         if(item.type==='prep'){
-          prepNeed[item.ref]=(prepNeed[item.ref]||0)+use;
+          const prep=this.preps().find(x=>String(x.id)===String(item.ref));
+          if(!prep){problems.push('Pre-elaborado no encontrado: '+String(item.ref));continue}
+          const prepUnit=prep.yieldUnit||'unidad';
+          const needBase=window.LRXUnits?.convert?window.LRXUnits.convert(use,item.unit||prepUnit,prepUnit):use;
+          const need=this.num(needBase??use);
+          prepNeed[item.ref]=(prepNeed[item.ref]||0)+need;
           continue;
         }
 
@@ -2850,7 +2855,7 @@ const POS={
     Object.entries(req.productNeed).forEach(([id,need])=>{const p=ps.find(x=>String(x.id)===String(id));if(p)p.stock=this.num(p.stock)-this.num(need)}); this.write('lrx_products',ps);
     const records=[];
     this.cart.forEach((line,i)=>{const r=this.recipes().find(x=>String(x.id)===String(line.id));if(!r)return;const lineGross=this.num(line.qty)*this.num(line.salePrice),lineDiscount=subtotal>0?discount*(lineGross/subtotal):0,netRevenue=Math.max(0,lineGross-lineDiscount),consumedProducts=[],consumedPreps=[];
-      for(const item of r.items){const use=this.num(item.qty)*this.num(line.qty);if(use<=0)continue;if(item.type==='prep')consumedPreps.push({prepId:item.ref,qty:use});else{const ing=this.ingredients().find(x=>String(x.id)===String(item.ref));const p=ing?this.findProduct(ing):null;if(p)consumedProducts.push({productId:p.id,productName:p.name,usageQty:use,qty:this.usageToStock(use,ing,p),unit:ing.unit})}}
+      for(const item of r.items){const use=this.num(item.qty)*this.num(line.qty);if(use<=0)continue;if(item.type==='prep'){const prep=this.preps().find(x=>String(x.id)===String(item.ref));const prepUnit=prep?.yieldUnit||'unidad';const needBase=window.LRXUnits?.convert?window.LRXUnits.convert(use,item.unit||prepUnit,prepUnit):use;consumedPreps.push({prepId:item.ref,qty:this.num(needBase??use),unit:prepUnit});}else{const ing=this.ingredients().find(x=>String(x.id)===String(item.ref));const p=ing?this.findProduct(ing):null;if(p)consumedProducts.push({productId:p.id,productName:p.name,usageQty:use,qty:this.usageToStock(use,ing,p),unit:ing.unit})}}
       records.push({id:stamp+i,transactionId,recipeId:r.id,recipeName:r.name,qty:line.qty,baseSalePrice:this.num(line.basePrice??r.salePrice),salePrice:this.num(line.salePrice),grossRevenue:lineGross,discountAmount:lineDiscount,discountPercent:subtotal?(discount/subtotal*100):0,discountType:dtype,discountValue:dval,discountReason:reason,revenue:netRevenue,channel,date:new Date().toISOString(),consumedProducts,consumedPreps});
     });
     this.write('lrx_sales_v5',sales.concat(records));
