@@ -6113,4 +6113,59 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 </body>
+<style id="lrx-v94-responsive-global">
+/* V94 — Mobile/Responsive hardening: ningún módulo puede crear ancho mayor que el viewport */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+*,*:before,*:after{max-width:100%}
+header,nav,main,footer,.page,.card,.form,.toolbar,.actionbar,.section-title{width:100%;max-width:100%;min-width:0}
+main{margin-left:auto;margin-right:auto}
+.card{overflow-x:hidden}
+.page{overflow-x:hidden}
+.page table{max-width:100%}
+/* Tablas: se desplazan dentro de su propio contenedor, nunca empujan la página */
+.page>div[style*="overflow:auto"],.page .card>div[style*="overflow:auto"],.page .lrx-movement-wrap{width:100%;max-width:100%;overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+/* Formularios y grids: todos los hijos pueden encogerse en iPhone */
+.form>*,.lrx-yield-grid>*,.lrx-check-grid>*,.lrx-manager-grid>*,.lrx-rx-grid>*,.cocina-grid>*{min-width:0;max-width:100%}
+.form input,.form select,.form textarea,.lrx-yield-grid input,.lrx-yield-grid select,.lrx-check-grid input,.lrx-check-grid select,.lrx-manager-grid input,.lrx-manager-grid select,.lrx-manager-grid textarea,.lrx-rx-grid input,.lrx-rx-grid select,.cocina-grid input,.cocina-grid select,.cocina-grid textarea{min-width:0;max-width:100%}
+.lrx-bar-kpis>div,.lrx-yield-kpis>div,.lrx-check-kpi{min-width:0}
+@media(max-width:700px){
+  header{padding:12px 14px}
+  nav.lrx-compact{width:100%!important;max-width:100%!important}
+  main{padding:10px!important}
+  .page[style*="padding:16px"]{padding:10px!important}
+  .card{padding:14px!important}
+  .section-title h2{font-size:22px;line-height:1.15}
+  .lrx-yield-grid,.lrx-check-grid,.lrx-manager-grid,.lrx-rx-grid{grid-template-columns:1fr!important}
+  .lrx-yield-grid label[style],.lrx-manager-full{grid-column:auto!important}
+  .lrx-bar-kpis,.lrx-yield-kpis,.lrx-check-kpis{grid-template-columns:1fr 1fr!important}
+  .toolbar,.actionbar{width:100%;max-width:100%;overflow:hidden}
+  .toolbar button,.actionbar button{max-width:100%}
+  .modal{padding:10px!important}
+  .modalbox{width:min(100%,700px)!important;max-width:100%!important;padding:15px!important}
+  .cocina-modal .box{width:100%!important;max-width:100%!important}
+}
+@media(max-width:390px){
+  .lrx-bar-kpis,.lrx-yield-kpis,.lrx-check-kpis{grid-template-columns:1fr!important}
+  .section-title h2{font-size:20px}
+}
+</style>
+<script>
+/* V94 — capa común de impresión y exportación para módulos nuevos.
+   Los módulos conservan sus registros en localStorage y las funciones existentes. */
+(function(){
+  window.LRXGlobalIO=window.LRXGlobalIO||{};
+  LRXGlobalIO.printElement=function(id,title){
+    const el=document.getElementById(id); if(!el){alert('No se encontró el módulo.');return;}
+    const w=window.open('','_blank'); if(!w){alert('Permite ventanas emergentes para imprimir.');return;}
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+String(title||'La Reyna Xpress').replace(/[<>]/g,'')+'</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#172033}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:7px;text-align:left;vertical-align:top}button{display:none!important}input,select,textarea{border:0;background:transparent}h1,h2,h3{margin-top:0}</style></head><body>'+el.innerHTML+'</body></html>');
+    w.document.close();w.focus();setTimeout(function(){w.print()},250);
+  };
+  LRXGlobalIO.downloadCSV=function(rows,filename){
+    const out=rows.map(r=>r.map(v=>'"'+String(v==null?'':v).replaceAll('"','""')+'"').join(',')).join('\n');
+    const u=URL.createObjectURL(new Blob(['\ufeff'+out],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=u;a.download=filename||'La_Reyna_Xpress_Export.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),800);
+  };
+})();
+</script>
+
 </html>
