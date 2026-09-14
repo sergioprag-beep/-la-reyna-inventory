@@ -765,7 +765,7 @@ function reloadPersistentState(){
     cats=JSON.parse(localStorage.getItem("lrx_categories")||"null")||cats;
   }catch(e){console.error(e)}
 }
-function refresh(){reloadPersistentState();document.getElementById("currentUserLabel")&&(document.getElementById("currentUserLabel").textContent=currentUser);renderLocations();renderProducts();renderIngredients();renderRecipeBook();renderMovements();renderPurchases();renderRecipes();renderPO();renderCount();renderSuppliers();renderAnalysis();refreshManagement();renderUsers();dashboard();fillCats();renderCategoryManager();renderReportTotals();
+function refresh(){reloadPersistentState();document.getElementById("currentUserLabel")&&(document.getElementById("currentUserLabel").textContent=(typeof currentUser!=="undefined"?currentUser:"Sergio"));renderLocations();renderProducts();renderIngredients();renderRecipeBook();renderMovements();renderPurchases();renderRecipes();renderPO();renderCount();renderSuppliers();renderAnalysis();refreshManagement();renderUsers();dashboard();fillCats();renderCategoryManager();renderReportTotals();
 try{window.LRXMenuEngineeringV38&&window.LRXMenuEngineeringV38.render()}catch(e){}
 }
 // Keep the visible UI synchronized with the persisted inventory state.
