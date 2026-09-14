@@ -1,9 +1,9 @@
 {
-  "name": "La Reyna Xpress – Inventario",
-  "short_name": "LRX Inventario",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#244b93",
-  "icons": []
+  "name":"La Reyna Xpress Management PRO V96",
+  "short_name":"La Reyna Xpress",
+  "start_url":"./index.html?v=96",
+  "display":"standalone",
+  "background_color":"#f4f6fb",
+  "theme_color":"#c92d7a",
+  "icons":[]
 }
