@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>La Reyna Xpress — Inventario PRO v15</title>
+<title>La Reyna Xpress — Restaurant Management PRO v115</title>
 <style>
 :root{--pink:#c92d6f;--turq:#244b93;--bg:#f5f7fb;--dark:#172033;--muted:#687386;--card:#fff}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--dark)}
@@ -6114,7 +6114,6 @@ document.addEventListener('click',e=>{const id=e.target?.dataset?.yrdel;if(id&&c
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setupBar();yieldInit()},{once:true});else{setupBar();yieldInit()}
 })();
 </script>
-</body>
 <style id="lrx-v94-responsive-global">
 /* V94 — Mobile/Responsive hardening: ningún módulo puede crear ancho mayor que el viewport */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -6195,7 +6194,8 @@ main{margin-left:auto;margin-right:auto}
    const old=read(PKEY,[]); const by=new Map(); const masterNames=new Set(M.products.map(p=>norm(p.name)));
    old.forEach(x=>{const k=norm(x.name); if(!k||!masterNames.has(k))return; const cur=by.get(k)||{stock:0,min:0,emergency:0,cost:0}; cur.stock+=Number(x.stock||x.qty||0); cur.min=Math.max(cur.min,Number(x.min||0)); cur.emergency=Math.max(cur.emergency,Number(x.emergency||0)); if(Number(x.cost||x.unitCost||0)>0)cur.cost=Number(x.cost||x.unitCost); by.set(k,cur)});
    const custom=old.filter(x=>{const k=norm(x.name);const id=String(x.id||'');const src=String(x.source||'');return k&&!masterNames.has(k)&&(src==='Usuario'||id.startsWith('USR-')||id.startsWith('bar-prod-'))});
-   const out=M.products.map(p=>{const q=by.get(norm(p.name))||{}; return {...p,stock:Number(q.stock||0),min:Number(q.min||0),emergency:Number(q.emergency||0),cost:Number(q.cost||p.cost||0),unitCost:Number(q.cost||p.cost||0)};}).concat(custom);
+   if(custom.length)write('lrx_custom_products_v115',custom);
+   const out=M.products.map(p=>{const q=by.get(norm(p.name))||{}; return {...p,stock:Number(q.stock||0),min:Number(q.min||0),emergency:Number(q.emergency||0),cost:Number(q.cost||p.cost||0),unitCost:Number(q.cost||p.cost||0)};});
    write(PKEY,out); write(SKEY,M); return out;
  }
  function dashboardSync(){
@@ -6239,10 +6239,11 @@ main{margin-left:auto;margin-right:auto}
   document.getElementById('v114DreRows').addEventListener('click',e=>{const ed=e.target.closest('[data-v114-dre-edit]');const de=e.target.closest('[data-v114-dre-del]');const a=read(DKEY,[]);if(de){write(DKEY,a.filter(x=>x.id!==de.dataset.v114DreDel));renderDRE()}else if(ed){const x=a.find(z=>z.id===ed.dataset.v114DreEdit);if(!x)return;const d=prompt('Descripción',x.desc);if(d===null)return;const m=prompt('Monto',String(x.amount));if(m===null)return; x.desc=d;x.amount=Number(m)||0;write(DKEY,a);renderDRE()}});
   const orig=window.refresh; if(typeof orig==='function'&&!orig.__v114){const wrapped=function(){let r;try{r=orig.apply(this,arguments)}catch(e){console.error(e)}try{canonicalize();if(typeof window.reloadPersistentState==='function')window.reloadPersistentState();if(typeof window.dashboard==='function')window.dashboard();if(typeof window.renderProducts==='function')window.renderProducts()}catch(e){console.error('V114 sync',e)}return r};wrapped.__v114=true;window.refresh=wrapped;}
   dashboardSync();
-  try{canonicalize(); if(typeof window.reloadPersistentState==='function')window.reloadPersistentState(); if(typeof window.dashboard==='function')window.dashboard(); if(typeof window.renderProducts==='function')window.renderProducts();}catch(e){console.error('V115 repair dashboard sync',e)}
+  try{const official=canonicalize(); if(Array.isArray(official)&&typeof products!=='undefined')products=official; if(typeof window.reloadPersistentState==='function')window.reloadPersistentState(); if(Array.isArray(official)&&typeof products!=='undefined')products=official; if(typeof window.dashboard==='function')window.dashboard(); if(typeof window.renderProducts==='function')window.renderProducts();}catch(e){console.error('V115 repair dashboard sync',e)}
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
  window.LRXV114={canonicalize,renderSUP,renderDRE};
 })();
 </script>
+</body>
 </html>
