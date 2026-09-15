@@ -1882,8 +1882,7 @@ function exportCSV(){
 }
 function print(){
  const rows=recipes().map(calc);
- const html='<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: '+cfg.targetFC+'% | Margen objetivo: '+cfg.targetMargin+'% | Comisión: '+cfg.commission+'%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+money(r.c)+'</td><td>'+money(r.current)+'</td><td>'+r.fc.toFixed(1)+'%</td><td>'+money(r.rec)+'</td></tr>').join('')+'</tbody></table>
-</body></html>';
+ const html='<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: '+cfg.targetFC+'% | Margen objetivo: '+cfg.targetMargin+'% | Comisión: '+cfg.commission+'%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.name)+'</td><td>'+money(r.c)+'</td><td>'+money(r.current)+'</td><td>'+r.fc.toFixed(1)+'%</td><td>'+money(r.rec)+'</td></tr>').join('')+'</tbody></table>\n</body></html>';
  const w=window.open('','_blank'); if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)}
 }
 window.LRXPricing={recalculate:sync,apply:applyPrice,exportCSV,print};
