@@ -1990,7 +1990,7 @@ function buildCompactNavV52(){
  const buttons=[...nav.querySelectorAll('button[data-page]')];
  if(!buttons.length) return;
  const labels={
-  dashboard:'🏠 Inicio',salesPOS:'🧾 POS',productos:'📦 Inventario',recetario:'🍳 Recetas',cocinaV54:'👨‍🍳 Cocina',compras:'🛒 Compras',cashFlow:'💰 Finanzas',reportes:'📊 Reportes',config:'⚙️ Sistema',
+  supV114:'📋 SUP',dreV114:'📊 DRE',dashboard:'🏠 Inicio',salesPOS:'🧾 POS',productos:'📦 Inventario',recetario:'🍳 Recetas',cocinaV54:'👨‍🍳 Cocina',compras:'🛒 Compras',cashFlow:'💰 Finanzas',reportes:'📊 Reportes',config:'⚙️ Sistema',
   ingredientes:'🥕 Ingredientes',recetas:'🍳 Recetas finales',recipeScan:'📷 Receta desde foto',movimientos:'🔄 Movimientos',conteo:'📋 Inventario físico',ubicaciones:'📍 Ubicaciones',scanner:'📷 Escáner',
   proveedores:'🏢 Proveedores',ordenes:'📑 Órdenes de compra',smartPurchases:'🧾 Compra Inteligente',quickImport:'⚡ Carga Rápida',scanCenter:'📷 Scan Center',
   budget:'📊 Budget',laborPrime:'👥 Labor & Prime Cost',operatingExpenses:'💳 Operating Expenses',pnlDashboard:'📋 P&L Dashboard',monthlyClose:'📅 Cierre Mensual',
@@ -1998,6 +1998,8 @@ function buildCompactNavV52(){
   barV92:'🍹 Bar',yieldAnalysisV92:'📉 Rendimiento',cuadernoGerente:'👔 Cuaderno Gerente',backupRestore:'💾 Backup / Restore',dataAudit:'🔎 Auditoría',systemAuditV41:'🔍 System Audit',crudAuditV50:'🧪 CRUD Audit',integrationAuditV43:'🔗 Integration Audit',productionAuditV44:'🚀 Production Audit',finalHardeningV45:'🛡️ Final Hardening',finalIntegrationV46:'🔗 Final Integration',productionQCv51:'🚀 Production QC',usuarios:'👤 Usuarios'
  };
  const groups=[
+  ['📋 SUP',['supV114']],
+  ['📊 DRE',['dreV114']],
   ['🏠 Inicio',['dashboard']],
   ['🧾 POS',['salesPOS']],
   ['📦 Inventario',['productos','ingredientes','movimientos','conteo','ubicaciones','scanner']],
