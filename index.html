@@ -127,6 +127,19 @@ nav.lrx-compact .lrx-submenu button.active{background:var(--pink);color:#fff}
 <style>
 .lrx-bar-kpis,.lrx-yield-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}.lrx-bar-kpis>div,.lrx-yield-kpis>div{padding:14px;border:1px solid #ddd;border-radius:12px;background:#fff}.lrx-bar-kpis b,.lrx-yield-kpis b{display:block;font-size:20px;margin-top:4px}.lrx-bar-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.lrx-bar-tabs button.active{font-weight:800;outline:2px solid #c43878}.lrx-bar-table,.lrx-yield-table{width:100%;border-collapse:collapse}.lrx-bar-table th,.lrx-bar-table td,.lrx-yield-table th,.lrx-yield-table td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.lrx-yield-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.lrx-yield-grid label{display:flex;flex-direction:column;gap:5px;font-weight:700}.lrx-yield-grid input,.lrx-yield-grid select{padding:11px;border:1px solid #ccd3df;border-radius:9px;background:#fff}.lrx-yield-result{margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:12px;background:#f7f8fb;font-weight:700}.lrx-good{font-weight:800}.lrx-warn{font-weight:800}.lrx-bad{font-weight:800}@media(max-width:800px){.lrx-bar-kpis,.lrx-yield-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lrx-yield-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.lrx-yield-grid{grid-template-columns:1fr}.lrx-bar-table,.lrx-yield-table{font-size:12px}.lrx-bar-table th,.lrx-bar-table td,.lrx-yield-table th,.lrx-yield-table td{padding:7px}.lrx-yield-grid label[style]{grid-column:auto !important}}
 </style>
+
+<script id="lrx-v133-canonical">
+(function(){
+  try{
+    var u=new URL(location.href);
+    if(u.searchParams.has('v')){
+      u.searchParams.delete('v');
+      history.replaceState(null,'',u.pathname+(u.searchParams.toString()?'?'+u.searchParams.toString():'')+u.hash);
+    }
+  }catch(e){}
+})();
+</script>
+
 </head>
 <body>
 <header class="brand-header">
@@ -841,7 +854,13 @@ let purchases=JSON.parse(localStorage.getItem("lrx_purchases_v8")||localStorage.
 const save=()=>{localStorage.setItem("lrx_products",JSON.stringify(products));/* V82: movements are persisted explicitly; never overwrite them from stale global state. */localStorage.setItem("lrx_purchases",JSON.stringify(purchases));localStorage.setItem("lrx_purchases_v8",JSON.stringify(purchases));localStorage.setItem("lrx_categories",JSON.stringify(cats));};
 const money=n=>"$"+Number(n||0).toFixed(2);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-function nav(){document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById(b.dataset.page).classList.add("active");refresh();});}
+function nav(){
+  // V133: navigation is owned by the single central controller at the end of the document.
+  if(typeof window.LRXNavigate==='function'){
+    const current=document.querySelector('.page.active')?.id||'dashboard';
+    try{window.LRXNavigate(current)}catch(e){console.error('LRXNavigate',e)}
+  }
+}
 document.addEventListener("DOMContentLoaded",()=>{nav();recoverMovementLedger();refresh();});
 document.addEventListener("input",e=>{if(e.target&&e.target.id==="search")renderProducts();});
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="catFilter")renderProducts();});
@@ -1863,7 +1882,21 @@ function sim(){
 function exportCSV(){
  const rows=recipes().map(calc); const head=['Recipe','Cost','Current Price','Food Cost %','Gross Margin','Minimum Price FC','Minimum Price Margin','Recommended Price']; const lines=[head,...rows.map(r=>[r.name,r.c.toFixed(2),r.current.toFixed(2),r.fc.toFixed(2),r.gross.toFixed(2),r.fcFloor.toFixed(2),Number.isFinite(r.marginFloor)?r.marginFloor.toFixed(2):'',(r.rec===null?'':r.rec.toFixed(2))])].map(a=>a.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='lrx_pricing_optimizer_v16.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
 }
-function print(){const rows=recipes().map(calc);const html=`<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: ${cfg.targetFC}% | Margen objetivo: ${cfg.targetMargin}% | Comisión: ${cfg.commission}%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.rec)}</td></tr>`).join('')}</tbody></table></body></html>`;const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)} }
+function print(){const rows=recipes().map(calc);const html=`<html><head><title>La Reyna Xpress - Pricing Optimizer</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ccc;padding:6px}th{background:#eee}</style><style>.lrx-po-settings{margin-bottom:18px}.lrx-po-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px}.lrx-po-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}.lrx-po-grid input,.lrx-po-grid select{padding:10px;border:1px solid #ccd3df;border-radius:10px}.lrx-po-result{grid-column:span 2;padding:14px;background:#f5f7fb;border-radius:12px}.lrx-po-kpis{margin:14px 0}@media(max-width:800px){.lrx-po-grid{grid-template-columns:1fr 1fr}.lrx-po-result{grid-column:span 2}}@media(max-width:520px){.lrx-po-grid{grid-template-columns:1fr}.lrx-po-result{grid-column:span 1}}</style></head><body><h1>Recipe Costing & Menu Pricing Optimizer</h1><p>Food Cost objetivo: ${cfg.targetFC}% | Margen objetivo: ${cfg.targetMargin}% | Comisión: ${cfg.commission}%</p><table><thead><tr><th>Recipe</th><th>Cost</th><th>Current</th><th>Food Cost</th><th>Recommended</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${money(r.c)}</td><td>${money(r.current)}</td><td>${r.fc.toFixed(1)}%</td><td>${money(r.rec)}</td></tr>`).join('')}</tbody></table>
+<script id="lrx-v133-pwa-health">
+(function(){
+  function ready(){
+    window.LRXPWA={
+      version:'133.0',
+      mode:window.matchMedia('(display-mode: standalone)').matches?'standalone':'browser',
+      sw:'serviceWorker' in navigator
+    };
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready,{once:true});else ready();
+})();
+</script>
+
+</body></html>`;const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),250)} }
 window.LRXPricing={recalculate:sync,apply:applyPrice,exportCSV,print};
 document.addEventListener('DOMContentLoaded',()=>{
  const sec=document.getElementById('pricingOptimizer');if(!sec)return;
@@ -1998,8 +2031,6 @@ function buildCompactNavV52(){
   barV92:'🍹 Bar',yieldAnalysisV92:'📉 Rendimiento',cuadernoGerente:'👔 Cuaderno Gerente',backupRestore:'💾 Backup / Restore',dataAudit:'🔎 Auditoría',systemAuditV41:'🔍 System Audit',crudAuditV50:'🧪 CRUD Audit',integrationAuditV43:'🔗 Integration Audit',productionAuditV44:'🚀 Production Audit',finalHardeningV45:'🛡️ Final Hardening',finalIntegrationV46:'🔗 Final Integration',productionQCv51:'🚀 Production QC',usuarios:'👤 Usuarios'
  };
  const groups=[
-  ['📋 SUP',['supV114']],
-  ['📊 DRE',['dreV114']],
   ['🏠 Inicio',['dashboard']],
   ['🧾 POS',['salesPOS']],
   ['📦 Inventario',['productos','ingredientes','movimientos','conteo','ubicaciones','scanner']],
@@ -2008,11 +2039,13 @@ function buildCompactNavV52(){
   ['🛒 Compras',['compras','proveedores','ordenes','smartPurchases','quickImport','scanCenter','shoppingListV126']],
   ['💰 Finanzas',['cashFlow','budget','laborPrime','operatingExpenses','pnlDashboard','monthlyClose','platformProfitability','profitabilityV126']],
   ['📊 Reportes',['reportes','salesAnalytics','pricingOptimizer','menuEngineeringV38','foodCostProfitability','analisis','gerencial','marketingV126']],
-  ['⚙️ Sistema',['config','backupRestore','dataAudit','systemAuditV41','crudAuditV50','integrationAuditV43','productionAuditV44','finalHardeningV45','finalIntegrationV46','productionQCv51','usuarios']],
+  ['📋 SUP',['supV114']],
+  ['📊 DRE',['dreV114']],
   ['🍹 Bar',['barV92']],
   ['📉 Rendimiento',['yieldAnalysisV92']],
   ['📋 Checklists',['checklistsV90']],
-  ['👔 Gerente',['cuadernoGerente']]
+  ['👔 Gerente',['cuadernoGerente']],
+  ['⚙️ Sistema',['config','backupRestore','dataAudit','systemAuditV41','crudAuditV50','integrationAuditV43','productionAuditV44','finalHardeningV45','finalIntegrationV46','productionQCv51','usuarios']]
  ];
  const byPage=new Map(buttons.map(b=>[b.dataset.page,b]));
  nav.innerHTML=''; nav.classList.add('lrx-compact'); nav.dataset.compactV55='1';
@@ -6519,44 +6552,88 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 @media(max-width:700px){#recetario #recipeBookTableWrap{display:none!important}#recetario .lrx-rx-mobile-list{display:block}#recetario .lrx-rx-toolbar{display:grid!important;grid-template-columns:1fr!important}.lrx-rx-origin-grid,.lrx-rx-breakdown{grid-template-columns:1fr 1fr!important}}
 @media(max-width:390px){#nav.lrx-compact .lrx-top-btn,#nav.lrx-compact details>summary{font-size:13px;padding:8px 4px}.lrx-rx-origin-grid,.lrx-rx-breakdown{grid-template-columns:1fr!important}}
 </style>
-<script id="lrx-v132-stable-runtime">
-(function(){'use strict';
- const nav=document.getElementById('nav');
- const safe=(fn)=>{try{if(typeof fn==='function')fn()}catch(e){console.error('LRX navigation render',e)}};
- function go(id){
-   const page=document.getElementById(id); if(!page)return;
-   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-   page.classList.add('active');
-   if(nav)nav.querySelectorAll('button[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
-   if(id==='supV114')safe(window.LRXV114?.renderSUP||window.renderSUP);
-   else if(id==='dreV114')safe(window.LRXV114?.renderDRE||window.renderDRE);
-   else if(id==='recetario')safe(window.LRXRec?.render||window.renderRecetario);
-   else if(id==='dashboard')safe(window.dashboard);
-   else if(id==='productos')safe(window.renderProducts);
-   else if(id==='ingredientes')safe(window.renderIngredients);
-   else if(id==='movimientos')safe(window.renderMovements);
-   else if(id==='compras')safe(window.renderPurchases);
-   else safe(window.refresh);
-   if(nav)nav.querySelectorAll('details[open]').forEach(d=>d.open=false);
-   window.scrollTo(0,0);
- }
- function install(){
-   if(!nav || nav.dataset.lrx132Nav==='1')return;
-   nav.dataset.lrx132Nav='1';
-   nav.addEventListener('click',function(e){
-     const b=e.target.closest('button[data-page]');
-     if(!b || !nav.contains(b))return;
-     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-     go(b.dataset.page);
-   },true);
-   window.LRXNavigate=go;
-   go(document.querySelector('.page.active')?.id||'dashboard');
- }
- function boot(){
-   try{if(nav && !nav.dataset.compactV55 && typeof buildCompactNavV52==='function')buildCompactNavV52()}catch(e){console.error('LRX compact nav',e)}
-   install();
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+<script id="lrx-v133-navigation">
+(function(){
+  'use strict';
+
+  function safe(fn){
+    try{ if(typeof fn==='function') fn(); }
+    catch(e){ console.error('LRX module render',e); }
+  }
+
+  function setActive(id){
+    document.querySelectorAll('.page').forEach(function(p){
+      p.classList.toggle('active', p.id===id);
+    });
+    var n=document.getElementById('nav');
+    if(n){
+      n.querySelectorAll('button[data-page]').forEach(function(b){
+        b.classList.toggle('active', b.dataset.page===id);
+      });
+    }
+  }
+
+  function renderFor(id){
+    if(id==='supV114') return safe(window.LRXV114?.renderSUP || window.renderSUP);
+    if(id==='dreV114') return safe(window.LRXV114?.renderDRE || window.renderDRE);
+    if(id==='recetario') return safe(window.LRXRec?.render || window.renderRecetario);
+    if(id==='dashboard') return safe(window.refresh || window.renderDashboard);
+    if(id==='productos') return safe(window.renderProducts);
+    if(id==='ingredientes') return safe(window.renderIngredients);
+    if(id==='movimientos') return safe(window.renderMovements);
+    if(id==='compras') return safe(window.renderPurchases);
+    return safe(window.refresh);
+  }
+
+  function go(id){
+    var page=document.getElementById(id);
+    if(!page){
+      id='dashboard';
+      page=document.getElementById(id);
+    }
+    if(!page) return;
+    setActive(id);
+    renderFor(id);
+    var n=document.getElementById('nav');
+    if(n) n.querySelectorAll('details[open]').forEach(function(d){d.open=false;});
+    try{window.scrollTo({top:0,left:0,behavior:'auto'});}catch(e){window.scrollTo(0,0);}
+  }
+
+  function install(){
+    var n=document.getElementById('nav');
+    if(!n || n.dataset.lrx133Nav==='1') return;
+    n.dataset.lrx133Nav='1';
+
+    // Capture phase: one and only one owner of navigation clicks.
+    n.addEventListener('click',function(e){
+      var b=e.target.closest && e.target.closest('button[data-page]');
+      if(!b || !n.contains(b)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      go(b.dataset.page);
+    },true);
+
+    window.LRXNavigate=go;
+
+    var initial=document.querySelector('.page.active')?.id || 'dashboard';
+    go(initial);
+  }
+
+  function boot(){
+    try{
+      if(window.buildCompactNavV52 && !document.getElementById('nav')?.dataset.compactV55){
+        window.buildCompactNavV52();
+      }
+    }catch(e){ console.error('LRX navigation build',e); }
+    install();
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',boot,{once:true});
+  }else{
+    boot();
+  }
 })();
 </script>
 </html>
