@@ -8,7 +8,33 @@
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">  
-<style>
+<style id="lrx-logo-mobile-fix">
+.logo{
+  content:url("./icons/icon-180.png");
+  object-fit:contain;
+}
+@media(max-width:700px){
+  header{
+    padding:10px 14px;
+  }
+  .brand-header{
+    gap:10px;
+  }
+  .logo{
+    width:58px;
+    height:58px;
+    padding:2px;
+  }
+  .brand-header h1{
+    font-size:22px;
+  }
+  .brand-header p{
+    font-size:14px;
+    line-height:1.25;
+  }
+}
+</style>
+  <style>
 :root{--pink:#c92d6f;--turq:#244b93;--bg:#f5f7fb;--dark:#172033;--muted:#687386;--card:#fff}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--dark)}
 header{background:linear-gradient(135deg,var(--turq),var(--pink));color:white;padding:14px 20px}
