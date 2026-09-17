@@ -1,16 +1,31 @@
 {
   "name": "La Reyna Xpress PRO",
   "short_name": "La Reyna Xpress",
-  "id": "./",
-  "start_url": "./",
-  "scope": "./",
+  "id": "https://sergioprag-beep.github.io/-la-reyna-inventory/",
+  "start_url": "https://sergioprag-beep.github.io/-la-reyna-inventory/",
+  "scope": "https://sergioprag-beep.github.io/-la-reyna-inventory/",
   "display": "standalone",
   "background_color": "#f5f6fa",
   "theme_color": "#c92d6f",
   "description": "La Reyna Xpress Restaurant Management System",
   "icons": [
-    {"src":"./icons/icon-180.png","sizes":"180x180","type":"image/png","purpose":"any"},
-    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {
+      "src": "./icons/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
