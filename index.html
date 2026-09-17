@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>La Reyna Xpress — Restaurant Management System PRO v140.0</title>
+<title>La Reyna Xpress — Restaurant Management System PRO v142.0</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -836,7 +836,7 @@ Seguridad: RLS activado; cada usuario solo puede leer/escribir su propia fila.</
   <div class="card"><div class="toolbar"><select id="gmFilterType"><option value="">Todos los tipos</option></select><select id="gmFilterStatus"><option value="">Todos los estados</option><option>Abierto</option><option>En seguimiento</option><option>Resuelto</option><option>Cerrado</option></select><button type="button" id="gmRefresh">↻ Actualizar</button></div><h3>📚 Historial del Cuaderno</h3><div id="gmRows"></div></div>
 </section>
 
-</main><footer style="text-align:center;padding:22px;color:#687386;font-size:12px">La Reyna Mexican Food Xpress • Restaurant Management System • PRO v140.0 — REAL BOOT FIXED</footer>
+</main><footer style="text-align:center;padding:22px;color:#687386;font-size:12px">La Reyna Mexican Food Xpress • Restaurant Management System • PRO v142.0 — NAVIGATION REPAIRED</footer>
 
 <div id="modal" class="modal"><div class="modalbox" id="modalbox"></div></div>
 <script>
@@ -6502,65 +6502,7 @@ function edit(id){const r=arr(FK).find(x=>String(x.id)===String(id))||arr(PK).fi
 function del(id){if(!confirm('¿Eliminar esta receta? Esta acción no se puede deshacer.'))return;write(FK,arr(FK).filter(x=>String(x.id)!==String(id)));write(PK,arr(PK).filter(x=>String(x.id)!==String(id)));render()}
 function exportCSV(){const finals=arr(FK),preps=arr(PK),rows=[['Tipo','Origen','Receta','Categoría','Rendimiento','Unidad','Costo lote','Costo por rendimiento','Precio venta','Food Cost']];[...preps.map(r=>({...r,type:'pre'})),...finals.map(r=>({...r,type:'final'}))].forEach(r=>{const lot=num(r.cost)||calc(r.items),y=Math.max(1,num(r.yieldQty||r.yield||1)),c=lot/y,p=num(r.salePrice??r.price),fc=r.type==='final'&&p>0?c/p*100:'';rows.push([r.type==='pre'?'Pre-elaborado':'Final',sourceLabel(r),r.name,r.category||'',y,r.yieldUnit||'orden',lot.toFixed(4),c.toFixed(4),p.toFixed(2),fc===''?'':fc.toFixed(2)+'%'])});const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='La_Reyna_Recetas.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function printRecipes(){const finals=arr(FK),preps=arr(PK),rows=[...preps.map(r=>({...r,type:'pre'})),...finals.map(r=>({...r,type:'final'}))];const html='<html><head><title>La Reyna Xpress — Recetas</title>
-<script id="lrx-v140-early-boot">
-(function(){
-  'use strict';
-  function go(id){
-    var p=document.getElementById(id);
-    if(!p) return false;
-    document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active')});
-    p.classList.add('active');
-    var nav=document.getElementById('nav');
-    if(nav) nav.querySelectorAll('button[data-page]').forEach(function(b){
-      b.classList.toggle('active', b.getAttribute('data-page')===id);
-    });
-    try{
-      if(id==='supV114' && window.LRXV114 && typeof window.LRXV114.renderSUP==='function') window.LRXV114.renderSUP();
-      else if(id==='dreV114' && window.LRXV114 && typeof window.LRXV114.renderDRE==='function') window.LRXV114.renderDRE();
-      else if(id==='recetario' && window.LRXRec && typeof window.LRXRec.refresh==='function') window.LRXRec.refresh();
-      else if(id==='productos' && typeof window.renderProducts==='function') window.renderProducts();
-      else if(typeof window.refresh==='function') window.refresh();
-    }catch(err){ console.error('LRX v140 page refresh',err); }
-    try{ window.scrollTo(0,0); }catch(e){}
-    return true;
-  }
-  window.LRXV140Go=go;
 
-  function buttonFromEvent(e){
-    var t=e.target;
-    while(t && t!==document){
-      if(t.tagName && String(t.tagName).toLowerCase()==='button' && t.getAttribute('data-page')) return t;
-      t=t.parentNode;
-    }
-    return null;
-  }
-
-  // Registered before legacy scripts. Never stops propagation.
-  window.addEventListener('click',function(e){
-    var b=buttonFromEvent(e);
-    if(b){ e.preventDefault(); go(b.getAttribute('data-page')); }
-  },true);
-
-  function bind(){
-    var nav=document.getElementById('nav');
-    if(!nav) return;
-    nav.querySelectorAll('button[data-page]').forEach(function(b){
-      b.type='button';
-      b.onclick=function(e){ e.preventDefault(); go(b.getAttribute('data-page')); };
-    });
-  }
-
-  function boot(){
-    bind();
-    var nav=document.getElementById('nav');
-    if(nav && window.MutationObserver){
-      new MutationObserver(bind).observe(nav,{childList:true,subtree:true});
-    }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
-})();
-</script>
 
 </head><body><h1>La Reyna Xpress — Recetas y Producción</h1><p>Pre-elaborados: '+preps.length+' | Recetas finales: '+finals.length+'</p><table border="1" cellpadding="6"><tr><th>Tipo</th><th>Origen</th><th>Receta</th><th>Rendimiento</th><th>Costo</th><th>Precio</th><th>Food Cost</th></tr>'+rows.map(r=>{const lot=num(r.cost)||calc(r.items),y=Math.max(1,num(r.yieldQty||r.yield||1)),c=lot/y,p=num(r.salePrice??r.price),fc=r.type==='final'&&p>0?(c/p*100).toFixed(1)+'%':'—';return '<tr><td>'+esc(r.type==='pre'?'Pre-elaborado':'Final')+'</td><td>'+esc(sourceLabel(r))+'</td><td>'+esc(r.name)+'</td><td>'+y+' '+esc(r.yieldUnit||'orden')+'</td><td>'+money(c)+'</td><td>'+money(p)+'</td><td>'+fc+'</td></tr>'}).join('')+'</table></body></html>';const w=window.open('','_blank');if(!w)return alert('Permite ventanas emergentes para imprimir.');w.document.write(html);w.document.close();setTimeout(()=>w.print(),300)}
 function bind(){ensureUI();const page=document.getElementById('recetario');if(!page)return;document.getElementById('lrx130RecipeSearch')?.addEventListener('input',render);document.getElementById('lrx130RecipeType')?.addEventListener('change',render);if(page.dataset.lrx130Clicks!=='1'){page.addEventListener('click',e=>{const a=e.target.closest('[data-rx-edit]'),d=e.target.closest('[data-rx-del]');if(a){e.preventDefault();edit(a.dataset.rxEdit)}else if(d){e.preventDefault();del(d.dataset.rxDel)}});page.dataset.lrx130Clicks='1'}render()}
@@ -6713,7 +6655,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 </script>
 
 
-<script id="lrx-v141-navigation-final">
+<script id="lrx-v142-navigation-final">
 (function(){
   'use strict';
   function bind(){
@@ -6747,7 +6689,7 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
   else bind();
   setTimeout(bind,300);
   setTimeout(bind,1000);
-  window.LRXV141={bind:bind};
+  window.LRXV142={bind:bind};
 })();
 </script>
 
