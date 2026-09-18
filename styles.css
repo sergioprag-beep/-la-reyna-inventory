@@ -55,3 +55,14 @@
 
 @media(max-width:900px){aside{width:250px;transform:translateX(-102%);transition:transform .2s;box-shadow:8px 0 30px rgba(0,0,0,.08)}aside.open{transform:translateX(0)}main{margin-left:0;width:100%}.iconbtn{display:inline-flex;align-items:center;justify-content:center}.grid,.modulegrid{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:16px}.head{flex-direction:column}.actions{width:100%}.actions .btn{min-height:42px}}
 @media(max-width:560px){header{padding:12px 14px}header h1{font-size:18px}#clock{display:none}.grid,.modulegrid,.formgrid{grid-template-columns:1fr}.card{padding:13px}.btn{min-height:42px}.toolbar>*{min-width:0;flex:1}.search{max-width:none}.modal{padding:8px}.modalbox{max-height:96vh;padding:14px;border-radius:12px}.tablewrap{border-radius:10px}table{min-width:650px}.nav button{padding:12px}.labelpreview{max-width:100%}}
+
+/* LRX v044 — responsive shell + mobile-safe windows */
+html,body{width:100%;max-width:100%;min-width:0;overflow-x:hidden}
+.app{width:100%;max-width:100%;min-width:0}
+main{max-width:100%;min-width:0;overflow-x:hidden}
+#content{width:100%;max-width:1500px;margin:0 auto;padding:22px;min-width:0;overflow-x:hidden}
+.modalbox{box-sizing:border-box;width:min(900px,100%);max-width:100%;min-width:0}
+.modalbox>*{max-width:100%}
+.tablewrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:900px){#content{padding:16px}}
+@media(max-width:560px){#content{padding:12px;width:100%;max-width:100%}.head{width:100%;min-width:0}.head h2,.head p{overflow-wrap:anywhere}.card{max-width:100%;min-width:0}.grid,.modulegrid,.formgrid{width:100%;min-width:0}.actions{width:100%;min-width:0}.actions .btn{min-width:0;max-width:100%}.toolbar{width:100%;min-width:0}.modal{padding:8px}.modalbox{width:100%;max-height:calc(100dvh - 16px);overflow:auto;-webkit-overflow-scrolling:touch;padding:14px}.modalbox .formgrid{grid-template-columns:1fr}.modalbox .actions{display:flex;flex-wrap:wrap}.modalbox .actions .btn{flex:1 1 140px}}
