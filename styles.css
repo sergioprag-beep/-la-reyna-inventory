@@ -118,3 +118,23 @@ main{margin-left:270px;width:calc(100% - 270px);background:#eef2f8}.topbar{heigh
 @media(max-width:1200px){.shortcut-grid{grid-template-columns:repeat(3,1fr)}.approved-kpis{grid-template-columns:repeat(3,1fr)}.approved-panels{grid-template-columns:1fr 1fr}.approved-promo{grid-column:auto}.profile-chip{min-width:150px}}
 @media(max-width:850px){.app{background:#eef2f8}.topbar{height:62px;padding:0 12px}.global-search{display:none}.topbar .iconbtn{display:block;border:1px solid rgba(255,255,255,.2);background:#0d315f;color:#fff}.profile-chip{min-width:0}.profile-copy{display:none}.approved-dashboard{padding:0 10px 20px}.dashboard-welcome{min-height:130px;padding:20px 12px;align-items:flex-end}.welcome-copy h2{font-size:25px}.welcome-meta{display:none}.shortcut-grid{grid-template-columns:repeat(2,1fr)}.approved-kpis{grid-template-columns:repeat(2,1fr)}.approved-panels{grid-template-columns:1fr}.approved-promo{min-height:150px}}
 @media(max-width:650px){.shortcut-visual{height:72px}.shortcut-body{padding:8px}.shortcut-body b{font-size:11px}.shortcut-body small{font-size:8px}.approved-kpi{padding:11px}.approved-kpi strong{font-size:19px}.foodcost-ring{gap:12px}.ring{width:108px;height:108px}.ring:after{width:70px;height:70px}.sales-chart{height:145px}.bar-track{height:100px}.purchase-row{grid-template-columns:30px 1fr auto}.purchase-row time{display:none}}
+
+/* LRX v115 — final responsive correction after executive desktop skin */
+@media(max-width:900px){
+  .app{display:block;min-height:100vh;background:#eef2f8}
+  aside{width:270px;transform:translateX(-102%);position:fixed;inset:0 auto 0 0}
+  aside.open{transform:translateX(0)}
+  main{margin-left:0!important;width:100%!important;min-width:0}
+  .topbar{width:100%;padding:0 12px}
+  .topbar .iconbtn{display:inline-flex}
+  .global-search{display:none}
+  .profile-chip{min-width:0}
+  .profile-copy{display:none}
+  .approved-dashboard{width:100%;max-width:none}
+}
+@media(max-width:560px){
+  .approved-dashboard{padding-left:8px;padding-right:8px}
+  .dashboard-welcome{width:100%;box-sizing:border-box}
+  .approved-kpis{grid-template-columns:1fr 1fr!important}
+  .approved-panels{grid-template-columns:1fr!important}
+}
