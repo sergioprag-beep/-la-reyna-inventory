@@ -50,28 +50,45 @@ function dashboard(){
  const purchaseTotal=(state.purchases||[]).reduce((n,x)=>n+Number(x.total||0),0);
  const invValue=(state.inventory||[]).reduce((n,x)=>n+Number(x.qty||0)*Number(x.unitCost||0),0);
  const low=(state.inventory||[]).filter(x=>Number(x.minQty||0)>0&&Number(x.qty||0)<=Number(x.minQty||0)).length;
- const fc=state.settings.targetFoodCost||30;
- const top=(state.sales||[]).reduce((m,x)=>{const k=x.product||'Sin producto';m[k]=(m[k]||0)+Number(x.qty||1);return m},{});
- const topRows=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
- return `<div class="hero-dashboard">
-  <div class="hero-copy"><span class="eyebrow">LA REYNA XPRESS · CONTROL EMPRESARIAL</span><h2>Bienvenido al centro de gestión</h2><p>Una sola vista para operación, costos, ventas y administración de la empresa.</p></div>
-  <div class="hero-actions"><span class="master-badge">MASTER: ${effectiveMaster('products').length} productos · ${effectiveMaster('suppliers').length || (master.suppliers||[]).length} proveedores · ${effectiveMaster('recipes').filter(r=>String(r.type||'final').toLowerCase()!=='pre').length} recetas · ${effectiveMaster('preps').length} pre-elaborados</span><button class="btn primary" data-jump="recetas">＋ Crear receta</button><button class="btn blue" data-jump="compras">＋ Registrar compra</button><button class="btn" data-jump="ventas">＋ Registrar venta</button></div>
- </div>
- <div class="grid kpi-dashboard">
-  <div class="card kpi"><small>Ventas netas</small><strong>${money(sales)}</strong><span>POS / canales</span></div>
-  <div class="card kpi blue"><small>Food Cost objetivo</small><strong>${Number(fc).toFixed(1)}%</strong><span>Configuración protegida</span></div>
-  <div class="card kpi"><small>Inventario valorizado</small><strong>${money(invValue)}</strong><span>Existencias actuales</span></div>
-  <div class="card kpi pink"><small>Compras registradas</small><strong>${money(purchaseTotal)}</strong><span>Histórico operativo</span></div>
-  <div class="card kpi"><small>Productos bajos</small><strong>${low}</strong><span>Requieren atención</span></div>
- </div>
- <div class="dashboard-grid">
-  <div class="card dashboard-panel"><div class="panel-head"><h3>Accesos rápidos</h3><span>Operación diaria</span></div><div class="quick-grid">${[['sup','SUP','Maestros'],['dre','DRE','Finanzas'],['inventario','Inventario','Existencias'],['foodcost','Food Cost','Costos'],['menu','Menu Engineering','Rentabilidad'],['inversion','Inversión','Registro empresarial'],['creditos','Créditos','Obligaciones'],['activos-digitales','Accesos','Credenciales']].map(x=>`<button class="quick-card" data-jump="${x[0]}"><b>${icon(x[0])} ${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div></div>
-  <div class="card dashboard-panel"><div class="panel-head"><h3>Top productos</h3><span>Unidades registradas</span></div>${topRows.map((x,i)=>`<div class="rank"><b>${i+1}</b><span>${esc(x[0])}</span><strong>${x[1]}</strong></div>`).join('')||'<div class="empty">Aún no hay ventas.</div>'}</div>
-  <div class="card dashboard-panel"><div class="panel-head"><h3>Alertas y pendientes</h3><button class="btn" data-jump="reportes">Ver reportes →</button></div>
-   <div class="alert-row"><span class="dot pink"></span><span>${low} productos por debajo del mínimo</span></div>
-   <div class="alert-row"><span class="dot blue"></span><span>${(state.loans||[]).filter(x=>Number(x.balance||0)>0).length} obligaciones financieras registradas</span></div>
-   <div class="alert-row"><span class="dot"></span><span>${(state.permits||[]).filter(x=>x.expiryDate&&new Date(x.expiryDate)<new Date()).length} permisos vencidos</span></div>
-  </div>
+ const fcTarget=Number(state.settings.targetFoodCost||30);
+ const activeEmployees=(state.employees||[]).filter(x=>x.active!==false).length;
+ const overdue=(state.permits||[]).filter(x=>x.expiryDate&&new Date(x.expiryDate)<new Date()).length;
+ const obligations=(state.loans||[]).filter(x=>Number(x.balance||0)>0).length;
+ const todayKey=new Date().toISOString().slice(0,10);
+ const todaySales=(state.sales||[]).filter(x=>String(x.date||x.createdAt||'').slice(0,10)===todayKey).reduce((n,x)=>n+Number(saleDetail(x).net||0),0);
+ const topMap=(state.sales||[]).reduce((m,x)=>{const k=x.product||x.recipe||'Sin producto';const net=Number(saleDetail(x).net||0);m[k]=(m[k]||0)+net;return m},{});
+ const topRows=Object.entries(topMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const days=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+ const chart=Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(6-i));const key=d.toISOString().slice(0,10);const value=(state.sales||[]).filter(x=>String(x.date||x.createdAt||'').slice(0,10)===key).reduce((n,x)=>n+Number(saleDetail(x).net||0),0);return {label:days[d.getDay()],value}});
+ const maxChart=Math.max(1,...chart.map(x=>x.value));
+ const recentPurchases=(state.purchases||[]).slice().sort((a,b)=>new Date(b.date||b.createdAt||0)-new Date(a.date||a.createdAt||0)).slice(0,5);
+ const masterCounts=`${effectiveMaster('products').length} productos · ${(effectiveMaster('suppliers').length||master.suppliers?.length||0)} proveedores · ${effectiveMaster('recipes').filter(r=>String(r.type||'final').toLowerCase()!=='pre').length} recetas · ${effectiveMaster('preps').length} pre-elaborados`;
+ const user=currentUser();
+ return `<div class="approved-dashboard">
+  <section class="dashboard-welcome">
+   <div class="welcome-copy"><span class="eyebrow">LA REYNA XPRESS · CONTROL EMPRESARIAL</span><h2>Bienvenido, <em>${esc((user.name||'Administrador LRX').split(' ')[0])}</em></h2><p>Aquí tienes un resumen completo de tu restaurante.</p></div>
+   <div class="welcome-meta"><span>☀️ Buenos días</span><small>${new Date().toLocaleDateString('es-US',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</small></div>
+  </section>
+  <section class="shortcut-grid">
+   ${[['recetas','Crear Receta','Desde foto o manual','✚','shortcut-recipe'],['compras','Subir Factura','Reconocimiento automático','▤','shortcut-invoice'],['inventario','Inventario','Control en tiempo real','◈','shortcut-inventory'],['produccion','Producción','Preelaborados y más','✂','shortcut-production'],['documentos-permisos','Documentos','Permisos, contratos y más','▤','shortcut-docs'],['reportes','Reportes','Todo en un solo lugar','▥','shortcut-reports']].map(x=>`<button class="shortcut-card ${x[4]}" data-jump="${x[0]}"><div class="shortcut-visual"><span>${x[3]}</span></div><div class="shortcut-body"><b>${x[1]}</b><small>${x[2]}</small><i>›</i></div></button>`).join('')}
+  </section>
+  <div class="master-strip">MASTER: ${masterCounts}</div>
+  <section class="approved-kpis">
+   <div class="approved-kpi"><small>Ventas hoy</small><strong>${money(todaySales)}</strong><span>POS / canales</span></div>
+   <div class="approved-kpi"><small>Ventas acumuladas</small><strong>${money(sales)}</strong><span>${(state.sales||[]).length} operaciones</span></div>
+   <div class="approved-kpi"><small>Food Cost objetivo</small><strong>${fcTarget.toFixed(1)}%</strong><span>Meta configurada</span></div>
+   <div class="approved-kpi"><small>Compras</small><strong>${money(purchaseTotal)}</strong><span>Histórico registrado</span></div>
+   <div class="approved-kpi"><small>Inventario</small><strong>${money(invValue)}</strong><span>Valor estimado</span></div>
+   <div class="approved-kpi"><small>Empleados activos</small><strong>${activeEmployees}</strong><span>${low} alertas de inventario</span></div>
+  </section>
+  <section class="approved-panels">
+   <div class="approved-panel sales-chart-panel"><div class="panel-head"><h3>Ventas de los últimos 7 días</h3><button class="link-btn" data-jump="ventas">Ver más →</button></div><small class="panel-caption">($ USD)</small><div class="sales-chart">${chart.map(x=>`<div class="bar-col"><span>${x.value?money(x.value):'—'}</span><div class="bar-track"><div class="bar-fill" style="height:${Math.max(4,(x.value/maxChart)*100)}%"></div></div><b>${x.label}</b></div>`).join('')}</div></div>
+   <div class="approved-panel"><div class="panel-head"><h3>Food Cost vs Ideal</h3><button class="link-btn" data-jump="foodcost">Ver más →</button></div><div class="foodcost-ring"><div class="ring" style="--pct:${Math.min(100,fcTarget)}%"><strong>${fcTarget.toFixed(1)}%</strong></div><div class="ring-legend"><span><i class="pink-dot"></i>Actual <b>${fcTarget.toFixed(1)}%</b></span><span><i class="blue-dot"></i>Ideal <b>25.0%</b></span><span><i class="gray-dot"></i>Diferencia <b>+${Math.max(0,fcTarget-25).toFixed(1)}%</b></span></div></div></div>
+   <div class="approved-panel"><div class="panel-head"><h3>Top 5 platos</h3><span>por ventas</span></div>${topRows.map((x,i)=>`<div class="rank-row"><b>${i+1}</b><span>${esc(x[0])}</span><strong>${money(x[1])}</strong></div>`).join('')||'<div class="empty">Aún no hay ventas registradas.</div>'}</div>
+   <div class="approved-panel"><div class="panel-head"><h3>Últimas compras</h3><button class="link-btn" data-jump="compras">Ver todas →</button></div>${recentPurchases.map(x=>`<div class="purchase-row"><span class="purchase-icon">▦</span><div><b>${esc(x.product||'Compra')}</b><small>${esc(x.supplier||'Sin proveedor')}</small></div><time>${fmt(x.date||x.createdAt)}</time><strong>${money(x.total||0)}</strong></div>`).join('')||'<div class="empty">Aún no hay compras registradas.</div>'}</div>
+   <div class="approved-panel"><div class="panel-head"><h3>Alertas y tareas</h3><button class="link-btn" data-jump="reportes">Ver todas →</button></div><div class="task-row"><span class="task-icon danger">!</span><div><b>${low} productos por debajo del mínimo</b><small>Revisar inventario y lista de compras</small></div></div><div class="task-row"><span class="task-icon warn">!</span><div><b>${overdue} permisos vencidos</b><small>Revisar documentos y permisos</small></div></div><div class="task-row"><span class="task-icon blue">$</span><div><b>${obligations} obligaciones financieras activas</b><small>Revisar módulo de Finanzas</small></div></div></div>
+   <button class="approved-promo" data-jump="recetas"><div><span>LA REYNA XPRESS</span><h3>Crear Receta</h3><p>Convierte tus ideas en operaciones estandarizadas.</p></div><strong>›</strong></button>
+  </section>
  </div>`;
 }
 function catalog(id,title){
@@ -918,7 +935,7 @@ function hydrateMasterData(){
   if(!Array.isArray(state.inventory)) state.inventory=[];
 }
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-23')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-23')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})}init();
 })();
 
 
