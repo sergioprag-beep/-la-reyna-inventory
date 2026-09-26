@@ -138,3 +138,8 @@ main{margin-left:270px;width:calc(100% - 270px);background:#eef2f8}.topbar{heigh
   .approved-kpis{grid-template-columns:1fr 1fr!important}
   .approved-panels{grid-template-columns:1fr!important}
 }
+
+/* LRX v117 — multi-item POS */
+.sale-items{display:flex;flex-direction:column;gap:7px;margin:7px 0 9px}.sale-item-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 110px 40px;gap:7px;align-items:center}.sale-item-row .input{min-width:0}.sale-item-remove{padding:7px 10px}.sale-items + .btn{margin-bottom:4px}@media(max-width:650px){.sale-item-row{grid-template-columns:1fr 72px 90px 36px;gap:5px}.sale-item-row .input{font-size:12px;padding:8px 7px}}
+
+.notification-badge{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#c62828;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:800}.top-icon{position:relative}.profile-button{border:0;background:transparent;cursor:pointer;text-align:left;font:inherit;color:inherit;padding:0}.profile-button:hover{filter:brightness(.96)}
