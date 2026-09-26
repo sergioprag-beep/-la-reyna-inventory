@@ -1,1 +1,11 @@
-{"name":"La Reyna Xpress — Sistema de Gestión","short_name":"LRX Gestión","start_url":"./","display":"standalone","background_color":"#f5f7fb","theme_color":"#244b93","lang":"es","icons":[{"src":"./LOGO XPRESS-4(5).jpg","sizes":"any","type":"image/jpeg"},{"src":"./LOGO XPRESS-4(5).jpg","sizes":"any","type":"image/jpeg"}]}
+{
+  "name": "La Reyna Xpress — Sistema de Gestión de Restaurante",
+  "short_name": "La Reyna Xpress",
+  "description": "Sistema de gestión integral de restaurante LRX",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#244b93",
+  "lang": "es-US"
+}
