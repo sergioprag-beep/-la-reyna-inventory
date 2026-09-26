@@ -162,3 +162,64 @@ main{margin-left:210px;width:calc(100% - 210px);background:var(--lrx-bg)}
 @media(max-width:1250px){aside{width:190px}main{margin-left:190px;width:calc(100% - 190px)}.approved-kpi-row{grid-template-columns:repeat(4,1fr)}.dashboard-grid-main{grid-template-columns:1fr 1fr}.business-panel{grid-column:1}.alerts-panel{grid-column:2}.expenses-panel,.result-panel{grid-column:auto}.hero-meta{min-width:410px}.nav button{font-size:10px}}
 @media(max-width:900px){aside{width:250px;transform:translateX(-105%)}aside.open{transform:translateX(0)}main{margin-left:0;width:100%}.topbar{height:54px}.approved-search{max-width:none}.date-chip,.sync-status,.language-chip{display:none}.approved-hero{border-radius:0;min-height:140px}.hero-meta{min-width:0;width:47%;grid-template-columns:1fr}.hero-meta>div{border-right:0;border-bottom:1px solid rgba(255,255,255,.1)}.hero-meta>div:last-child{border-bottom:0}.approved-kpi-row{grid-template-columns:repeat(2,1fr)}.dashboard-grid-main{grid-template-columns:1fr}.expenses-panel,.result-panel,.business-panel,.alerts-panel{grid-column:auto}.dashboard-bottom{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.approved-dashboard{padding:0 6px 14px}.approved-hero{display:block;padding:15px}.hero-copy h1{font-size:25px}.hero-meta{width:100%;margin-top:12px;grid-template-columns:1fr 1fr}.hero-meta>div{border-right:1px solid rgba(255,255,255,.1)}.hero-meta>div:nth-child(2n){border-right:0}.approved-kpi-row{grid-template-columns:1fr 1fr;gap:5px}.approved-kpi-card{min-height:68px;padding:7px}.kpi-icon{width:29px;height:29px;font-size:15px}.kpi-copy strong{font-size:14px}.kpi-copy small,.kpi-copy span{font-size:7px}.dashboard-bottom{grid-template-columns:1fr 1fr}.profile-copy,.profile-chevron{display:none}.profile-chip{min-width:34px}.topbar{padding:0 8px}.approved-search{flex:1}.approved-search kbd{display:none}.monthly-chart{height:145px}.month-bars{height:120px}}
+
+/* LRX v125 — navegación y arquitectura interna unificadas */
+.nav button{display:flex;align-items:center;gap:9px;text-decoration:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.nav button .nav-icon{width:17px;height:17px;display:grid;place-items:center;flex:0 0 17px;color:#9fb4cf;transition:color .16s,transform .16s}
+.nav button .nav-icon svg{width:16px;height:16px;display:block}
+.nav button .nav-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav button:hover .nav-icon{color:#fff;transform:translateX(1px)}
+.nav button.active .nav-icon{color:#fff}
+.nav button:focus-visible{outline:2px solid #f0b846;outline-offset:1px}
+.sidebar-script{font-family:"Brush Script MT","Segoe Script","Snell Roundhand",cursive;font-weight:600;letter-spacing:.01em}
+
+.module-page{padding:14px 14px 26px;max-width:1600px;margin:0 auto;min-width:0}
+.module-head{background:#fff;border:1px solid var(--lrx-line);border-radius:10px;padding:13px 14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(16,24,40,.035);align-items:center}
+.module-title-wrap{display:flex;align-items:center;gap:10px;min-width:0}
+.module-title-icon{width:34px;height:34px;border-radius:9px;background:#eef4fb;color:var(--lrx-blue);display:grid;place-items:center;flex:0 0 34px}
+.module-title-icon svg{width:18px;height:18px}
+.module-head h2{font-size:18px;line-height:1.15;color:#172033;margin:0 0 2px;font-weight:850}
+.module-head p{font-size:10px;color:#738096;line-height:1.35;margin:0}
+.module-head .actions{justify-content:flex-end}
+.module-page>.grid{gap:9px}
+.module-page>.card,.module-page>.tablewrap,.module-page>.catalog-results,.module-page>.catalog-grid,.module-page>.modulegrid{margin-top:9px}
+.module-page .card{border-radius:10px;box-shadow:0 2px 7px rgba(16,24,40,.035);padding:13px}
+.module-page .card h3{font-size:13px;margin:0 0 8px;color:#172033}
+.module-page .card h4{font-size:11px;color:#334155}
+.module-page .kpi strong{font-size:21px}
+.module-page .toolbar{padding:8px;background:#f8fafc;border:1px solid #e5e9ef;border-radius:9px;margin-top:9px;margin-bottom:9px}
+.module-page .toolbar .btn{min-height:34px;padding:7px 11px;font-size:11px}
+.module-page .input,.module-page .field input,.module-page .field select,.module-page .field textarea{border-color:#d7dee8;border-radius:8px;padding:9px 10px;font-size:12px}
+.module-page .tablewrap{border-radius:9px;box-shadow:0 2px 7px rgba(16,24,40,.025)}
+.module-page table{min-width:720px}
+.module-page th{background:#f5f7fa;color:#657389;font-size:9px;padding:9px 10px}
+.module-page td{font-size:11px;padding:9px 10px;color:#253247}
+.module-page .catalog-card{background:#fff;border:1px solid var(--lrx-line);border-radius:10px;padding:12px;box-shadow:0 2px 7px rgba(16,24,40,.035)}
+.module-page .catalog-title h3{font-size:13px}
+.module-page .catalog-grid{gap:8px}
+.module-page .catalog-grid small{font-size:9px;color:#7a879a}
+.module-page .catalog-grid b{font-size:11px;color:#172033}
+.module-page .catalog-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid #edf0f4}
+.module-page .catalog-actions .btn,.module-page .actions .btn{font-size:10px;padding:7px 10px;border-radius:7px;min-height:32px}
+.module-page .status{font-size:9px;padding:3px 7px}
+.module-page .pager{padding:8px 0}
+.module-page .empty{font-size:11px;padding:24px}
+.module-page .muted{font-size:10px}
+
+/* A touch-friendly single-click target on every interactive control. */
+.nav button,.btn,.module,.module-page .tablewrap button,.module-page a,[data-action]{touch-action:manipulation}
+
+@media(max-width:900px){
+  .module-page{padding:10px 8px 20px}
+  .module-head{padding:11px 12px}
+  .module-head{align-items:flex-start}
+  .module-head .actions{width:auto}
+  .module-head .actions .btn{flex:0 0 auto}
+}
+@media(max-width:650px){
+  .module-head{flex-direction:column;gap:9px}
+  .module-head .actions{width:100%}
+  .module-head .actions .btn{flex:1;min-width:0}
+  .module-title-icon{width:31px;height:31px;flex-basis:31px}
+  .module-head h2{font-size:16px}
+}
