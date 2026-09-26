@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#244b93">
+<meta name="theme-color" content="#071c35">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,29 +16,40 @@
 <body>
 <div class="app" id="app">
   <aside id="sidebar">
-    <div class="brand">
+    <div class="brand brand-approved">
       <img src="./LOGO XPRESS-4(5).jpg" alt="La Reyna Xpress">
-      <div><b>LA REYNA</b><span>XPRESS</span><small>Gestión de Restaurante</small></div>
+      <div class="brand-wordmark"><b>LRX</b><span>LA REYNA XPRESS</span></div>
     </div>
     <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-script">La Reyna Xpress</div>
+      <div class="sidebar-motto">GOOD FOOD<br>GOOD MOOD</div>
+      <small>LRX · Sistema de Gestión</small>
+    </div>
   </aside>
   <main>
     <header class="topbar">
       <button class="iconbtn" id="menuBtn" type="button" aria-label="Abrir menú">☰</button>
-      <div class="global-search" role="search"><span>⌕</span><input id="globalSearch" type="search" autocomplete="off" placeholder="Buscar módulo…"></div>
+      <div class="global-search approved-search" role="search">
+        <span>⌕</span><input id="globalSearch" type="search" autocomplete="off" placeholder="Buscar productos, recetas, ventas, proveedores..."><kbd>⌘ K</kbd>
+      </div>
       <div class="topbar-spacer"></div>
+      <button class="date-chip" type="button" aria-label="Rango de fechas">▣ <b>01 Ene 2025</b><span>→</span><b>31 Dic 2025</b>⌄</button>
+      <div class="sync-status"><span class="sync-dot"></span><b>Sincronizado</b></div>
+      <button class="language-chip" type="button">🇺🇸 <b>ES</b>⌄</button>
+      <button class="top-icon voice-button" id="voiceBtn" type="button" aria-label="Acción por voz">🎙️</button>
       <button class="top-icon" id="notificationsBtn" type="button" aria-label="Notificaciones">🔔<span id="notificationBadge" class="notification-badge" hidden>0</span></button>
       <button class="profile-chip profile-button" id="profileBtn" type="button" aria-label="Abrir perfil">
         <div class="profile-avatar" id="profileAvatar">LR</div>
-        <div class="profile-copy"><b id="profileName">Administrador LRX</b><small id="profileRole">Administrador</small></div>
+        <div class="profile-copy"><b id="profileName">Administrador LRX</b><small id="profileRole">Administrador</small></div><span class="profile-chevron">⌄</span>
       </button>
-      <span class="clock" id="clock"></span>
     </header>
     <section class="content" id="content" aria-live="polite"></section>
   </main>
 </div>
 <div class="modal" id="modal" hidden><div class="modalbox" id="modalBox"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
