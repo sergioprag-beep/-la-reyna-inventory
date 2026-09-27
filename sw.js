@@ -1,4 +1,4 @@
-const CACHE = "lrx-v129-approved";
+const CACHE = "lrx-v130-approved";
 const CORE = ["./", "./index.html", "./app.js", "./styles.css", "./master.json", "./manifest.webmanifest", "./LOGO XPRESS-4(5).jpg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
