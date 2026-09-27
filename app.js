@@ -1,6 +1,6 @@
 (()=>{'use strict';
-const APP_VERSION='v136';
-const KEY='lrx_state_v136';
+const APP_VERSION='v138';
+const KEY='lrx_state_v138';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
 const state=load(); let master={products:[],recipes:[]}; let current=location.hash.slice(1)||'dashboard'; if(!MODULES.some(m=>m[0]===current))current='dashboard';
@@ -738,33 +738,50 @@ async function attachPurchaseFile(file){
 
 function purchaseAttachmentControls(){return `<div class="card" style="margin-top:12px"><div class="rowhead"><h4>Documentos de esta compra</h4><span class="muted">Quedan vinculados a la compra actual</span></div><div class="actions"><button class="btn" id="purchaseAttachBtn" type="button">📎 Adjuntar factura / archivo</button><button class="btn" id="purchasePhotoBtn" type="button">📷 Fotografiar factura</button><button class="btn blue" id="purchaseOcrBtn" type="button">🔎 OCR factura</button><input id="purchaseAttachInput" type="file" accept="image/*,.pdf,.csv,.txt,.json,.xlsx,.xls" hidden><div id="purchaseAttachmentStatus" class="resultbox" style="margin-top:8px">Sin documento adjunto.</div></div></div>`}
 function parseInvoiceToPurchase(text){
- const raw=String(text||''); if(!raw.trim())return {supplier:'',invoice:'',date:'',lines:[]};
+ const raw=String(text||''); if(!raw.trim())return {supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
  const clean=raw.replace(/\r/g,'');
- const supplier=(clean.match(/(?:proveedor|supplier|vendor|empresa|company)\s*[:#-]?\s*([^\n]+)/i)||[])[1]?.trim()||'';
- const invoice=(clean.match(/(?:factura|invoice|invoice\s*no|no\.?\s*factura|n[úu]mero\s*de\s*factura)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/]+)/i)||[])[1]?.trim()||'';
- const date=(clean.match(/\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2})\b/)||[])[1]||((clean.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})\b/)||[]).slice(1).length===3?(()=>{const m=clean.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})\b/);return `${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`})():'');
- const lines=[];
- for(const line of clean.split('\n').map(x=>x.trim()).filter(Boolean)){
-   const m=line.match(/^(.{2,80}?)\s+(\d+(?:[.,]\d+)?)\s*(lb|lbs|libras?|oz|onzas?|kg|kilos?|g|gramos?|l|lt|litros?|ml|unidad(?:es)?|ea)?\s+(?:x\s*)?\$?\s*(\d+(?:[.,]\d{1,4})?)\s*$/i);
-   if(m){const qty=Number(m[2].replace(',','.'));const cost=Number(m[4].replace(',','.'));if(qty>0&&cost>=0)lines.push({product:m[1].replace(/^[\-•·]+/,'').trim(),qty,unit:voiceUnit(m[3]||'')||'unidad',unitCost:cost});}
+ const linesRaw=clean.split('\n').map(x=>x.replace(/[\t]+/g,' ').replace(/\s{2,}/g,' ').trim()).filter(Boolean);
+ const firstNonEmpty=linesRaw.find(x=>x.length>2)||'';
+ const pick=(re)=>{const m=clean.match(re);return m?.[1]?.trim()||''};
+ let supplier=pick(/(?:proveedor|supplier|vendor|empresa|company|merchant|vendedor)\s*[:#-]?\s*([^\n]+)/i);
+ if(!supplier){const candidates=linesRaw.slice(0,8).filter(x=>!/(invoice|factura|receipt|fecha|date|subtotal|total|tax|impuesto|telefono|phone|\bno\b)/i.test(x));supplier=candidates[0]||firstNonEmpty;}
+ const invoice=pick(/(?:factura|invoice|invoice\s*no|invoice\s*number|no\.?\s*factura|n[úu]mero\s*de\s*factura|folio)\s*(?:#|n[úu]mero|number|no\.?)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/\.]+)/i);
+ let date=pick(/\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2})\b/);
+ if(!date){const m=clean.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})\b/);if(m)date=`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;}
+ const moneyVal=(v)=>Number(String(v||'').replace(/[$€£]/g,'').replace(/\s/g,'').replace(/,(?=\d{2}$)/,'.').replace(/,/g,''))||0;
+ const findMoney=(patterns)=>{for(const re of patterns){const m=clean.match(re);if(m)return moneyVal(m[1]);}return 0};
+ const subtotal=findMoney([/(?:subtotal|sub\s*total|importe\s*neto|net\s*amount)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/i]);
+ const tax=findMoney([/(?:sales\s*tax|tax|impuesto|iva|\btotal\s*tax\b)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/i]);
+ const total=findMoney([/(?:grand\s*total|total\s*due|amount\s*due|balance\s*due|total)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/i]);
+ const out=[];
+ const unitRe='(?:lb|lbs|libras?|oz|onzas?|kg|kilos?|kilogramos?|g|gramos?|l|lt|lts?|litros?|ml|mililitros?|unidad(?:es)?|ea|pcs?|piezas?)';
+ const add=(product,qty,unit,cost,lineTotal)=>{product=String(product||'').replace(/^[\-•·*]+/,'').replace(/\s+/g,' ').trim();qty=moneyVal(qty);cost=moneyVal(cost);lineTotal=moneyVal(lineTotal);if(!product||qty<=0)return; if(!cost&&lineTotal)cost=lineTotal/qty; if(!cost&&lineTotal<=0)return;out.push({product,qty,unit:voiceUnit(unit)||'unidad',unitCost:cost,lineTotal:lineTotal||qty*cost});};
+ for(const line of linesRaw){
+   if(/^(?:subtotal|sub total|total|tax|impuesto|iva|invoice|factura|date|fecha|balance|amount due|grand total)\b/i.test(line))continue;
+   let m=line.match(new RegExp('^(.{2,90}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*('+unitRe+')?\\s*(?:x|@|a|por)?\\s*\\$?\\s*(\\d+(?:[.,]\\d{1,4})?)\\s*(?:\\$?\\s*(?:=|total)?\\s*(\\d+(?:[.,]\\d{1,2})?))?$','i'));
+   if(m){add(m[1],m[2],m[3],m[4],m[5]);continue;}
+   m=line.match(new RegExp('^(.{2,90}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*('+unitRe+')?\\s+\\$?\\s*(\\d+(?:[.,]\\d{1,4})?)$','i'));
+   if(m){add(m[1],m[2],m[3],m[4],0);continue;}
+   m=line.match(/^(.{2,90}?)\s+\$?\s*(\d+(?:[.,]\d{1,2})?)$/i);
+   if(m && !/(subtotal|total|tax|impuesto|iva|phone|tel|zip|invoice|factura|date|fecha)/i.test(m[1])){add(m[1],1,'unidad',m[2],m[2]);}
  }
- return {supplier,invoice,date,lines:lines.slice(0,50)};
+ return {supplier,invoice,date,subtotal,tax,total,lines:out.slice(0,100)};
 }
 function applyInvoiceToPurchase(text){
- const d=parseInvoiceToPurchase(text); if(d.supplier)voiceSet('bs',d.supplier); if(d.invoice)voiceSet('bi',d.invoice); if(d.date)voiceSet('bd',d.date);
+ const d=parseInvoiceToPurchase(text); if(d.supplier)voiceSet('bs',d.supplier); if(d.invoice)voiceSet('bi',d.invoice); if(d.date)voiceSet('bd',d.date); if(d.subtotal)voiceSet('bsub',d.subtotal.toFixed(2)); if(d.tax)voiceSet('btax',d.tax.toFixed(2)); if(d.total)voiceSet('btotal',d.total.toFixed(2));
  if(d.lines.length){const box=document.getElementById('purchaseLines');if(box){box.innerHTML=d.lines.map((x,i)=>purchaseLineRow(x,i)).join('');const products=[...(master.products||[]),...(state.products||[])];bindPurchaseLines(products);updatePurchasePreview();}}
- window._lrxPurchaseDraft=window._lrxPurchaseDraft||{};window._lrxPurchaseDraft.ocrText=text;window._lrxPurchaseDraft.parsed=d;
+ window._lrxPurchaseDraft=window._lrxPurchaseDraft||{};window._lrxPurchaseDraft.ocrText=text;window._lrxPurchaseDraft.parsed=d;persistPurchaseDraft();
  return d;
 }
 function persistPurchaseDraft(){
  const modalEl=document.getElementById('modal'); if(!modalEl||modalEl.hidden||!document.getElementById('bs')) return;
  const lines=[...document.querySelectorAll('.purchase-line')].map(r=>({product:r.querySelector('.bp-line-product')?.value.trim()||'',qty:Number(r.querySelector('.bp-line-qty')?.value||0),unit:r.querySelector('.bp-line-unit')?.value.trim()||'lb',unitCost:Number(r.querySelector('.bp-line-cost')?.value||0)}));
- window._lrxPurchaseDraft={...(window._lrxPurchaseDraft||{}),form:'purchase',context:'compras',supplier:document.getElementById('bs')?.value.trim()||'',invoice:document.getElementById('bi')?.value.trim()||'',date:document.getElementById('bd')?.value||'',status:document.getElementById('bst')?.value||'RECIBIDA',notes:document.getElementById('bn')?.value.trim()||'',lines,updatedAt:now()};
+ window._lrxPurchaseDraft={...(window._lrxPurchaseDraft||{}),form:'purchase',context:'compras',supplier:document.getElementById('bs')?.value.trim()||'',invoice:document.getElementById('bi')?.value.trim()||'',date:document.getElementById('bd')?.value||'',subtotal:Number(document.getElementById('bsub')?.value||0),tax:Number(document.getElementById('btax')?.value||0),total:Number(document.getElementById('btotal')?.value||0),status:document.getElementById('bst')?.value||'RECIBIDA',notes:document.getElementById('bn')?.value.trim()||'',lines,updatedAt:now()};
 }
 function bindPurchaseDraftAutosave(){
  const box=document.getElementById('modalBox'); if(!box)return;
- box.querySelectorAll('#bs,#bi,#bd,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('input',persistPurchaseDraft));
- box.querySelectorAll('#bs,#bi,#bd,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('change',persistPurchaseDraft));
+ box.querySelectorAll('#bs,#bi,#bd,#bsub,#btax,#btotal,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('input',persistPurchaseDraft));
+ box.querySelectorAll('#bs,#bi,#bd,#bsub,#btax,#btotal,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('change',persistPurchaseDraft));
 }
 async function readPurchaseDocument(file){
  if(!file)return '';
@@ -783,6 +800,9 @@ function purchaseModal(prefillId=''){
  <div class="field"><label>Proveedor</label><input id="bs" list="buySuppliers" value="${esc(savedDraft?.supplier||sh?.supplier||'')}" placeholder="Proveedor"><datalist id="buySuppliers">${suppliers.map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="field"><label>Factura / referencia</label><input id="bi" placeholder="Factura #" value="${esc(savedDraft?.invoice||(state._ocrInvoiceText||'').split(/\n/)[0].slice(0,80))}"></div>
  <div class="field"><label>Fecha</label><input id="bd" type="date" value="${savedDraft?.date||sh?.date||new Date().toISOString().slice(0,10)}"></div>
+ <div class="field"><label>Subtotal</label><input id="bsub" type="number" step="0.01" value="${Number(savedDraft?.subtotal||0)||''}" placeholder="0.00"></div>
+ <div class="field"><label>Impuestos</label><input id="btax" type="number" step="0.01" value="${Number(savedDraft?.tax||0)||''}" placeholder="0.00"></div>
+ <div class="field"><label>Total factura</label><input id="btotal" type="number" step="0.01" value="${Number(savedDraft?.total||0)||''}" placeholder="0.00"></div>
  <div class="field"><label>Estado</label><select id="bst"><option>RECIBIDA</option><option>PARCIAL</option><option>PENDIENTE</option><option>CANCELADA</option></select></div>
  </div><div class="card" style="margin-top:12px"><div class="rowhead"><h4>Productos de la compra</h4><button class="btn" id="addPurchaseLine" type="button">＋ Agregar producto</button></div><datalist id="buyProducts">${products.map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist><div id="purchaseLines">${initial.map((x,i)=>purchaseLineRow(x,i)).join('')}</div><div id="buyPreview" class="resultbox" style="margin-top:10px">Total estimado: $0.00</div></div>
  ${purchaseAttachmentControls()}<div class="field" style="margin-top:12px"><label>Notas</label><textarea id="bn" placeholder="Observaciones de recepción"></textarea></div>
@@ -792,12 +812,20 @@ function purchaseModal(prefillId=''){
  document.getElementById('addPurchaseLine').onclick=()=>{const box=document.getElementById('purchaseLines');box.insertAdjacentHTML('beforeend',purchaseLineRow({},box.children.length));bindPurchaseLines(products);updatePurchasePreview()};
  const inp=document.getElementById('purchaseAttachInput');document.getElementById('purchaseAttachBtn').onclick=()=>inp?.click();inp.onchange=()=>attachPurchaseFile(inp.files?.[0]);
  document.getElementById('purchasePhotoBtn').onclick=()=>cameraCapture(attachPurchaseFile);
- document.getElementById('purchaseOcrBtn').onclick=()=>purchaseInvoiceOcrModal();bindPurchaseDraftAutosave();persistPurchaseDraft();
+ document.getElementById('purchaseOcrBtn').onclick=()=>{if(window._lrxPurchaseAttachment?.file)runPurchaseOcrOnAttachment();else purchaseInvoiceOcrModal()};bindPurchaseDraftAutosave();persistPurchaseDraft();
+}
+async function runPurchaseOcrOnAttachment(){
+ const file=window._lrxPurchaseAttachment?.file;
+ if(!file)return purchaseInvoiceOcrModal();
+ const status=document.getElementById('purchaseAttachmentStatus');
+ if(status)status.textContent=`🔎 Procesando OCR de ${file.name}…`;
+ try{const text=await readPurchaseDocument(file);if(!text.trim())throw new Error('No se detectó texto en el documento');window._lrxPurchaseAttachment.ocrText=text;const parsed=applyInvoiceToPurchase(text);if(status)status.textContent=`✅ OCR terminado · ${parsed.lines.length} producto(s) detectado(s) · cabecera cargada`;toast(parsed.lines.length?`OCR aplicado: ${parsed.lines.length} producto(s) y cabecera cargados`:'OCR terminado; revisa la cabecera y el texto detectado');persistPurchaseDraft();}
+ catch(e){console.error('purchase OCR',e);if(status)status.textContent=`⚠️ No se pudo leer ${file.name}. Puedes intentar de nuevo o completar manualmente.`;toast('No se pudo procesar el OCR de esta factura')}
 }
 function purchaseInvoiceOcrModal(){
- modal(`<h3>🔎 Leer factura de esta compra</h3><p class="muted">Sube o fotografía la factura. El OCR se conservará en el borrador de compra y podrá convertirse en líneas.</p><div class="formgrid"><div class="field full"><label>Factura</label><input id="pOcrFile" type="file" accept="image/*" capture="environment"></div><div class="field full"><div id="pOcrStatus" class="resultbox">Esperando imagen…</div></div><div class="field full"><label>Texto reconocido</label><textarea id="pOcrText" style="min-height:180px"></textarea></div></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn blue" id="pRunOcr" type="button">Ejecutar OCR</button><button class="btn primary" id="pUseOcr" type="button">Usar en compra</button></div>`);
+ modal(`<h3>🔎 Leer factura de esta compra</h3><p class="muted">Sube o fotografía la factura. El OCR se conservará en el borrador de compra y podrá convertirse en líneas.</p><div class="formgrid"><div class="field full"><label>Factura</label><input id="pOcrFile" type="file" accept="image/*,.pdf" capture="environment"></div><div class="field full"><div id="pOcrStatus" class="resultbox">Esperando imagen…</div></div><div class="field full"><label>Texto reconocido</label><textarea id="pOcrText" style="min-height:180px"></textarea></div></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn blue" id="pRunOcr" type="button">Ejecutar OCR</button><button class="btn primary" id="pUseOcr" type="button">Usar en compra</button></div>`);
  const f=document.getElementById('pOcrFile'),status=document.getElementById('pOcrStatus'),txt=document.getElementById('pOcrText');
- document.getElementById('pRunOcr').onclick=async()=>{const file=f.files?.[0];if(!file)return toast('Selecciona una imagen');try{status.textContent='Procesando OCR…';const T=await ensureOCR();const r=await T.recognize(file,'spa+eng',{logger:m=>{if(m.status&&m.progress!=null)status.textContent=`OCR: ${m.status} ${(m.progress*100).toFixed(0)}%`}});txt.value=r?.data?.text||'';status.textContent='OCR terminado';}catch(e){status.textContent='No se pudo procesar el OCR'}};
+ document.getElementById('pRunOcr').onclick=async()=>{const file=f.files?.[0]||window._lrxPurchaseAttachment?.file;if(!file)return toast('Selecciona o adjunta una factura');try{status.textContent='Procesando OCR…';const text=await readPurchaseDocument(file);txt.value=text||'';status.textContent=text?'OCR terminado':'No se detectó texto';}catch(e){console.error(e);status.textContent='No se pudo procesar el OCR'}};
  document.getElementById('pUseOcr').onclick=()=>{const parsed=applyInvoiceToPurchase(txt.value||'');window._lrxPurchaseAttachment={file:f.files?.[0]||window._lrxPurchaseAttachment?.file,ocrText:txt.value||'',parsed};close();toast(parsed.lines.length?`OCR aplicado: ${parsed.lines.length} línea(s) detectadas`:'OCR asociado al borrador; revisa los campos')};
 }
 
@@ -1091,7 +1119,7 @@ function voicePurchaseContext(text){
  if(/\b(?:agrega|añade|anade)\s+(?:otro\s+)?producto\b/.test(x)){document.getElementById('addPurchaseLine')?.click();ok=true}
  if(/\b(?:toma|fotografia|fotografía)\b.*\bfactura\b/.test(x)){document.getElementById('purchasePhotoBtn')?.click();ok=true}
  if(/\b(?:adjunta|anexa|sube)\b.*\b(factura|archivo|documento)\b/.test(x)){document.getElementById('purchaseAttachBtn')?.click();ok=true}
- if(/\bocr\b|\blee\s+la\s+factura\b/.test(x)){document.getElementById('purchaseOcrBtn')?.click();ok=true}
+ if(/\bocr\b|\blee\s+la\s+factura\b|\baplica(?:r)?\s+(?:el\s+)?ocr\b|\busa(?:r)?\s+(?:el\s+)?ocr\b/.test(x)){if(window._lrxPurchaseAttachment?.file)runPurchaseOcrOnAttachment();else document.getElementById('purchaseOcrBtn')?.click();ok=true}
  const natural=raw.match(/(?:^|\b)([A-Za-zÁÉÍÓÚáéíóúÑñ][A-Za-zÁÉÍÓÚáéíóúÑñ0-9 .\-]{2,80}?)\s+(\d+(?:[.,]\d+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|gramos?|g|litros?|lt|ml|unidades?|piezas?)\s+(?:a|por|en)\s*\$?\s*(\d+(?:[.,]\d+)?)(?:\b|$)/i);
  if(natural && !ok){const product=natural[1].trim(),qty=voiceNumber(natural[2]),unit=voiceUnit(natural[3])||'lb',cost=voiceNumber(natural[4]);let target=[...document.querySelectorAll('.purchase-line')].find(r=>!String(r.querySelector('.bp-line-product')?.value||'').trim());if(!target){document.getElementById('addPurchaseLine')?.click();target=document.querySelectorAll('.purchase-line')[document.querySelectorAll('.purchase-line').length-1]}target.querySelector('.bp-line-product').value=product;target.querySelector('.bp-line-qty').value=qty;target.querySelector('.bp-line-unit').value=unit;target.querySelector('.bp-line-cost').value=cost;target.querySelector('.bp-line-product').dispatchEvent(new Event('change',{bubbles:true}));updatePurchasePreview();persistPurchaseDraft();ok=true;}
  if(/\b(?:guardar|guarda|registrar|registra)\b/.test(x)){document.querySelector('[data-action="save-purchase"]')?.click();window._lrxVoiceContext=null;window._lrxVoiceSession=null;return true}
@@ -1270,7 +1298,7 @@ function printSuppliers(){const rows=effectiveMaster('suppliers').map((x,i)=>({.
 
 function saveSupplier(){const name=document.getElementById('sn').value.trim();if(!name)return toast('Indica la empresa');const code=nextSupplierCode();state.suppliers.push({id:code,code,name,contact:document.getElementById('sc').value.trim(),phone:document.getElementById('sp').value.trim(),email:document.getElementById('se').value.trim(),terms:document.getElementById('st').value.trim(),notes:document.getElementById('sx').value.trim(),createdAt:now()});save();close();render();toast('Proveedor guardado')}
 async function savePurchase(){
- const supplier=document.getElementById('bs')?.value.trim()||'',invoice=document.getElementById('bi')?.value.trim()||'',purchaseDate=document.getElementById('bd')?.value||now(),status=document.getElementById('bst')?.value||'RECIBIDA',notes=document.getElementById('bn')?.value.trim()||'';
+ const supplier=document.getElementById('bs')?.value.trim()||'',invoice=document.getElementById('bi')?.value.trim()||'',purchaseDate=document.getElementById('bd')?.value||now(),subtotal=Number(document.getElementById('bsub')?.value||0),tax=Number(document.getElementById('btax')?.value||0),invoiceTotal=Number(document.getElementById('btotal')?.value||0),status=document.getElementById('bst')?.value||'RECIBIDA',notes=document.getElementById('bn')?.value.trim()||'';
  const lines=[...document.querySelectorAll('.purchase-line')].map(r=>({product:r.querySelector('.bp-line-product')?.value.trim()||'',qty:Number(r.querySelector('.bp-line-qty')?.value||0),unit:r.querySelector('.bp-line-unit')?.value.trim()||'u',unitCost:Number(r.querySelector('.bp-line-cost')?.value||0)})).filter(x=>x.product&&x.qty>0&&x.unitCost>=0);
  if(!lines.length)return toast('Agrega al menos un producto con cantidad');
  const groupId='BUYGRP-'+Date.now();const supplierMaster=(master.suppliers||[]).map(x=>typeof x==='string'?{name:x}:x).find(x=>String(x.name||'').trim().toLowerCase()===supplier.toLowerCase());
@@ -1283,7 +1311,7 @@ async function savePurchase(){
   if(!linkedProduct){linkedProduct={id:'P-'+Date.now()+Math.random().toString(36).slice(2,6),name:line.product,category:'Sin categoría',supplier,unit:line.unit,standardUnit:line.unit,cost:line.unitCost,source:'PURCHASE',createdAt:now()};state.products.push(linkedProduct)}
   const masterProductId=productMaster?.id||linkedProduct?.masterId||linkedProduct?.id||'';const id='BUY-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);const total=line.qty*line.unitCost;
   const prior=(state.purchasePriceHistory||[]).filter(x=>String(x.productId)===String(linkedProduct.id)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))[0];
-  const purchase={id,groupId,date:purchaseDate,supplier,supplierId,product:line.product,productId:linkedProduct.id,masterProductId,qty:line.qty,orderedQty:line.qty,unit:line.unit,unitCost:line.unitCost,total,invoice,status,notes,createdAt:now(),inventoryApplied:false};
+  const purchase={id,groupId,date:purchaseDate,supplier,supplierId,product:line.product,productId:linkedProduct.id,masterProductId,qty:line.qty,orderedQty:line.qty,unit:line.unit,unitCost:line.unitCost,total,invoice,subtotal,tax,invoiceTotal,status,notes,createdAt:now(),inventoryApplied:false,source:'Manual/OCR'};
   state.purchases.push(purchase);created.push(purchase);
   state.purchasePriceHistory.push({id:'PH-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),purchaseId:id,date:purchase.date,productId:linkedProduct.id,masterProductId,product:line.product,supplier,supplierId,unit:line.unit,unitCost:line.unitCost,qty:line.qty,total,received:status==='RECIBIDA'||status==='PARCIAL'});
   if(state.settings.priceIncreaseAlertEnabled&&prior&&Number(prior.unitCost)>0){const pct=(line.unitCost-Number(prior.unitCost))/Number(prior.unitCost)*100;if(pct>=Number(state.settings.priceIncreaseAlertPct||10)){state.audit=Array.isArray(state.audit)?state.audit:[];state.audit.push({id:'AUD-'+Date.now(),date:now(),type:'ALERTA PRECIO',message:`${line.product}: aumento ${pct.toFixed(1)}% (${money(prior.unitCost)} → ${money(line.unitCost)})`,ref:id})}}
