@@ -1,6 +1,6 @@
 (()=>{'use strict';
-const APP_VERSION='v132';
-const KEY='lrx_state_v132';
+const APP_VERSION='v133';
+const KEY='lrx_state_v133';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
 const state=load(); let master={products:[],recipes:[]}; let current=location.hash.slice(1)||'dashboard'; if(!MODULES.some(m=>m[0]===current))current='dashboard';
@@ -956,12 +956,24 @@ function saveDateRange(){
  if(!from||!to)return toast('Selecciona ambas fechas'); if(from>to)return toast('La fecha inicial no puede ser posterior a la final');
  state.settings.dateRange={from,to};save();close();updateDateChip();render();toast('Rango de fechas actualizado');
 }
+function documentRoute(type){
+ const t=normalizeVoice(type);
+ if(t.includes('factura')||t.includes('compra'))return {area:'Compras / Finanzas',collection:'financialDocuments'};
+ if(t.includes('receta'))return {area:'SUP / Recetas',collection:'recipes'};
+ if(t.includes('ficha'))return {area:'SUP / Fichas técnicas',collection:'records'};
+ if(t.includes('etiqueta'))return {area:'Producción / Etiquetas',collection:'labels'};
+ if(t.includes('empleado')||t.includes('contrato'))return {area:'Empleados / Documentos',collection:'employeeDocs'};
+ return {area:'NAS / Archivo Documental',collection:'documents'};
+}
+function showSavedDocument(d){
+ modal(`<h3>📄 Documento guardado</h3><div class="card"><p><b>${esc(d.name)}</b></p><p>Tipo: <b>${esc(d.type)}</b></p><p>Destino LRX: <b>${esc(d.routeArea)}</b></p><p>OCR: <b>${d.ocrText?'Procesado':'No procesado'}</b></p>${d.ocrText?`<details style="margin-top:10px"><summary>Ver texto OCR</summary><pre style="white-space:pre-wrap;max-height:280px;overflow:auto">${esc(d.ocrText)}</pre></details>`:''}</div><div class="actions"><button class="btn" data-action="close">Cerrar</button><button class="btn primary" data-action="document-download" data-id="${esc(d.id)}">Abrir / descargar</button></div>`);
+}
 function captureDocumentsModal(initialFile=null){
  modal(`<h3>Capturar / importar información</h3><p class="muted">Adjunta documentos, fotos o archivos para conservarlos en el registro LRX. Las imágenes también pueden pasar por OCR.</p><div class="formgrid"><div class="field full"><label>Archivo</label><input id="docFile" type="file" accept="image/*,.pdf,.csv,.txt,.json,.xlsx,.xls" capture="environment"><button class="btn" type="button" id="docCameraBtn">📷 Abrir cámara</button><input id="docCameraFile" type="file" accept="image/*" capture="environment" hidden></div><div class="field"><label>Tipo</label><select id="docType"><option>Documento</option><option>Factura</option><option>Foto</option><option>Receta</option><option>Ficha técnica</option><option>Etiqueta</option><option>Otro</option></select></div><div class="field"><label>Descripción</label><input id="docDesc" placeholder="Ej. factura proveedor, ficha..."/></div><div class="field full"><div id="docPreview" class="resultbox">Ningún archivo seleccionado.</div></div></div><div class="actions"><button class="btn" data-action="close">Cerrar</button><button class="btn blue" id="docOcrBtn" type="button">OCR imagen</button><button class="btn primary" id="docSaveBtn" type="button">Guardar documento</button></div>`);
  const f=document.getElementById('docFile');const cf=document.getElementById('docCameraFile');
  if(initialFile){try{const dt=new DataTransfer();dt.items.add(initialFile);f.files=dt.files}catch(e){} }const cameraBtn=document.getElementById('docCameraBtn');const showFile=x=>{if(!x)return;document.getElementById('docPreview').textContent=`${x.name} · ${(x.size/1024).toFixed(1)} KB`;try{const dt=new DataTransfer();dt.items.add(x);f.files=dt.files}catch(e){}};f.onchange=()=>showFile(f.files?.[0]);if(cameraBtn)cameraBtn.onclick=()=>cf?.click();if(cf)cf.onchange=()=>showFile(cf.files?.[0]);
  document.getElementById('docOcrBtn').onclick=async()=>{const x=f.files?.[0];if(!x)return toast('Selecciona una imagen');if(!x.type.startsWith('image/'))return toast('El OCR de esta acción requiere una imagen');const box=document.getElementById('docPreview');box.textContent='Procesando OCR…';try{const T=await ensureOCR();const r=await T.recognize(x,'spa+eng',{logger:m=>{if(m.status&&m.progress!=null)box.textContent=`OCR: ${m.status} ${(m.progress*100).toFixed(0)}%`}});const txt=r?.data?.text||'';state._lastOcrText=txt;box.textContent=`OCR terminado · ${txt.length} caracteres`;toast('Texto OCR disponible; se conservará en la ficha del documento');}catch(e){box.textContent='No se pudo procesar el OCR';toast('Error de OCR')}};
- document.getElementById('docSaveBtn').onclick=()=>{const x=f.files?.[0];if(!x)return toast('Selecciona un archivo');const reader=new FileReader();reader.onload=()=>{state.documents=Array.isArray(state.documents)?state.documents:[];state.documents.unshift({id:'DOC-'+Date.now(),name:x.name,type:document.getElementById('docType').value,description:document.getElementById('docDesc').value.trim(),mime:x.type,size:x.size,dataUrl:String(reader.result||'').slice(0,1500000),ocrText:state._lastOcrText||'',createdAt:now(),createdBy:currentUser().name});state.documents=state.documents.slice(0,100);state._lastOcrText='';save();close();render();toast('Documento guardado en LRX')};reader.readAsDataURL(x)};
+ document.getElementById('docSaveBtn').onclick=()=>{const x=f.files?.[0];if(!x)return toast('Selecciona un archivo');const reader=new FileReader();reader.onload=()=>{state.documents=Array.isArray(state.documents)?state.documents:[];const type=document.getElementById('docType').value,route=documentRoute(type);const d={id:'DOC-'+Date.now(),name:x.name,type,description:document.getElementById('docDesc').value.trim(),mime:x.type,size:x.size,dataUrl:String(reader.result||'').slice(0,1500000),ocrText:state._lastOcrText||'',routeArea:route.area,routeCollection:route.collection,createdAt:now(),createdBy:currentUser().name};state.documents.unshift(d);state.documents=state.documents.slice(0,100);if(type==='Factura'||type==='Factura de compra'){state.financialDocuments=Array.isArray(state.financialDocuments)?state.financialDocuments:[];state.financialDocuments.unshift({...d,category:'Factura de compra',sourceDocumentId:d.id});state.financialDocuments=state.financialDocuments.slice(0,100)}state._lastOcrText='';save();close();render();showSavedDocument(d)};reader.readAsDataURL(x)};
 }
 function normalizeVoice(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[¿?¡!]/g,' ').replace(/\s+/g,' ').trim()}
 function voiceNumber(s){const raw=normalizeVoice(s);const words={cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,treinta:30,cuarenta:40,cincuenta:50,cien:100};if(words[raw]!=null)return words[raw];const n=Number(raw.replace(',','.').replace(/[^0-9.\-]/g,''));return Number.isFinite(n)?n:null}
@@ -987,19 +999,65 @@ function voiceRecipeContext(text){
 }
 function voiceProductContext(text){const raw=String(text||''),x=normalizeVoice(raw);let ok=false;const name=raw.match(/(?:nombre\s*[:\-]?\s*|producto\s+(?:de|llamado)\s+)([^.,]+?)(?=\s+(?:categoria|proveedor|unidad|costo|precio|codigo|barra|guardar)\b|[.,]|$)/i);if(name){voiceSet('pn',name[1].trim());ok=true}const cat=raw.match(/categor(?:ia|ía)\s*[:\-]?\s*([^.,]+)/i);if(cat){voiceSet('pc',cat[1].trim());ok=true}const sup=raw.match(/proveedor\s*[:\-]?\s*([^.,]+)/i);if(sup){voiceSet('ps',sup[1].trim());ok=true}const unit=raw.match(/unidad\s*[:\-]?\s*([^.,]+)/i);if(unit){voiceSet('pu',unit[1].trim());ok=true}const cost=raw.match(/(?:costo|coste|precio(?: de compra)?)\s*[:\-]?\s*\$?([0-9]+(?:[.,][0-9]+)?)/i);if(cost){voiceSet('px',voiceNumber(cost[1]));ok=true}if(/\bguardar\b/.test(x)){const b=document.querySelector('[data-action="save-product"]');if(b)b.click();window._lrxVoiceContext=null;return true}return ok}
 function voicePurchaseContext(text){const raw=String(text||''),x=normalizeVoice(raw);let ok=false;const sup=raw.match(/proveedor\s*[:\-]?\s*([^.,]+)/i);if(sup){voiceSet('bs',sup[1].trim());ok=true}const items=voiceIngredientParts(raw);if(items.length){const i=items[0];voiceSet('bp',i.product);voiceSet('bq',i.qty);voiceSet('bu',i.unit);ok=true}if(/\bguardar\b|\brecibir\b/.test(x)){const b=document.querySelector('[data-action="save-purchase"]');if(b)b.click();window._lrxVoiceContext=null;return true}return ok}
+function voiceSessionEnsure(){
+ if(!window._lrxVoiceSession) window._lrxVoiceSession={active:true,startedAt:now(),turns:[],draftId:null};
+ return window._lrxVoiceSession;
+}
+function voiceSessionAppend(text){
+ const s=voiceSessionEnsure();const t=String(text||'').trim();if(!t)return;
+ s.turns.push({at:now(),text:t});s.turns=s.turns.slice(-30);
+ const live=document.getElementById('lrxVoiceLiveText');if(live)live.textContent=t;
+ const hist=document.getElementById('lrxVoiceHistory');if(hist){hist.innerHTML=s.turns.map(x=>`<div style="padding:6px 0;border-bottom:1px solid rgba(20,40,80,.08)"><small style="opacity:.55">${esc(fmt(x.at,true))}</small><div>${esc(x.text)}</div></div>`).join('');hist.scrollTop=hist.scrollHeight;}
+}
+function voiceContextLabel(){
+ const c=window._lrxVoiceContext;if(!c)return 'Conversación LRX';
+ if(c.form==='recipe')return c.recipeType==='prep'?'Receta / Pre-elaborado activo':'Receta final activa';
+ if(c.form==='product')return 'Producto activo';
+ if(c.form==='purchase')return 'Compra activa';
+ return 'Contexto LRX activo';
+}
+function voiceNaturalRecipe(text){
+ const raw=String(text||''),x=normalizeVoice(raw),ctx=window._lrxVoiceContext;
+ if(!ctx||ctx.form!=='recipe')return false;
+ let changed=voiceRecipeContext(raw);
+ const addRe=/\b(?:agrega|añade|anade|incorpora|incluye|pon|poner|lleva|con)\s+(.+)$/i;
+ const rename=raw.match(/\b(?:llamala|llámala|se va a llamar|que se llame|ponle de nombre)\s+([^.,]+)/i);if(rename){voiceSet('rn',rename[1].trim());changed=true;}
+ const changeYield=raw.match(/\b(?:cambia|pon|ajusta)\s+(?:el\s+)?(?:rendimiento|peso)\s+(?:a|en)\s*([0-9]+(?:[.,][0-9]+)?)\s*(\w+)?/i);if(changeYield){voiceSet('ry',voiceNumber(changeYield[1]));const u=voiceUnit(changeYield[2]||'');if(u)voiceSet('ru',u);changed=true;}
+ if(/\b(?:guardar|guárdala|guardala|registrar|regístrala|registrala)\b/.test(x)){saveRecipe(ctx.recipeType||'final',ctx.id||null);window._lrxVoiceContext=null;window._lrxVoiceSession=null;return true;}
+ return changed;
+}
+function voiceConversationStatus(){
+ const s=window._lrxVoiceSession;const c=window._lrxVoiceContext;return c?voiceContextLabel():(s?'Conversación LRX activa':'Listo para conversar');
+}
 function openVoiceContextPanel(){
  let p=document.getElementById('lrxVoiceAssistant');if(p){p.hidden=false;return}
- p=document.createElement('div');p.id='lrxVoiceAssistant';p.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483000;width:min(420px,calc(100vw - 36px));background:#fff;border:1px solid rgba(20,40,80,.18);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.22);padding:16px;font-family:inherit';p.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>🎙️ Asistente LRX</b><div id="lrxVoiceContextLabel" style="font-size:12px;opacity:.7">Contexto activo</div></div><button id="lrxVoiceClose" class="btn">×</button></div><div id="lrxVoiceLiveText" class="resultbox" style="margin-top:10px;min-height:48px">Habla naturalmente. LRX mantendrá el contexto.</div><div id="lrxVoiceAssistantStatus" class="muted" style="margin-top:8px">Listo.</div><div class="actions" style="margin-top:10px"><button id="lrxVoiceStart" class="btn blue">🎙️ Escuchar</button><button id="lrxVoiceStop" class="btn" disabled>⏹ Detener</button></div>`;document.body.appendChild(p);
+ p=document.createElement('div');p.id='lrxVoiceAssistant';p.style.cssText='position:fixed;right:18px;bottom:18px;z-index:2147483000;width:min(420px,calc(100vw - 36px));background:#fff;border:1px solid rgba(20,40,80,.18);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.22);padding:16px;font-family:inherit';p.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>🎙️ Asistente LRX</b><div id="lrxVoiceContextLabel" style="font-size:12px;opacity:.7">${esc(voiceConversationStatus())}</div></div><button id="lrxVoiceClose" class="btn">×</button></div><div id="lrxVoiceLiveText" class="resultbox" style="margin-top:10px;min-height:48px">Habla naturalmente. LRX mantendrá el contexto aunque haya pausas.</div><div id="lrxVoiceHistory" style="margin-top:10px;max-height:180px;overflow:auto"></div><div id="lrxVoiceAssistantStatus" class="muted" style="margin-top:8px">Listo para conversar.</div><div class="actions" style="margin-top:10px"><button id="lrxVoiceStart" class="btn blue">🎙️ Escuchar / continuar</button><button id="lrxVoiceStop" class="btn" disabled>⏸ Pausar</button></div>`;document.body.appendChild(p);
  document.getElementById('lrxVoiceClose').onclick=()=>{stopContextVoice();p.remove()};document.getElementById('lrxVoiceStart').onclick=startContextVoice;document.getElementById('lrxVoiceStop').onclick=stopContextVoice;
 }
 let _lrxContextRec=null,_lrxContextListening=false;
-function stopContextVoice(){_lrxContextListening=false;try{_lrxContextRec?.stop()}catch(e){};_lrxContextRec=null;const s=document.getElementById('lrxVoiceAssistantStatus'),st=document.getElementById('lrxVoiceStart'),sp=document.getElementById('lrxVoiceStop');if(s)s.textContent='Detenido.';if(st)st.disabled=false;if(sp)sp.disabled=true}
+function stopContextVoice(clear=false){
+ _lrxContextListening=false;try{_lrxContextRec?.stop()}catch(e){};_lrxContextRec=null;
+ const s=document.getElementById('lrxVoiceAssistantStatus'),st=document.getElementById('lrxVoiceStart'),sp=document.getElementById('lrxVoiceStop');
+ if(s)s.textContent=clear?'Sesión cerrada.':'Pausado. El contexto y el borrador siguen intactos.';
+ if(st)st.disabled=false;if(sp)sp.disabled=true;
+}
 function startContextVoice(){
- const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return toast('Este navegador no ofrece reconocimiento de voz.');stopContextVoice();const r=new SR();r.lang='es-US';r.continuous=true;r.interimResults=false;r.maxAlternatives=1;_lrxContextRec=r;_lrxContextListening=true;const s=document.getElementById('lrxVoiceAssistantStatus'),st=document.getElementById('lrxVoiceStart'),sp=document.getElementById('lrxVoiceStop');if(st)st.disabled=true;if(sp)sp.disabled=false;if(s)s.textContent='Escuchando… Puedes hablar de forma natural.';r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(!e.results[i].isFinal)continue;const t=e.results[i][0]?.transcript||'';const out=document.getElementById('lrxVoiceLiveText');if(out)out.textContent=t;handleVoiceTranscript(t,{context:true});}};r.onerror=e=>{if(s)s.textContent=e.error==='not-allowed'?'Permiso de micrófono bloqueado.':'Error de voz: '+e.error};r.onend=()=>{if(_lrxContextListening){try{r.start()}catch(e){}}};try{r.start()}catch(e){stopContextVoice();toast('No se pudo iniciar el micrófono')}
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return toast('Este navegador no ofrece reconocimiento de voz.');
+ if(_lrxContextListening)return;voiceSessionEnsure();_lrxContextListening=true;
+ const create=()=>{
+  const r=new SR();r.lang='es-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=3;_lrxContextRec=r;
+  const s=document.getElementById('lrxVoiceAssistantStatus'),st=document.getElementById('lrxVoiceStart'),sp=document.getElementById('lrxVoiceStop'),lab=document.getElementById('lrxVoiceContextLabel');
+  if(st)st.disabled=true;if(sp)sp.disabled=false;if(lab)lab.textContent=voiceConversationStatus();if(s)s.textContent='Escuchando… Puedes hablar naturalmente y hacer pausas.';
+  r.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i]?.[0]?.transcript||'';if(e.results[i].isFinal){voiceSessionAppend(t);handleVoiceTranscript(t,{context:true,conversation:true});}else interim+=t;}const live=document.getElementById('lrxVoiceLiveText');if(live&&interim)live.textContent=interim;};
+  r.onerror=e=>{if(e?.error==='aborted'||e?.error==='no-speech')return;if(s)s.textContent=e.error==='not-allowed'?'Permiso de micrófono bloqueado.':'Error de voz: '+e.error;};
+  r.onend=()=>{_lrxContextRec=null;if(_lrxContextListening){if(s)s.textContent='Pausa detectada. Continúo escuchando…';setTimeout(()=>{if(_lrxContextListening)create()},350)}else{if(s)s.textContent='Pausado. El borrador sigue guardado.'}};
+  try{r.start()}catch(e){_lrxContextRec=null;if(_lrxContextListening)setTimeout(()=>{if(_lrxContextListening)create()},500)}
+ };
+ create();
 }
 function handleVoiceTranscript(q,opts={}){
  const raw=String(q||'').trim(),x=normalizeVoice(raw);if(!raw)return;
- if(opts.context||window._lrxVoiceContext){const c=window._lrxVoiceContext;if(c?.form==='recipe'&&voiceRecipeContext(raw)){toast('LRX actualizó la receta con tu instrucción');return}if(c?.form==='product'&&voiceProductContext(raw)){toast('LRX actualizó el producto con tu instrucción');return}if(c?.form==='purchase'&&voicePurchaseContext(raw)){toast('LRX actualizó la compra con tu instrucción');return}}
+ if(opts.context||window._lrxVoiceContext){const c=window._lrxVoiceContext;if(c?.form==='recipe'&&voiceNaturalRecipe(raw)){toast('LRX actualizó la receta con tu instrucción');const lab=document.getElementById('lrxVoiceContextLabel');if(lab)lab.textContent=voiceConversationStatus();return}if(c?.form==='product'&&voiceProductContext(raw)){toast('LRX actualizó el producto con tu instrucción');return}if(c?.form==='purchase'&&voicePurchaseContext(raw)){toast('LRX actualizó la compra con tu instrucción');return}}
  if(/^(?:crear|creame|créame|hacer|hazme)\s+(?:una\s+)?receta\b|\bnueva\s+receta\b|\bquiero\s+(?:crear|hacer)\s+una\s+receta\b/.test(x)){
    const isPrep=/pre[- ]?elaborado|preparacion base|pre elaborado/.test(x);window._lrxVoiceContext={form:'recipe',recipeType:isPrep?'prep':'final',id:null};go(isPrep?'preelaborados':'recetas');requestAnimationFrame(()=>{recipeModal(isPrep?'prep':'final');requestAnimationFrame(()=>{openVoiceContextPanel();voiceRecipeContext(raw);});});return toast('Preparando una nueva receta');
  }
@@ -1017,7 +1075,7 @@ function voiceFinancialSearch(query){
  const q=normalizeVoice(query);const all=[...(state.financialDocuments||[]),...(state.documents||[])];const rows=all.filter(d=>normalizeVoice(JSON.stringify(d)).includes(q)||q.split(/\s+/).filter(Boolean).some(w=>normalizeVoice(JSON.stringify(d)).includes(w))).slice(0,30);
  modal(`<h3>🔎 Resultado de búsqueda</h3><p class="muted">Búsqueda por voz: <b>${esc(query)}</b></p><div class="card">${rows.map(d=>`<div class="module-list-row"><b>${esc(d.name||d.title||d.fileName||'Documento')}</b><span>${esc(d.type||d.category||'Documento')}</span><strong>${esc(d.date||d.createdAt||'')}</strong></div>`).join('')||'<div class="empty">No encontré documentos con esos datos.</div>'}</div><div class="actions"><button class="btn primary" data-action="close">Cerrar</button></div>`);
 }
-function voiceAction(){if(window._lrxVoiceContext){openVoiceContextPanel();return}voiceModal('command')}
+function voiceAction(){if(window._lrxVoiceContext||window._lrxVoiceSession){openVoiceContextPanel();startContextVoice();return}voiceSessionEnsure();openVoiceContextPanel();startContextVoice();}
 function stopCameraStream(){try{(window._lrxCameraStream?.getTracks?.()||[]).forEach(t=>t.stop())}catch(e){}window._lrxCameraStream=null}
 function cameraCapture(){
  modal(`<h3>📷 Capturar fotografía</h3><p class="muted">La cámara se abre directamente desde LRX. Después de capturar podrás conservar la foto, aplicar OCR o adjuntarla a un documento.</p><div class="camera-stage"><video id="lrxCameraVideo" autoplay playsinline muted style="width:100%;max-height:48vh;border-radius:14px;background:#071c35;object-fit:cover"></video><canvas id="lrxCameraCanvas" hidden></canvas></div><div id="cameraStatus" class="resultbox">Solicitando acceso a la cámara…</div><div class="actions"><button class="btn" data-action="close-camera">Cerrar</button><button class="btn" id="cameraStartBtn" type="button">📷 Activar cámara</button><button class="btn blue" id="cameraShotBtn" type="button" disabled>◉ Tomar fotografía</button><button class="btn primary" id="cameraUseBtn" type="button" disabled>Usar fotografía</button></div>`);
