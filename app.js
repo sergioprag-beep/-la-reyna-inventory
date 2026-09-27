@@ -730,10 +730,17 @@ async function attachPurchaseFile(file){
  if(!file)return;
  window._lrxPurchaseAttachment={...(window._lrxPurchaseAttachment||{}),file,ocrText:window._lrxPurchaseAttachment?.ocrText||''};
  persistPurchaseDraft();
- const e=document.getElementById('purchaseAttachmentStatus');if(e)e.textContent=`📎 ${file.name} · ${(file.size/1024).toFixed(1)} KB · Asociado a esta compra`;
+ const e=document.getElementById('purchaseAttachmentStatus');
+ if(e)e.textContent=`📎 ${file.name} · ${(file.size/1024).toFixed(1)} KB · Asociado a esta compra`;
+ // Do not make attachment depend on OCR: the original file remains attached even if OCR fails.
  const txt=await readPurchaseDocument(file);
- if(txt){window._lrxPurchaseAttachment.ocrText=txt;const parsed=applyInvoiceToPurchase(txt);if(e)e.textContent=parsed.lines.length?`🔎 Documento leído · ${parsed.lines.length} producto(s) detectados · revisa y guarda`:'🔎 Documento leído · revisa los datos detectados';toast(parsed.lines.length?'Factura procesada y aplicada al borrador':'Documento leído; revisa el borrador');persistPurchaseDraft();}
- else if(e)e.textContent='📎 Documento adjunto · no se pudo extraer texto automáticamente; puedes completar los datos manualmente';
+ if(txt){
+  window._lrxPurchaseAttachment.ocrText=txt;
+  const parsed=applyInvoiceToPurchase(txt);
+  if(e)e.textContent=parsed.lines.length?`✅ OCR terminado · ${parsed.lines.length} producto(s) detectado(s) · cabecera cargada`:'✅ OCR terminado · cabecera/texto detectado; revisa los datos';
+  toast(parsed.lines.length?'Factura procesada y aplicada al borrador':'Documento leído; revisa el borrador');
+  persistPurchaseDraft();
+ }else if(e)e.textContent=`📎 ${file.name} adjunto · OCR no pudo extraer texto. Puedes pulsar “OCR factura” para reintentar.`;
 }
 
 function purchaseAttachmentControls(){return `<div class="card" style="margin-top:12px"><div class="rowhead"><h4>Documentos de esta compra</h4><span class="muted">Quedan vinculados a la compra actual</span></div><div class="actions"><button class="btn" id="purchaseAttachBtn" type="button">📎 Adjuntar factura / archivo</button><button class="btn" id="purchasePhotoBtn" type="button">📷 Fotografiar factura</button><button class="btn blue" id="purchaseOcrBtn" type="button">🔎 OCR factura</button><input id="purchaseAttachInput" type="file" accept="image/*,.pdf,.csv,.txt,.json,.xlsx,.xls" hidden><div id="purchaseAttachmentStatus" class="resultbox" style="margin-top:8px">Sin documento adjunto.</div></div></div>`}
@@ -785,10 +792,66 @@ function bindPurchaseDraftAutosave(){
 }
 async function readPurchaseDocument(file){
  if(!file)return '';
- if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
-  try{const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');const data=await file.arrayBuffer();const pdf=await pdfjs.getDocument({data}).promise;let text='';const pages=Math.min(pdf.numPages,8);for(let i=1;i<=pages;i++){const page=await pdf.getPage(i);const tc=await page.getTextContent();text+='\n'+tc.items.map(x=>x.str||'').join(' ');if(text.replace(/\s/g,'').length<80){const vp=page.getViewport({scale:1.6});const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const T=await ensureOCR();const r=await T.recognize(blob,'spa+eng');text+='\n'+(r?.data?.text||'')}}return text.trim();}catch(e){console.warn('PDF purchase OCR',e);return ''}
+ const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+ if(isPdf){
+  let lastError=null;
+  const loaders=[
+   async()=>await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm'),
+   async()=>await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs')
+  ];
+  for(const load of loaders){
+   try{
+    const pdfjs=await load();
+    const data=await file.arrayBuffer();
+    if(pdfjs?.GlobalWorkerOptions){
+     pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+    }
+    const pdf=await pdfjs.getDocument({data,useWorkerFetch:false,isEvalSupported:true}).promise;
+    let text='';
+    const pages=Math.min(pdf.numPages,12);
+    for(let i=1;i<=pages;i++){
+     const page=await pdf.getPage(i);
+     let pageText='';
+     try{
+      const tc=await page.getTextContent({normalizeWhitespace:true,disableCombineTextItems:false});
+      pageText=(tc?.items||[]).map(x=>x?.str||'').join(' ').replace(/\s+/g,' ').trim();
+     }catch(e){console.warn('PDF text layer',i,e)}
+     if(pageText) text+='\n'+pageText;
+     // Many restaurant/vendor invoices are scanned PDFs. OCR the rendered page when the
+     // text layer is empty or suspiciously short, and also use OCR as a fallback if parsing
+     // the text layer later yields no useful product lines.
+     if(pageText.replace(/\s/g,'').length<120){
+      try{
+       const vp=page.getViewport({scale:2});
+       const canvas=document.createElement('canvas');
+       canvas.width=Math.ceil(vp.width); canvas.height=Math.ceil(vp.height);
+       const ctx=canvas.getContext('2d',{willReadFrequently:true});
+       await page.render({canvasContext:ctx,viewport:vp}).promise;
+       const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('No se pudo crear imagen OCR')),'image/png',1));
+       const T=await ensureOCR();
+       const r=await T.recognize(blob,'spa+eng');
+       const ocr=String(r?.data?.text||'').trim();
+       if(ocr) text+='\n'+ocr;
+      }catch(e){console.warn('PDF page OCR',i,e)}
+     }
+    }
+    const result=text.trim();
+    if(result) return result;
+   }catch(e){lastError=e;console.warn('PDF purchase OCR loader failed',e)}
+  }
+  console.warn('PDF purchase OCR failed',lastError);
+  return '';
  }
- if(file.type?.startsWith('image/')){try{const T=await ensureOCR();const r=await T.recognize(file,'spa+eng');return r?.data?.text||''}catch(e){console.warn('image purchase OCR',e)}}
+ if(file.type?.startsWith('image/')){
+  try{
+   const T=await ensureOCR();
+   const r=await T.recognize(file,'spa+eng');
+   return String(r?.data?.text||'').trim();
+  }catch(e){console.warn('image purchase OCR',e)}
+ }
+ if(file.type==='text/plain'||/\.txt$/i.test(file.name)){
+  try{return await file.text()}catch(e){console.warn('text purchase read',e)}
+ }
  return '';
 }
 function purchaseModal(prefillId=''){
@@ -1110,19 +1173,47 @@ function voiceRecipeContext(text){
 }
 function voiceProductContext(text){const raw=String(text||''),x=normalizeVoice(raw);let ok=false;const name=raw.match(/(?:nombre\s*[:\-]?\s*|producto\s+(?:de|llamado)\s+)([^.,]+?)(?=\s+(?:categoria|proveedor|unidad|costo|precio|codigo|barra|guardar)\b|[.,]|$)/i);if(name){voiceSet('pn',name[1].trim());ok=true}const cat=raw.match(/categor(?:ia|ía)\s*[:\-]?\s*([^.,]+)/i);if(cat){voiceSet('pc',cat[1].trim());ok=true}const sup=raw.match(/proveedor\s*[:\-]?\s*([^.,]+)/i);if(sup){voiceSet('ps',sup[1].trim());ok=true}const unit=raw.match(/unidad\s*[:\-]?\s*([^.,]+)/i);if(unit){voiceSet('pu',unit[1].trim());ok=true}const cost=raw.match(/(?:costo|coste|precio(?: de compra)?)\s*[:\-]?\s*\$?([0-9]+(?:[.,][0-9]+)?)/i);if(cost){voiceSet('px',voiceNumber(cost[1]));ok=true}if(/\bguardar\b/.test(x)){const b=document.querySelector('[data-action="save-product"]');if(b)b.click();window._lrxVoiceContext=null;return true}return ok}
 function voicePurchaseContext(text){
- const raw=String(text||''),x=normalizeVoice(raw);let ok=false;
- const sup=raw.match(/(?:proveedor|vendor|supplier)\s*[:\-]?\s*([^.,;]+?)(?=\s+(?:factura|numero|número|fecha|agrega|añade|anade|producto|guardar)|[.,;]|$)/i);if(sup){voiceSet('bs',sup[1].trim());ok=true}
- const inv=raw.match(/(?:factura|numero de factura|número de factura|invoice)\s*(?:es|número|numero|#)?\s*[:#-]?\s*([A-Z0-9\-]+)/i);if(inv){voiceSet('bi',inv[1].trim());ok=true}
- const rows=document.querySelectorAll('.purchase-line');
- const itemPatterns=[/(?:agrega|añade|anade|incorpora|incluye|producto)\s+(.+?)\s*,?\s*([0-9]+(?:[.,][0-9]+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|gramos?|g|litros?|lt|ml|unidades?|piezas?)\s*(?:a|por|costo)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i,/^(.+?)\s+([0-9]+(?:[.,][0-9]+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|gramos?|g|litros?|lt|ml|unidades?|piezas?)\s*(?:a|por|costo)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i];
- for(const re of itemPatterns){const m=raw.match(re);if(m){let product=m[1].trim().replace(/^(el|la|los|las)\s+/i,'');const qty=voiceNumber(m[2]),unit=voiceUnit(m[3])||'lb',cost=voiceNumber(m[4]);let target=[...document.querySelectorAll('.purchase-line')].find(r=>!String(r.querySelector('.bp-line-product')?.value||'').trim());if(!target){document.getElementById('addPurchaseLine')?.click();target=document.querySelectorAll('.purchase-line')[document.querySelectorAll('.purchase-line').length-1]}target.querySelector('.bp-line-product').value=product;target.querySelector('.bp-line-qty').value=qty;target.querySelector('.bp-line-unit').value=unit;target.querySelector('.bp-line-cost').value=cost;target.querySelector('.bp-line-product').dispatchEvent(new Event('change',{bubbles:true}));updatePurchasePreview();ok=true;break}}
+ const raw=String(text||'').trim(),x=normalizeVoice(raw);let ok=false;
+ const set=(id,v)=>{if(v!==undefined&&v!==null&&String(v).trim()!==''){voiceSet(id,String(v).trim());ok=true}};
+ // Cabecera: acepta frases naturales, no solo el formato "campo: valor".
+ const sup=raw.match(/(?:el\s+)?(?:proveedor|vendor|supplier)\s*(?:es|se llama|es el)?\s*[:\-]?\s*(.+?)(?=\s+(?:la\s+)?(?:factura|numero|número|fecha|subtotal|impuesto|iva|total)\b|[.;]|$)/i);
+ if(sup)set('bs',sup[1].trim());
+ const inv=raw.match(/(?:numero|número|no\.?|folio)\s*(?:de\s+)?(?:la\s+)?factura\s*(?:es|numero|número|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/.]*)/i)||raw.match(/(?:factura|invoice)\s*(?:es|numero|número|#)?\s*[:#\-]?\s*([A-Z0-9][A-Z0-9\-\/.]*)/i);
+ if(inv)set('bi',inv[1]);
+ const date=raw.match(/(?:fecha\s*(?:de\s+la\s+factura)?|date)\s*(?:es|del)?\s*[:\-]?\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})/i);
+ if(date){let d=date[1].replace(/\//g,'-');const parts=d.split('-');if(parts.length===3&&parts[0].length<=2){const yy=parts[2].length===2?'20'+parts[2]:parts[2];d=`${yy}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;}set('bd',d)}
+ const moneyField=(re,id)=>{const m=raw.match(re);if(m){const n=voiceNumber(m[1]);if(n!=null)set(id,n.toFixed(2))}};
+ moneyField(/(?:subtotal|sub\s*total)\s*(?:es|de|:)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i,'bsub');
+ moneyField(/(?:impuesto|impuestos|iva|tax)\s*(?:es|de|:)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i,'btax');
+ moneyField(/(?:total|total\s+factura|grand\s+total)\s*(?:es|de|:)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i,'btotal');
+ // Producto: admite "tomate 5 lb a 2.50", "agrega 5 libras de tomate a 2.50" y "tomate, cantidad 5 libras, costo 2.50".
+ const addLine=(product,qty,unit,cost)=>{
+   product=String(product||'').replace(/^(?:el|la|los|las|un|una)\s+/i,'').replace(/\s+/g,' ').trim();
+   qty=voiceNumber(qty);cost=voiceNumber(cost);unit=voiceUnit(unit)||'lb';
+   if(!product||qty==null||qty<=0)return false;
+   let target=[...document.querySelectorAll('.purchase-line')].find(r=>!String(r.querySelector('.bp-line-product')?.value||'').trim());
+   if(!target){document.getElementById('addPurchaseLine')?.click();target=document.querySelectorAll('.purchase-line')[document.querySelectorAll('.purchase-line').length-1]}
+   if(!target)return false;
+   target.querySelector('.bp-line-product').value=product;
+   target.querySelector('.bp-line-qty').value=qty;
+   target.querySelector('.bp-line-unit').value=unit;
+   if(cost!=null)target.querySelector('.bp-line-cost').value=cost;
+   target.querySelector('.bp-line-product')?.dispatchEvent(new Event('change',{bubbles:true}));
+   target.querySelector('.bp-line-qty')?.dispatchEvent(new Event('input',{bubbles:true}));
+   target.querySelector('.bp-line-cost')?.dispatchEvent(new Event('input',{bubbles:true}));
+   updatePurchasePreview();persistPurchaseDraft();return true;
+ };
+ let m=raw.match(/(?:agrega|añade|anade|incorpora|incluye|pon|producto)\s+(?:el\s+|la\s+)?(.+?)\s*,?\s*(?:cantidad\s*)?([0-9]+(?:[.,][0-9]+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|kilogramos?|gramos?|g|litros?|lt|lts?|ml|unidades?|piezas?)\s*(?:a|por|en|costo|precio)?\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i);
+ if(m)addLine(m[1],m[2],m[3],m[4])&&(ok=true);
+ if(!ok){m=raw.match(/^(.+?)\s+(?:cantidad\s*)?([0-9]+(?:[.,][0-9]+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|kilogramos?|gramos?|g|litros?|lt|lts?|ml|unidades?|piezas?)\s*(?:a|por|en|costo|precio)\s*\$?\s*([0-9]+(?:[.,][0-9]+)?)/i);if(m)addLine(m[1],m[2],m[3],m[4])&&(ok=true)}
+ if(!ok){m=raw.match(/(?:producto|articulo|artículo)\s+(.+?)\s+(?:cantidad\s+)?([0-9]+(?:[.,][0-9]+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|kilogramos?|gramos?|g|litros?|lt|lts?|ml|unidades?|piezas?)(?:\s*,?\s*(?:costo|precio)\s*\$?\s*([0-9]+(?:[.,][0-9]+)?))?/i);if(m)addLine(m[1],m[2],m[3],m[4])&&(ok=true)}
  if(/\b(?:agrega|añade|anade)\s+(?:otro\s+)?producto\b/.test(x)){document.getElementById('addPurchaseLine')?.click();ok=true}
+ if(/\b(?:quita|elimina|borra)\b/.test(x)){const name=raw.replace(/^.*?\b(?:quita|elimina|borra)\b\s+/i,'').trim();[...document.querySelectorAll('.purchase-line')].forEach(r=>{const v=String(r.querySelector('.bp-line-product')?.value||'');if(v&&normalizeVoice(v).includes(normalizeVoice(name)))r.querySelector('[data-remove-purchase-line]')?.click()});ok=true}
  if(/\b(?:toma|fotografia|fotografía)\b.*\bfactura\b/.test(x)){document.getElementById('purchasePhotoBtn')?.click();ok=true}
- if(/\b(?:adjunta|anexa|sube)\b.*\b(factura|archivo|documento)\b/.test(x)){document.getElementById('purchaseAttachBtn')?.click();ok=true}
- if(/\bocr\b|\blee\s+la\s+factura\b|\baplica(?:r)?\s+(?:el\s+)?ocr\b|\busa(?:r)?\s+(?:el\s+)?ocr\b/.test(x)){if(window._lrxPurchaseAttachment?.file)runPurchaseOcrOnAttachment();else document.getElementById('purchaseOcrBtn')?.click();ok=true}
- const natural=raw.match(/(?:^|\b)([A-Za-zÁÉÍÓÚáéíóúÑñ][A-Za-zÁÉÍÓÚáéíóúÑñ0-9 .\-]{2,80}?)\s+(\d+(?:[.,]\d+)?)\s*(onzas?|oz|libras?|lb|kg|kilos?|gramos?|g|litros?|lt|ml|unidades?|piezas?)\s+(?:a|por|en)\s*\$?\s*(\d+(?:[.,]\d+)?)(?:\b|$)/i);
- if(natural && !ok){const product=natural[1].trim(),qty=voiceNumber(natural[2]),unit=voiceUnit(natural[3])||'lb',cost=voiceNumber(natural[4]);let target=[...document.querySelectorAll('.purchase-line')].find(r=>!String(r.querySelector('.bp-line-product')?.value||'').trim());if(!target){document.getElementById('addPurchaseLine')?.click();target=document.querySelectorAll('.purchase-line')[document.querySelectorAll('.purchase-line').length-1]}target.querySelector('.bp-line-product').value=product;target.querySelector('.bp-line-qty').value=qty;target.querySelector('.bp-line-unit').value=unit;target.querySelector('.bp-line-cost').value=cost;target.querySelector('.bp-line-product').dispatchEvent(new Event('change',{bubbles:true}));updatePurchasePreview();persistPurchaseDraft();ok=true;}
+ if(/\b(?:adjunta|anexa|sube|carga)\b.*\b(?:factura|archivo|documento)\b/.test(x)){document.getElementById('purchaseAttachBtn')?.click();ok=true}
+ if(/\bocr\b|\blee\s+(?:la\s+)?factura\b|\baplica(?:r)?\s+(?:el\s+)?ocr\b|\busa(?:r)?\s+(?:el\s+)?ocr\b/.test(x)){if(window._lrxPurchaseAttachment?.file)runPurchaseOcrOnAttachment();else document.getElementById('purchaseOcrBtn')?.click();ok=true}
  if(/\b(?:guardar|guarda|registrar|registra)\b/.test(x)){document.querySelector('[data-action="save-purchase"]')?.click();window._lrxVoiceContext=null;window._lrxVoiceSession=null;return true}
+ if(ok)persistPurchaseDraft();
  return ok;
 }
 
@@ -1401,7 +1492,7 @@ function hydrateMasterData(){
   if(!Array.isArray(state.inventory)) state.inventory=[];
 }
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v140')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v140',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v142')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v140',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
