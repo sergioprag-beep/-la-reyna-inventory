@@ -785,7 +785,7 @@ function matchKnownProductLine(line,known){
  }
  return bestScore>=0.66?best:null;
 }
-function parseInvoiceToPurchase(text){
+function lrxParseInvoiceBase(text){
  const raw=String(text||'');
  if(!raw.trim())return {supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
  const clean=raw.replace(/\r/g,'');
@@ -877,7 +877,7 @@ function bindPurchaseDraftAutosave(){
  box.querySelectorAll('#bs,#bi,#bd,#bsub,#btax,#btotal,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('input',persistPurchaseDraft));
  box.querySelectorAll('#bs,#bi,#bd,#bsub,#btax,#btotal,#bst,#bn,.purchase-line input').forEach(el=>el.addEventListener('change',persistPurchaseDraft));
 }
-async function readPurchaseDocument(file){
+async function lrxReadPurchaseDocumentBase(file){
  if(!file)return '';
  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
  if(isPdf){
@@ -1601,7 +1601,139 @@ function hydrateMasterData(){
   if(!Array.isArray(state.inventory)) state.inventory=[];
 }
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v145')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v145',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+
+/* V146 OCR engine: layout-aware invoice extraction. The parser never treats arbitrary
+   OCR numbers as quantity/cost when a table layout is available. */
+function lrxOcrNum(v){
+ const x=String(v??'').replace(/[$€£\s]/g,'').trim();
+ let y=x;
+ if(y.includes(',')&&y.includes('.')) y=y.lastIndexOf(',')>y.lastIndexOf('.')?y.replace(/\./g,'').replace(',','.'):y.replace(/,/g,'');
+ else if(y.includes(',')&&/,\d{1,2}$/.test(y)) y=y.replace(',','.');
+ else y=y.replace(/,/g,'');
+ const n=Number(y); return Number.isFinite(n)?n:0;
+}
+function lrxLayoutGroups(items){
+ const clean=(items||[]).filter(x=>String(x?.text||'').trim()).map(x=>({x:Number(x.x||0),y:Number(x.y||0),text:String(x.text||'').trim()}));
+ clean.sort((a,b)=>b.y-a.y||a.x-b.x);
+ const groups=[];
+ for(const it of clean){let g=groups.find(z=>Math.abs(z.y-it.y)<=5);if(!g){g={y:it.y,items:[]};groups.push(g)}g.items.push(it)}
+ return groups.sort((a,b)=>b.y-a.y).map(g=>{g.items.sort((a,b)=>a.x-b.x);g.text=g.items.map(x=>x.text).join(' ');return g});
+}
+function lrxHeaderRole(t){
+ const n=normalizeOcrKey(t);
+ if(/^(code|item\s*(no|number|#)?|sku|upc|product\s*code|item\s*code)$/.test(n)||/\b(sku|upc|item code)\b/.test(n))return 'code';
+ if(/\b(description|product|item|material|ingredient|article|beer|beverage|name)\b/.test(n))return 'desc';
+ if(/\b(qty|quantity|units|cases|case|ordered|ship|shipped)\b/.test(n))return 'qty';
+ if(/\b(unit\s*price|price|cost|rate)\b/.test(n))return 'cost';
+ if(/\b(ext|extended|amount|line\s*total|total\s*price)\b/.test(n))return 'total';
+ if(/\b(unit|uom|pack|size)\b/.test(n))return 'unit';
+ return '';
+}
+function lrxLayoutInvoiceLines(layoutPages,known){
+ const out=[];
+ for(const page of (layoutPages||[])){
+  const groups=lrxLayoutGroups(page.items||[]);
+  let header=null;
+  for(let i=0;i<groups.length;i++){
+   const roles=[]; for(const it of groups[i].items){const role=lrxHeaderRole(it.text);if(role)roles.push({role,x:it.x});}
+   const distinct=new Set(roles.map(x=>x.role));
+   if(distinct.has('desc')&&(distinct.has('qty')||distinct.has('cost')||distinct.has('total'))){header={index:i,roles};break;}
+  }
+  if(!header)continue;
+  const cols={};
+  for(const r of header.roles){if(cols[r.role]==null)cols[r.role]=r.x;}
+  const stop=/^(subtotal|sub total|tax|sales tax|impuesto|iva|grand total|invoice total|total due|amount due|balance due|shipping|freight|discount|payment|terms|thank)/i;
+  for(let i=header.index+1;i<groups.length;i++){
+   const g=groups[i]; if(stop.test(g.text))break;
+   const buckets={code:[],desc:[],qty:[],cost:[],total:[],unit:[]};
+   for(const it of g.items){
+    const roles=Object.entries(cols).map(([role,x])=>({role,d:Math.abs(it.x-x)})).sort((a,b)=>a.d-b.d);
+    const role=roles[0]?.role; if(role&&roles[0].d<180)buckets[role].push(it.text);
+   }
+   const desc=buckets.desc.join(' ').replace(/\s+/g,' ').trim();
+   if(!desc||desc.length<2||stop.test(desc))continue;
+   const qty=lrxOcrNum((buckets.qty.join(' ').match(/-?\d[\d,.]*/)||[])[0]);
+   const cost=lrxOcrNum((buckets.cost.join(' ').match(/-?\d[\d,.]*/)||[])[0]);
+   const total=lrxOcrNum((buckets.total.join(' ').match(/-?\d[\d,.]*/)||[])[0]);
+   if(qty<=0)continue;
+   let finalCost=cost;
+   if(total>0&&Math.abs(qty*cost-total)>Math.max(.1,total*.02)) finalCost=total/qty;
+   if(finalCost<=0&&total>0)finalCost=total/qty;
+   if(finalCost<=0)continue;
+   const match=matchKnownProductLine(desc,known);
+   const product=match?.p;
+   const unit=(buckets.unit.join(' ')||product?.standardUnit||product?.unit||'unidad').trim();
+   out.push({product:product?.name||desc,qty,unit,unitCost:finalCost,lineTotal:total||qty*finalCost,source:'layout',matchScore:match?.score||0,code:buckets.code.join(' ').trim()});
+  }
+ }
+ const seen=new Set();return out.filter(x=>{const k=normalizeOcrKey(x.product);if(!k||seen.has(k))return false;seen.add(k);return true});
+}
+function lrxTsvToLayout(tsv){
+ const pages=[];const byLine=new Map();
+ for(const raw of String(tsv||'').split(/\r?\n/)){const a=raw.split('\t');if(a.length<12||a[0]!=='5')continue;const text=(a[11]||'').trim(),conf=Number(a[10]);if(!text||(!Number.isNaN(conf)&&conf<20))continue;const key=[a[1],a[2],a[3],a[4],a[5]].join(':');let arr=byLine.get(key);if(!arr){arr=[];byLine.set(key,arr)}arr.push({x:Number(a[6]||0),y:Number(a[7]||0),text});}
+ const items=[...byLine.values()].flat(); if(items.length)pages.push({items}); return pages;
+}
+async function lrxOcrImageWithLayout(blob){
+ const T=await ensureOCR(); const r=await T.recognize(blob,'spa+eng');
+ return {text:String(r?.data?.text||'').trim(),layout:lrxTsvToLayout(r?.data?.tsv||'')};
+}
+async function readPurchaseDocument(file){
+ if(!file)return '';
+ window._lrxPurchaseLayout=[];
+ const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+ if(isPdf){
+  let lastError=null;
+  const loaders=[async()=>await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm'),async()=>await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs')];
+  for(const load of loaders){
+   try{
+    const pdfjs=await load(); if(pdfjs?.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+    const pdf=await pdfjs.getDocument({data:await file.arrayBuffer(),useWorkerFetch:false,isEvalSupported:true}).promise;
+    let text=''; const pages=Math.min(pdf.numPages,12);
+    for(let i=1;i<=pages;i++){
+     const page=await pdf.getPage(i); let pageItems=[];
+     try{const tc=await page.getTextContent({normalizeWhitespace:true,disableCombineTextItems:false});pageItems=(tc?.items||[]).filter(x=>String(x?.str||'').trim()).map(x=>({x:Number(x.transform?.[4]||0),y:Number(x.transform?.[5]||0),text:String(x.str||'').trim()}));}catch(e){console.warn('PDF text layer',i,e)}
+     const groups=lrxLayoutGroups(pageItems); const pageText=groups.map(g=>g.text).join('\n').trim(); if(pageText)text+='\n'+pageText;
+     if(pageItems.length)window._lrxPurchaseLayout.push({items:pageItems});
+     // Always render table pages to image OCR when the text layer does not yield a usable table.
+     const vp=page.getViewport({scale:2});const canvas=document.createElement('canvas');canvas.width=Math.ceil(vp.width);canvas.height=Math.ceil(vp.height);const ctx=canvas.getContext('2d',{willReadFrequently:true});await page.render({canvasContext:ctx,viewport:vp}).promise;
+     let imageResult=null;
+     try{imageResult=await lrxOcrImageWithLayout(await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('canvas')),'image/png',1)));}catch(e){console.warn('PDF image OCR',i,e)}
+     if(imageResult?.text){text+='\n'+imageResult.text; if(imageResult.layout?.[0])window._lrxPurchaseLayout.push(imageResult.layout[0]);}
+    }
+    const result=text.trim(); if(result)return result;
+   }catch(e){lastError=e;console.warn('PDF purchase OCR loader failed',e)}
+  }
+  console.warn('PDF purchase OCR failed',lastError);return '';
+ }
+ if(file.type?.startsWith('image/')){try{const r=await lrxOcrImageWithLayout(file);window._lrxPurchaseLayout=r.layout||[];return r.text||''}catch(e){console.warn('image purchase OCR',e)}}
+ if(file.type==='text/plain'||/\.txt$/i.test(file.name)){try{return await file.text()}catch(e){}}
+ return '';
+}
+function parseInvoiceToPurchase(text){
+ const d=window._lrxParseInvoiceBase?window._lrxParseInvoiceBase(text):null;
+ return d||{supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
+}
+
+
+window._lrxParseInvoiceBase=lrxParseInvoiceBase;
+window._lrxReadPurchaseDocumentBase=lrxReadPurchaseDocumentBase;
+function parseInvoiceToPurchase(text){
+ const base=lrxParseInvoiceBase(text)||{supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
+ const known=purchaseKnownProducts();
+ const layoutLines=lrxLayoutInvoiceLines(window._lrxPurchaseLayout||[],known);
+ if(layoutLines.length){base.lines=layoutLines;}
+ // Never accept an implausible tax or total. If there is no explicit tax label, tax stays zero.
+ if(!/\b(?:tax|sales\s*tax|taxes|impuesto|impuestos|iva|total\s+tax)\b/i.test(text||''))base.tax=0;
+ if(base.subtotal>0&&base.total>0&&base.tax>0&&Math.abs(base.subtotal+base.tax-base.total)>Math.max(.1,base.total*.03)){
+   // Prefer an explicitly labeled total; do not invent a balancing tax.
+   base.tax=0;
+ }
+ // Invoice/reference must not be a date, PO box, or an address token.
+ if(base.invoice&&(/^(?:P\.?O\.?|BOX)$/i.test(base.invoice)||/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(base.invoice)))base.invoice='';
+ return base;
+}
+
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v146')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v146',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
