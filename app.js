@@ -753,9 +753,19 @@ function purchaseKnownProducts(){
 }
 function purchaseKnownSupplierFromText(clean){
  const text=normalizeOcrKey(clean);
+ const words=new Set(text.split(/\s+/).filter(w=>w.length>=4));
  const suppliers=[...(master.suppliers||[]),...(state.suppliers||[])].map(x=>typeof x==='string'?{name:x}:x).filter(x=>x?.name);
- suppliers.sort((a,b)=>String(b.name).length-String(a.name).length);
- return suppliers.find(x=>{const k=normalizeOcrKey(x.name);return k.length>=4&&text.includes(k)})?.name||'';
+ let best='',bestScore=0;
+ for(const x of suppliers){
+  const name=normalizeOcrKey(x.name);
+  if(name.length<3)continue;
+  if(text.includes(name))return x.name;
+  const nt=name.split(/\s+/).filter(w=>w.length>=4);
+  const hit=nt.filter(w=>words.has(w)||text.includes(w)).length;
+  const score=nt.length?hit/nt.length:0;
+  if(hit>=1 && score>bestScore){bestScore=score;best=x.name;}
+ }
+ return bestScore>=0.34?best:'';
 }
 function ocrLineLooksHeader(line){return /^(?:invoice|factura|date|fecha|ship\s*to|bill\s*to|sold\s*to|remit|subtotal|sub\s*total|tax|sales\s*tax|impuesto|iva|total|grand\s*total|amount\s*due|balance\s*due|payment|terms|phone|tel|fax|email|www\.|http)/i.test(String(line||'').trim())}
 function ocrNumbers(line){
@@ -776,60 +786,84 @@ function matchKnownProductLine(line,known){
  return bestScore>=0.66?best:null;
 }
 function parseInvoiceToPurchase(text){
- const raw=String(text||''); if(!raw.trim())return {supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
+ const raw=String(text||'');
+ if(!raw.trim())return {supplier:'',invoice:'',date:'',subtotal:0,tax:0,total:0,lines:[]};
  const clean=raw.replace(/\r/g,'');
- const linesRaw=clean.split('\n').map(x=>x.replace(/[\t]+/g,' ').replace(/\s{2,}/g,' ').trim()).filter(x=>x.length>1);
+ const linesRaw=clean.split('\n').map(x=>x.replace(/[\t]+/g,' ').replace(/\u00a0/g,' ').replace(/\s{2,}/g,' ').trim()).filter(x=>x.length>1);
  const compact=linesRaw.join('\n');
- const moneyVal=(v)=>Number(String(v||'').replace(/[$€£]/g,'').replace(/\s/g,'').replace(/,(?=\d{2}$)/,'.').replace(/,/g,''))||0;
- const pick=(res)=>{const m=compact.match(res);return m?.[1]?.trim()||''};
+ const moneyVal=(v)=>{let x=String(v??'').replace(/[$€£\s]/g,'').trim();if(x.includes(',')&&x.includes('.'))x=x.lastIndexOf(',')>x.lastIndexOf('.')?x.replace(/\./g,'').replace(',','.'):x.replace(/,/g,'');else if(x.includes(',')&&/,\d{1,2}$/.test(x))x=x.replace(',','.');else x=x.replace(/,/g,'');const n=Number(x);return Number.isFinite(n)?n:0};
+ const firstMatch=(res)=>{const m=compact.match(res);return m?.[1]?.trim()||''};
+ const lineMatch=(patterns)=>{for(const line of linesRaw){for(const re of patterns){const m=line.match(re);if(m)return m[1]?.trim()||''}}return ''};
  let supplier=purchaseKnownSupplierFromText(compact);
- if(!supplier){
-  supplier=pick(/(?:bill\s*from|ship\s*from|sold\s*by|sold\s*from|vendor|supplier|proveedor|empresa|company|merchant)\s*[:#-]?\s*([^\n]+)/i);
-  supplier=String(supplier||'').replace(/\s+(?:invoice|factura)\b.*$/i,'').replace(/\s+(?:ship|bill|sold)\s+to\b.*$/i,'').trim();
+ if(!supplier){supplier=lineMatch([/(?:bill\s*from|ship\s*from|sold\s*by|sold\s*from|vendor|supplier|proveedor|empresa|company|merchant)\s*[:#-]?\s*(.+)$/i]);supplier=String(supplier||'').replace(/\s+(?:invoice|factura)\b.*$/i,'').replace(/\s+(?:ship|bill|sold)\s+to\b.*$/i,'').trim()}
+ if(/^(?:invoice|factura|date|fecha|ship|bill|sold|p\.o\.?\s*box)\b/i.test(supplier))supplier='';
+ // Invoice/reference: prefer a labeled value on its own line and reject dates, PO boxes and monetary values.
+ let invoice='';
+ const invoicePatterns=[
+  /^(?:invoice|factura|invoice\s*(?:no|number|#)|factura\s*(?:no|numero|número|#)|inv\.?)[\s:#-]*([A-Z0-9][A-Z0-9\-\/\.]{2,})\s*$/i,
+  /\b(?:invoice|factura)\s*(?:number|numero|número|no\.?|#)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})\b/i,
+  /\b(?:invoice\s*id|document\s*no|document\s*number|folio|reference|ref\.?)[\s:#-]*([A-Z0-9][A-Z0-9\-\/\.]{2,})\b/i
+ ];
+ for(const line of linesRaw){
+  for(const re of invoicePatterns){const m=line.match(re);const v=m?.[1]?.trim()||'';if(v&&!/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(v)&&!/^(?:P\.?O\.?|BOX)$/i.test(v)){invoice=v;break}}if(invoice)break;
  }
- // Never use a line such as "INVOICE ... SHIP TO ..." as the supplier.
- if(/^(?:invoice|factura)\b/i.test(supplier)||/\bship\s+to\b/i.test(supplier)||/\bdate\b/i.test(supplier))supplier='';
- const invoice=pick(/(?:invoice\s*(?:number|no|#)?|factura\s*(?:numero|número|no|#)?|no\.?\s*factura|n[úu]mero\s*de\s*factura|folio)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/\.]+)/i);
- let date=pick(/\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2})\b/);
- if(!date){const m=compact.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})\b/);if(m)date=`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;}
- const findMoney=(patterns)=>{for(const re of patterns){const m=compact.match(re);if(m)return moneyVal(m[1]);}return 0};
- const subtotal=findMoney([/(?:subtotal|sub\s*total|importe\s*neto|net\s*amount)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/i]);
- const tax=findMoney([/(?:sales\s*tax|tax|impuesto|iva|total\s*tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/i]);
- const total=findMoney([/(?:^|\n)\s*(?:grand\s*total|total\s*due|amount\s*due|balance\s*due|total)\s*[:#-]?\s*\$?\s*([0-9][0-9,]*\.?[0-9]{0,2})/im]);
+ if(!invoice)invoice=firstMatch(/(?:invoice|factura)\s*(?:number|numero|número|no\.?|#)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,})/i);
+ let date=firstMatch(/\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2})\b/);
+ if(!date){const m=compact.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](20\d{2})\b/);if(m)date=`${m[3]}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`}
+ const labeledAmount=(patterns)=>{for(const line of linesRaw){for(const re of patterns){const m=line.match(re);if(m){const v=moneyVal(m[1]);if(Number.isFinite(v))return v}}}return 0};
+ const subtotal=labeledAmount([/(?:^|\s)(?:subtotal|sub\s*total|importe\s*neto|net\s*amount)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i]);
+ const tax=labeledAmount([/(?:^|\s)(?:sales\s*tax|tax\s+amount|taxes|impuesto|impuestos|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i]);
+ let total=0,totalCandidates=[];
+ for(const line of linesRaw){const m=line.match(/(?:^|\s)(?:grand\s*total|total\s*due|amount\s*due|balance\s*due|invoice\s*total|total\s*invoice|total\s*factura|total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);if(m)totalCandidates.push(moneyVal(m[1]))}
+ if(totalCandidates.length)total=totalCandidates[totalCandidates.length-1];
+ if(!total&&subtotal)total=subtotal+tax;
  const known=purchaseKnownProducts(),out=[],seen=new Set();
- const add=(product,qty,unit,cost,lineTotal,source='ocr')=>{
-  product=String(product||'').replace(/^[\-•·*]+/,'').replace(/\s+/g,' ').trim();qty=moneyVal(qty);cost=moneyVal(cost);lineTotal=moneyVal(lineTotal);
-  if(!product||qty<=0)return;
-  if(!cost&&lineTotal)cost=lineTotal/qty;
-  if(!cost||cost<=0)return;
-  const match=matchKnownProductLine(product,known);const finalName=match?.p?.name||product;const key=normalizeOcrKey(finalName);
-  if(!key||seen.has(key))return;seen.add(key);
-  const finalUnit=voiceUnit(unit)||match?.p?.standardUnit||match?.p?.unit||'unidad';
-  out.push({product:finalName,qty,unit:finalUnit,unitCost:cost,lineTotal:lineTotal||qty*cost,source,matchScore:match?.score||0});
+ const ocrUnit=(u,p)=>{const x=String(u||'').toLowerCase().replace(/[().]/g,'').trim();if(/^(cs|case|cases|caja|cajas|carton|cartons)$/.test(x))return 'caja';if(/^(ea|each|unit|units|unidad|unidades|pc|pcs|piece|pieces|pieza|piezas)$/.test(x))return 'unidad';if(/^(dz|doz|dozen|docena|docenas)$/.test(x))return 'docena';if(/^(lb|lbs|pound|pounds|libra|libras)$/.test(x))return 'lb';if(/^(oz|ounce|ounces|onza|onzas)$/.test(x))return 'oz';if(/^(kg|kgs|kilo|kilos|kilogram|kilograms)$/.test(x))return 'kg';if(/^(g|gr|gram|grams|gramo|gramos)$/.test(x))return 'g';if(/^(gal|gallon|gallons|galon|galones)$/.test(x))return 'gal';if(/^(l|lt|lts|liter|liters|litro|litros)$/.test(x))return 'L';if(/^(ml|milliliter|milliliters|mililitro|mililitros)$/.test(x))return 'mL';return p?.standardUnit||p?.unit||'unidad'};
+ const add=(product,qty,unit,cost,lineTotal,source='ocr')=>{product=String(product||'').replace(/^[\-•·*|]+/,'').replace(/\s+/g,' ').trim();qty=moneyVal(qty);cost=moneyVal(cost);lineTotal=moneyVal(lineTotal);if(!product||qty<=0)return;if(!cost&&lineTotal&&qty)cost=lineTotal/qty;if(cost<=0)return;const match=matchKnownProductLine(product,known);const finalName=match?.p?.name||product;const key=normalizeOcrKey(finalName);if(!key||seen.has(key))return;seen.add(key);const finalUnit=ocrUnit(unit,match?.p);out.push({product:finalName,qty,unit:finalUnit,unitCost:cost,lineTotal:lineTotal||qty*cost,source,matchScore:match?.score||0})};
+ const nums=(line)=>[...String(line).matchAll(/(?:\$\s*)?(\d+(?:[.,]\d{1,4})?)/g)].map(m=>({value:moneyVal(m[1]),index:m.index||0,raw:m[0]}));
+ const unitToken=(line)=>{const m=line.match(/\b(cs|case|cases|caja|cajas|carton|cartons|ea|each|unit|units|unidad|unidades|pc|pcs|piece|pieces|pieza|piezas|dz|doz|dozen|docena|docenas|lb|lbs|pound|pounds|libra|libras|oz|ounce|ounces|onza|onzas|kg|kgs|kilo|kilos|kilogram|kilograms|g|gr|gram|grams|gramo|gramos|gal|gallon|gallons|galon|galones|l|lt|lts|liter|liters|litro|litros|ml|milliliter|milliliters|mililitro|mililitros)\b/i);return m?.[1]||''};
+ const plausibleRow=(numbers)=>{
+  if(numbers.length<2)return null;
+  // Prefer a 3-column tail qty / unit cost / line total only when arithmetic supports it.
+  for(let i=numbers.length-3;i>=0;i--){const q=numbers[i]?.value,c=numbers[i+1]?.value,t=numbers[i+2]?.value;if(q>0&&c>0&&t>0&&Math.abs(q*c-t)<=Math.max(0.08,t*0.015))return {qty:q,cost:c,total:t,start:numbers[i].index}}
+  const q=numbers[numbers.length-2]?.value,c=numbers[numbers.length-1]?.value;
+  if(q>0&&c>0){
+   // Reject likely item/SKU codes when there is no evidence of a quantity/cost relationship.
+   if(c>=1000000||q>=1000000)return null;
+   return {qty:q,cost:c,total:q*c,start:numbers[numbers.length-2].index};
+  }
+  return null;
  };
- // Prefer matching OCR lines to the existing master catalog. This prevents OCR header garbage from becoming products.
+ // Pass 1: match known catalog products and interpret the numeric tail conservatively.
  for(const line of linesRaw){
   if(ocrLineLooksHeader(line))continue;
-  const match=matchKnownProductLine(line,known); if(!match)continue;
-  const nums=ocrNumbers(line); if(!nums.length)continue;
-  const product=match.p.name;
-  const unit=(line.match(/\b(lb|lbs|libras?|oz|onzas?|kg|kilos?|kilogramos?|g|gramos?|l|lt|lts?|litros?|ml|mililitros?|ea|pcs?|piezas?|unidades?)\b/i)||[])[1]||match.p.standardUnit||match.p.unit||'unidad';
-  const qty=nums[0], cost=nums.length>=3?nums[1]:nums.length>=2?nums[1]:0, lineTotal=nums.length>=3?nums[2]:0;
-  if(qty>0&&cost>0)add(product,qty,unit,cost,lineTotal,'catalog-match');
+  const match=matchKnownProductLine(line,known);if(!match)continue;
+  const numbers=nums(line);if(numbers.length<2)continue;
+  const row=plausibleRow(numbers);if(!row)continue;
+  const unit=unitToken(line)||match.p.standardUnit||match.p.unit||'unidad';
+  // If the first numeric token is clearly a code and the remaining tokens form qty/cost/total, use the latter group.
+  add(match.p.name,row.qty,unit,row.cost,row.total,'catalog-match');
  }
- // Fallback for genuinely new products: require an explicit unit and at least two monetary/quantity values.
- const unitRe='(?:lb|lbs|libras?|oz|onzas?|kg|kilos?|kilogramos?|g|gramos?|l|lt|lts?|litros?|ml|mililitros?|unidad(?:es)?|ea|pcs?|piezas?)';
+ // Pass 2: generic rows. Only accept rows with an explicit unit, or a strong arithmetic qty/cost/total pattern.
+ const unitRe='(?:cs|case|cases|caja|cajas|carton|cartons|ea|each|unit|units|unidad(?:es)?|pc|pcs|piece|pieces|pieza|piezas|dz|doz|dozen|docena|docenas|lb|lbs|libras?|oz|ounces?|onzas?|kg|kgs|kilos?|kilogramos?|g|gr|gramos?|gal|gallons?|galones?|l|lt|lts?|liters?|litros?|ml|milliliters?|mililitros?)';
  for(const line of linesRaw){
-  if(out.length>=100||ocrLineLooksHeader(line))continue;
-  if(matchKnownProductLine(line,known))continue;
-  const m=line.match(new RegExp('^(.{3,80}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*('+unitRe+')\\s+(?:x|@|a|por)?\\s*\\$?\\s*(\\d+(?:[.,]\\d{1,4})?)(?:\\s+\\$?\\s*(\\d+(?:[.,]\\d{1,2})?))?$','i'));
-  if(m)add(m[1],m[2],m[3],m[4],m[5]||0,'pattern');
+  if(out.length>=100||ocrLineLooksHeader(line)||matchKnownProductLine(line,known))continue;
+  let m=line.match(new RegExp('^(.{3,120}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*('+unitRe+')\\s+(?:x|@|a|por)?\\s*\\$?\\s*(\\d+(?:[.,]\\d{1,4})?)(?:\\s+\\$?\\s*(\\d+(?:[.,]\\d{1,2})?))?$','i'));
+  if(m){add(m[1],m[2],m[3],m[4],m[5]||0,'pattern');continue}
+  const row=plausibleRow(nums(line));if(row){let name=line.slice(0,row.start).replace(/\s*[:|]+\s*$/,'').trim();if(name&&!ocrLineLooksHeader(name)&&name.length>=3)add(name,row.qty,unitToken(line)||'',row.cost,row.total,'numeric-row')}
  }
  return {supplier,invoice,date,subtotal,tax,total,lines:out.slice(0,100)};
 }
 function applyInvoiceToPurchase(text){
- const d=parseInvoiceToPurchase(text); if(d.supplier)voiceSet('bs',d.supplier); if(d.invoice)voiceSet('bi',d.invoice); if(d.date)voiceSet('bd',d.date); if(d.subtotal)voiceSet('bsub',d.subtotal.toFixed(2)); if(d.tax)voiceSet('btax',d.tax.toFixed(2)); if(d.total)voiceSet('btotal',d.total.toFixed(2));
- if(d.lines.length){const box=document.getElementById('purchaseLines');if(box){box.innerHTML=d.lines.map((x,i)=>purchaseLineRow(x,i)).join('');const products=[...(master.products||[]),...(state.products||[])];bindPurchaseLines(products);updatePurchasePreview();}}
+ const d=parseInvoiceToPurchase(text);
+ // OCR is authoritative for this pass: clear stale header values before applying new data.
+ voiceSet('bs',d.supplier||'');voiceSet('bi',d.invoice||'');voiceSet('bd',d.date||'');voiceSet('bsub',d.subtotal?d.subtotal.toFixed(2):'');voiceSet('btax',d.tax?d.tax.toFixed(2):'');voiceSet('btotal',d.total?d.total.toFixed(2):'');
+ const box=document.getElementById('purchaseLines');
+ if(box){
+  const rows=d.lines.length?d.lines:[{product:'',qty:'',unit:'lb',unitCost:0}];
+  box.innerHTML=rows.map((x,i)=>purchaseLineRow(x,i)).join('');
+  const products=[...(master.products||[]),...(state.products||[])];bindPurchaseLines(products);updatePurchasePreview();
+ }
  window._lrxPurchaseDraft=window._lrxPurchaseDraft||{};window._lrxPurchaseDraft.ocrText=text;window._lrxPurchaseDraft.parsed=d;persistPurchaseDraft();
  return d;
 }
@@ -1295,6 +1329,7 @@ function voiceContextLabel(){
  if(c.form==='recipe')return c.recipeType==='prep'?'Receta / Pre-elaborado activo':'Receta final activa';
  if(c.form==='product')return 'Producto activo';
  if(c.form==='purchase')return 'Compra activa';
+ if(c.form==='navigation'&&c.module)return `Navegación · ${c.module}`;
  return 'Contexto LRX activo';
 }
 function voiceNaturalRecipe(text){
@@ -1338,12 +1373,12 @@ function startContextVoice(){
 }
 function handleVoiceTranscript(q,opts={}){
  const raw=String(q||'').trim(),x=normalizeVoice(raw);if(!raw)return;
- if(opts.context||window._lrxVoiceContext){const c=window._lrxVoiceContext;if(c?.form==='recipe'&&voiceNaturalRecipe(raw)){toast('LRX actualizó la receta con tu instrucción');const lab=document.getElementById('lrxVoiceContextLabel');if(lab)lab.textContent=voiceConversationStatus();return}if(c?.form==='product'&&voiceProductContext(raw)){toast('LRX actualizó el producto con tu instrucción');return}if(c?.form==='purchase'&&voicePurchaseContext(raw)){toast('LRX actualizó la compra con tu instrucción');return}}
+ /* Voz LRX en v145 es solo navegación/comandos de apertura. El llenado de formularios y documentos se hace manualmente u OCR para evitar interpretaciones erróneas. */
  if(/^(?:crear|creame|créame|hacer|hazme)\s+(?:una\s+)?receta\b|\bnueva\s+receta\b|\bquiero\s+(?:crear|hacer)\s+una\s+receta\b/.test(x)){
-   const isPrep=/pre[- ]?elaborado|preparacion base|pre elaborado/.test(x);window._lrxVoiceContext={form:'recipe',recipeType:isPrep?'prep':'final',id:null};go(isPrep?'preelaborados':'recetas');requestAnimationFrame(()=>{recipeModal(isPrep?'prep':'final');requestAnimationFrame(()=>{openVoiceContextPanel();voiceRecipeContext(raw);});});return toast('Preparando una nueva receta');
+   const isPrep=/pre[- ]?elaborado|preparacion base|pre elaborado/.test(x);window._lrxVoiceContext={form:'navigation',module:isPrep?'preelaborados':'recetas',navigationOnly:true,id:null};go(isPrep?'preelaborados':'recetas');requestAnimationFrame(()=>{recipeModal(isPrep?'prep':'final');requestAnimationFrame(()=>{openVoiceContextPanel();});});return toast('Preparando una nueva receta');
  }
- if(/\b(?:nuevo|nueva|registrar|crear)\s+producto\b|\bquiero\s+registrar\s+un\s+producto\b/.test(x)){window._lrxVoiceContext={form:'product',id:null};go('productos');requestAnimationFrame(()=>{productModal();requestAnimationFrame(()=>{openVoiceContextPanel();voiceProductContext(raw);});});return toast('Preparando un nuevo producto')}
- if(/\b(?:nueva|registrar|crear)\s+(?:una\s+)?compra\b|\bquiero\s+registrar\s+una\s+compra\b/.test(x)){window._lrxVoiceContext={form:'purchase',id:null};go('compras');requestAnimationFrame(()=>{purchaseModal();requestAnimationFrame(()=>{openVoiceContextPanel();voicePurchaseContext(raw);});});return toast('Preparando una nueva compra')}
+ if(/\b(?:nuevo|nueva|registrar|crear)\s+producto\b|\bquiero\s+registrar\s+un\s+producto\b/.test(x)){window._lrxVoiceContext={form:'navigation',module:'productos',navigationOnly:true,id:null};go('productos');requestAnimationFrame(()=>{productModal();requestAnimationFrame(()=>{openVoiceContextPanel();});});return toast('Preparando un nuevo producto')}
+ if(/\b(?:nueva|registrar|crear)\s+(?:una\s+)?compra\b|\bquiero\s+registrar\s+una\s+compra\b/.test(x)){window._lrxVoiceContext={form:'navigation',module:'compras',navigationOnly:true,id:null};go('compras');requestAnimationFrame(()=>{purchaseModal();requestAnimationFrame(()=>{openVoiceContextPanel();});});return toast('Preparando una nueva compra')}
  if(/\b(?:registrar|crear)\s+(?:una\s+)?venta\b|\bquiero\s+registrar\s+una\s+venta\b/.test(x)){go('ventas');requestAnimationFrame(()=>{const b=document.querySelector('[data-action="new-sale"]');if(b)b.click();});return toast('Abriendo registro de venta')}
  const fin=raw.match(/(?:busca|buscar|encuentra|encuentrame|encuéntrame)\s+(?:en\s+)?(?:finanzas|documentos|archivo)?\s*(?:la\s+)?factura\s+(?:de\s+)?(.+)/i);
  if(fin){const query=fin[1].trim();go('finanzas');requestAnimationFrame(()=>voiceFinancialSearch(query));return toast('Buscando la factura')}
@@ -1454,6 +1489,7 @@ function saveSupplier(){const name=document.getElementById('sn').value.trim();if
 function cancelPurchaseDraft(){
  window._lrxPurchaseAttachment=null;
  window._lrxPurchaseDraft=null;
+ try{sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft')}catch(e){}
  window._lrxVoiceContext=null;
  window._lrxVoiceSession=null;
  state._ocrInvoiceText='';
@@ -1565,7 +1601,7 @@ function hydrateMasterData(){
   if(!Array.isArray(state.inventory)) state.inventory=[];
 }
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v143')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v140',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-27-v145')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a)action(a.dataset.action,a.dataset.id,a)});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-27-v145',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
