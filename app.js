@@ -1,10 +1,10 @@
 (()=>{'use strict';
-const APP_VERSION='v164';
+const APP_VERSION='v165';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
 const state=load(); let master={products:[],recipes:[]}; let current=location.hash.slice(1)||'dashboard'; if(!MODULES.some(m=>m[0]===current))current='dashboard';
-function load(){let s={};try{const raw=localStorage.getItem(KEY);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))s=parsed}}catch(e){s={}}; if(!Object.keys(s).length){for(const k of LEGACY_KEYS){try{const raw=localStorage.getItem(k);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){s=parsed;break}}}catch(e){}}} for(const k of ['products','ingredients','categories','suppliers','purchases','purchasePriceHistory','shopping','inventory','movements','waste','sales','promotions','events','production','labels','notes','records','dreRecords','budgets','recipes','preps','physicalCounts','barcodeLog','barRecipes','barPreps','checklistTasks','managerLogs','incidents','maintenance','equipment','users','audit','employees','employeeDocs','employeeConsumptions','labor','resources','partners','capitalMoves','companyAssets','companyNotes','companyIncidents','companyDocuments','companyResponsibilities','financialDocuments','loans','loanPayments','digitalAssets','permits','refrigerationMoves','documents'])s[k]=Array.isArray(s[k])?s[k]:[];if(!s.users.length)s.users=[{id:'USR-ADMIN',name:'Administrador LRX',role:'Admin',active:true,createdAt:new Date().toISOString()}];s.currentUserId=s.currentUserId||'USR-ADMIN';s.settings={labelFormats:[{name:'4 × 3 in',w:4,h:3},{name:'3 × 2 in',w:3,h:2}],shelfLifeDefault:3,targetFoodCost:30,targetContributionMargin:70,distributionReservePct:30,credentialRevealLog:true,priceIncreaseAlertPct:10,priceIncreaseAlertEnabled:true,inventoryLocations:['Almacén','Cocina','Bar','Nevera','Congelador','Producción'],channels:[{name:'Salón',type:'Directo',commission:0,cardFeePct:0,fixedFee:0,active:true},{name:'Uber Eats',type:'Delivery',commission:49,cardFeePct:0,fixedFee:0,active:true},{name:'DoorDash',type:'Delivery',commission:30,cardFeePct:0,fixedFee:0,active:true},{name:'Pickup',type:'Directo',commission:0,cardFeePct:0,fixedFee:0,active:true}],...(s.settings||{})};return s}
+function load(){let s={};try{const raw=localStorage.getItem(KEY);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))s=parsed}}catch(e){s={}}; if(!Object.keys(s).length){for(const k of LEGACY_KEYS){try{const raw=localStorage.getItem(k);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){s=parsed;break}}}catch(e){}}} for(const k of ['products','ingredients','categories','suppliers','purchases','purchaseHeaders','purchasePriceHistory','shopping','inventory','movements','waste','sales','promotions','events','production','labels','notes','records','dreRecords','budgets','recipes','preps','physicalCounts','barcodeLog','barRecipes','barPreps','checklistTasks','managerLogs','incidents','maintenance','equipment','users','audit','employees','employeeDocs','employeeConsumptions','labor','resources','partners','capitalMoves','companyAssets','companyNotes','companyIncidents','companyDocuments','companyResponsibilities','financialDocuments','loans','loanPayments','digitalAssets','permits','refrigerationMoves','documents'])s[k]=Array.isArray(s[k])?s[k]:[];if(!s.users.length)s.users=[{id:'USR-ADMIN',name:'Administrador LRX',role:'Admin',active:true,createdAt:new Date().toISOString()}];s.currentUserId=s.currentUserId||'USR-ADMIN';s.settings={labelFormats:[{name:'4 × 3 in',w:4,h:3},{name:'3 × 2 in',w:3,h:2}],shelfLifeDefault:3,targetFoodCost:30,targetContributionMargin:70,distributionReservePct:30,credentialRevealLog:true,priceIncreaseAlertPct:10,priceIncreaseAlertEnabled:true,inventoryLocations:['Almacén','Cocina','Bar','Nevera','Congelador','Producción'],channels:[{name:'Salón',type:'Directo',commission:0,cardFeePct:0,fixedFee:0,active:true},{name:'Uber Eats',type:'Delivery',commission:49,cardFeePct:0,fixedFee:0,active:true},{name:'DoorDash',type:'Delivery',commission:30,cardFeePct:0,fixedFee:0,active:true},{name:'Pickup',type:'Directo',commission:0,cardFeePct:0,fixedFee:0,active:true}],...(s.settings||{})};return s}
 state.masterOverrides=state.masterOverrides&&typeof state.masterOverrides==='object'?state.masterOverrides:{};state.masterHidden=state.masterHidden&&typeof state.masterHidden==='object'?state.masterHidden:{};for(const k of ['products','recipes','preps'])state.masterHidden[k]=Array.isArray(state.masterHidden[k])?state.masterHidden[k]:[];
 function effectiveMaster(type){
  const isPrep=type==='preps';
@@ -731,12 +731,19 @@ function purchaseCatalogProducts(){
  return rows.filter(p=>{const k=String(p?.id||p?.code||p?.sku||p?.name||'').trim().toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true});
 }
 function purchaseLineMatch(line){
- const code=String(line?.code||'').replace(/[^A-Za-z0-9]/g,'').toLowerCase();
- const name=String(line?.product||'').trim().toLowerCase();
- const normName=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+ const normalizeCode=v=>String(v??'').replace(/[^A-Za-z0-9]/g,'').toLowerCase();
+ const normName=v=>String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+ const code=normalizeCode(line?.code);
+ const name=normName(line?.product);
  const catalog=purchaseCatalogProducts();
- if(code){const hit=catalog.find(p=>String(p.code??p.sku??p.itemCode??p.item_code??p.upc??p.barcode??'').replace(/[^A-Za-z0-9]/g,'').toLowerCase()===code);if(hit)return {product:hit,reason:'Código'}}
- const nn=normName(name);if(nn){const hit=catalog.find(p=>normName(p.name)===nn);if(hit)return {product:hit,reason:'Nombre exacto'}}
+ if(code){
+   const hit=catalog.find(p=>[p?.code,p?.sku,p?.itemCode,p?.item_code,p?.upc,p?.barcode,p?.id].some(v=>normalizeCode(v)===code));
+   if(hit)return {product:hit,reason:'Código'};
+ }
+ if(name){
+   const hit=catalog.find(p=>normName(p?.name)===name);
+   if(hit)return {product:hit,reason:'Nombre exacto'};
+ }
  return null;
 }
 function purchaseLineRow(x={},i=0){
@@ -796,6 +803,7 @@ function bindPurchaseDraftAutosave(){
  ['bst'].forEach(id=>document.getElementById(id)?.addEventListener('change',persistPurchaseDraft));
 }
 function purchaseCreateProductModal(lineIndex){
+ if(window._lrxPurchaseCreateBusy)return;
  const row=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);if(!row)return;
  capturePurchaseDraft();
  window._lrxPurchaseCreateContext={lineIndex:String(lineIndex),startedAt:window._lrxPurchaseDraft?.startedAt||now()};
@@ -823,39 +831,42 @@ function purchaseCreateProductModal(lineIndex){
  const syncUnits=()=>{const u=String(packUnit.value||'lb');if(!standardUnit.dataset.userChanged)standardUnit.value=u};packUnit.addEventListener('change',syncUnits);syncUnits();standardUnit.addEventListener('change',()=>standardUnit.dataset.userChanged='1');
  const recalc=()=>{const q=Number(packQty.value||0),price=Number(packPrice.value||0),from=packUnit.value,to=standardUnit.value,w=Math.min(99.999,Math.max(0,Number(waste.value||0)));let c=0;try{if(q>0&&price>=0){c=price/q;if(from!==to&&window.LRXCost?.convert)c=window.LRXCost.convert(c,from,to)}}catch(e){c=price/q||0}const y=100-w,ec=y>0?c/(y/100):0;unitCost.value=c?c.toFixed(6):'';yieldEl.value=y.toFixed(3);effective.value=ec?ec.toFixed(6):'';calc.innerHTML=q>0?`<b>1 ${esc(purchaseUnit)}</b> contiene <b>${q} ${esc(from)}</b> · costo presentación <b>${money(price)}</b> · costo estándar <b>${money(c)}</b>/${esc(to)} · merma <b>${w.toFixed(2)}%</b> · rendimiento <b>${y.toFixed(2)}%</b> · costo real <b>${money(ec)}</b>/${esc(to)}`:'Indica el contenido de la presentación para calcular el costo.'};
  [packQty,packPrice,packUnit,standardUnit,waste].forEach(x=>x.addEventListener('input',recalc));recalc();
- document.getElementById('confirmPurchaseCreate').onclick=()=>{const n=document.getElementById('ppn').value.trim(),c=document.getElementById('ppcode').value.trim(),sup=document.getElementById('ppsup').value.trim(),pu=document.getElementById('pppurchaseunit').value.trim()||'caja',packQ=Number(packQty.value||0),packU=packUnit.value,standardU=standardUnit.value,packP=Number(packPrice.value||0),stdC=Number(unitCost.value||0),w=Number(waste.value||0),yieldFactor=Math.max(.000001,1-w/100),effectiveCost=Number(effective.value||0),cat=document.getElementById('ppcat').value.trim()||'Sin categoría';
-  if(!n)return toast('Indica el nombre del producto');if(!(packQ>0))return toast('Indica cuánto contiene la presentación');if(packP<0)return toast('Indica un costo válido');const again=purchaseLineMatch({product:n,code:c});if(again)return toast(`No se puede crear: ya existe “${again.product.name}”.`);const id=nextCatalogCode();
-  const product={id,code:c||id,name:n,category:cat,supplier:sup,unit:standardU,standardUnit:standardU,purchaseUnit:pu,packQty:packQ,packUnit:packU,packPrice:packP,purchasePrice:packP,preMermaUnitCost:stdC,standardUnitCost:stdC,cost:effectiveCost,finalCost:effectiveCost,usableCost:effectiveCost,wastePct:w,yieldFactor,usableQty:packQ*yieldFactor,createdAt:now(),source:'PURCHASE_INVOICE'};state.products.push(product);
-  const d=window._lrxPurchaseDraft||(window._lrxPurchaseDraft={form:'purchase',context:'compras',lines:[]});
-  d.lines=Array.isArray(d.lines)?d.lines:[];
-  d.lines[lineIndex]={...(d.lines[lineIndex]||{}),product:n,code:c,unit:pu,unitCost:packP,standardUnit:standardU,packQty:packQ,packUnit:packU,standardUnitCost:stdC,finalCost:effectiveCost,wastePct:w,yieldFactor};
-  try{
-   save();
-   const activeRow=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);
-   if(activeRow){
-    activeRow.dataset.code=c;
-    const pi=activeRow.querySelector('.bp-line-product'),ui=activeRow.querySelector('.bp-line-unit'),ci=activeRow.querySelector('.bp-line-cost');
-    if(pi)pi.value=n;if(ui)ui.value=pu;if(ci)ci.value=packP;
-    updatePurchaseLineCreateState(activeRow);
-   }
-   const list=document.getElementById('buyProducts');
-   if(list&&!Array.from(list.options).some(o=>String(o.value).trim().toLowerCase()===n.toLowerCase()))list.insertAdjacentHTML('beforeend',`<option value="${esc(n)}">`);
-   // Preserve the complete purchase draft and reopen the SAME purchase form.
-   capturePurchaseDraft();
-   window._lrxPurchaseDraft={...(window._lrxPurchaseDraft||{}),lines:[...(window._lrxPurchaseDraft?.lines||[])],lastCreatedProductId:id};
-   window._lrxPurchaseDraft.lines[lineIndex]={...(window._lrxPurchaseDraft.lines[lineIndex]||{}),product:n,code:c,unit:pu,unitCost:packP,standardUnit:standardU,packQty:packQ,packUnit:packU,standardUnitCost:stdC,finalCost:effectiveCost,wastePct:w,yieldFactor};
-   persistPurchaseDraft();
-   const draft=JSON.parse(JSON.stringify(window._lrxPurchaseDraft||{}));
-   window._lrxPurchaseCreateContext=null;
-   close();
-   window._lrxPurchaseDraft=draft;
-   purchaseModal();
-   requestAnimationFrame(()=>{persistPurchaseDraft();const r=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);if(r)updatePurchaseLineCreateState(r);});
-   toast(`Producto creado: ${n} · ${money(effectiveCost)} / ${standardU} después de merma`);
-  }catch(err){
-   console.error('purchase create product',err);
-   toast('El producto no pudo guardarse. La compra permanece abierta.');
-  }
+ document.getElementById('confirmPurchaseCreate').onclick=()=>{
+   if(window._lrxPurchaseCreateBusy)return;
+   window._lrxPurchaseCreateBusy=true;
+   const btn=document.getElementById('confirmPurchaseCreate');if(btn){btn.disabled=true;btn.textContent='Guardando producto…'}
+   try{
+    const n=document.getElementById('ppn').value.trim(),c=document.getElementById('ppcode').value.trim(),sup=document.getElementById('ppsup').value.trim(),pu=document.getElementById('pppurchaseunit').value.trim()||'caja',packQ=Number(packQty.value||0),packU=packUnit.value,standardU=standardUnit.value,packP=Number(packPrice.value||0),stdC=Number(unitCost.value||0),w=Number(waste.value||0),yieldFactor=Math.max(.000001,1-w/100),effectiveCost=Number(effective.value||0),cat=document.getElementById('ppcat').value.trim()||'Sin categoría';
+    if(!n){window._lrxPurchaseCreateBusy=false;return toast('Indica el nombre del producto')}
+    if(!(packQ>0)){window._lrxPurchaseCreateBusy=false;return toast('Indica cuánto contiene la presentación')}
+    if(packP<0){window._lrxPurchaseCreateBusy=false;return toast('Indica un costo válido')}
+    const again=purchaseLineMatch({product:n,code:c});if(again){window._lrxPurchaseCreateBusy=false;return toast(`No se puede crear: ya existe “${again.product.name}”.`)}
+    const id=nextCatalogCode();
+    const product={id,code:c||id,name:n,category:cat,supplier:sup,unit:standardU,standardUnit:standardU,purchaseUnit:pu,packQty:packQ,packUnit:packU,packPrice:packP,purchasePrice:packP,preMermaUnitCost:stdC,standardUnitCost:stdC,cost:effectiveCost,finalCost:effectiveCost,usableCost:effectiveCost,wastePct:w,yieldFactor,usableQty:packQ*yieldFactor,createdAt:now(),source:'PURCHASE_INVOICE'};
+    state.products=Array.isArray(state.products)?state.products:[];state.products.push(product);
+    const d=window._lrxPurchaseDraft||(window._lrxPurchaseDraft={form:'purchase',context:'compras',lines:[]});
+    d.lines=Array.isArray(d.lines)?d.lines:[];
+    d.lines[lineIndex]={...(d.lines[lineIndex]||{}),product:n,code:c,unit:pu,qty:qty||d.lines[lineIndex]?.qty||1,unitCost:packP,standardUnit:standardU,packQty:packQ,packUnit:packU,standardUnitCost:stdC,finalCost:effectiveCost,wastePct:w,yieldFactor};
+    d.lastCreatedProductId=id;d.lastCreatedAt=now();
+    save();persistPurchaseDraft();
+    const draft=JSON.parse(JSON.stringify(window._lrxPurchaseDraft));
+    window._lrxPurchaseCreateContext=null;
+    close();
+    // Let Safari finish the current click/modal lifecycle before rebuilding the purchase modal.
+    setTimeout(()=>{
+      try{
+       window._lrxPurchaseDraft=draft;
+       purchaseModal();
+       requestAnimationFrame(()=>{
+        const r=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);
+        if(r){r.dataset.code=c;updatePurchaseLineCreateState(r)}
+        persistPurchaseDraft();
+        window._lrxPurchaseCreateBusy=false;
+        toast(`Producto creado: ${n} · ${money(effectiveCost)} / ${standardU} después de merma`);
+       });
+      }catch(err){console.error('purchase reopen',err);window._lrxPurchaseCreateBusy=false;toast('Producto creado, pero no se pudo reabrir la compra. Pulsa Compras → Registrar compra; el borrador quedó guardado.')}
+    },0);
+   }catch(err){console.error('purchase create product',err);window._lrxPurchaseCreateBusy=false;if(btn){btn.disabled=false;btn.textContent='Crear producto y volver a la compra'}toast('El producto no pudo guardarse. La compra permanece abierta.')}
  };
 }
 
@@ -938,63 +949,84 @@ function purchaseInventoryQuantity(product, qty, purchaseUnit){
 }
 function reconcileInventoryFromPurchases(){
  state.inventory=Array.isArray(state.inventory)?state.inventory:[];
+ state.movements=Array.isArray(state.movements)?state.movements:[];
  const products=[...(master.products||[]),...(state.products||[])];
- const findProduct=x=>products.find(p=>String(p.id||'')===String(x.productId||'') || String(p.code||p.sku||'')===String(x.code||'') || String(p.name||'').trim().toLowerCase()===String(x.product||x.productName||'').trim().toLowerCase());
- const ensure=(x)=>{const p=findProduct(x); if(!p)return null; const imp=purchaseInventoryQuantity(p,x.qty,x.unit); let inv=state.inventory.find(i=>String(i.productId||'')===String(p.id||'') || (String(i.product||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase() && String(i.unit||'').toLowerCase()===String(imp.unit).toLowerCase())); if(!inv){inv={id:'INV-'+p.id,productId:p.id,product:p.name,unit:imp.unit,qty:0,unitCost:imp.unitCost,minQty:Number(p.minQty??p.min??0),supplier:p.supplier||'',source:'PURCHASE'};state.inventory.push(inv)} return {p,inv,imp};};
- const applied=new Set((state.inventory||[]).flatMap(i=>Array.isArray(i.appliedPurchaseIds)?i.appliedPurchaseIds.map(String):[]));
+ const norm=v=>String(v??'').trim().toLowerCase();
+ const codeNorm=v=>String(v??'').replace(/[^A-Za-z0-9]/g,'').toLowerCase();
+ const findProduct=x=>{
+  const xc=codeNorm(x.code);
+  return products.find(p=>(x.productId&&String(p.id)===String(x.productId)) || (xc&&[p.code,p.sku,p.itemCode,p.item_code,p.upc,p.barcode,p.id].some(v=>codeNorm(v)===xc)) || norm(p.name)===norm(x.product||x.productName));
+ };
+ const ensure=(x)=>{const p=findProduct(x);if(!p)return null;const imp=purchaseInventoryQuantity(p,x.qty,x.unit);let inv=state.inventory.find(i=>String(i.productId||'')===String(p.id||'') && String(i.unit||'').toLowerCase()===String(imp.unit).toLowerCase());if(!inv)inv=state.inventory.find(i=>norm(i.product)===norm(p.name)&&String(i.unit||'').toLowerCase()===String(imp.unit).toLowerCase());if(!inv){inv={id:'INV-'+p.id,productId:p.id,product:p.name,unit:imp.unit,qty:0,unitCost:imp.unitCost,minQty:Number(p.minQty??p.min??0),supplier:p.supplier||'',source:'PURCHASE'};state.inventory.push(inv)}return {p,inv,imp}};
  let changed=false;
  (state.purchases||[]).filter(x=>String(x.status||'RECIBIDA').toUpperCase()==='RECIBIDA').forEach(x=>{
-   const pid=String(x.id||''); if(pid && applied.has(pid))return;
-   const r=ensure(x); if(!r)return;
-   const old=Number(r.inv.qty||0), add=Number(r.imp.qty||0), cost=Number(r.imp.unitCost||0);
-   r.inv.qty=old+add;
-   if(old+add>0)r.inv.unitCost=old>0?((old*Number(r.inv.unitCost||0))+(add*cost))/(old+add):cost;
-   r.inv.usableUnitCost=Number(r.p?.finalCost ?? r.p?.usableCost ?? r.inv.unitCost ?? 0);
-   r.inv.presentation=r.p.purchaseUnit||r.inv.presentation||x.unit||'';r.inv.packQty=Number(r.p.packQty||r.inv.packQty||0);r.inv.packUnit=r.p.packUnit||r.inv.packUnit||r.inv.unit;r.inv.packPrice=Number(r.p.packPrice??r.inv.packPrice??0);r.inv.wastePct=Number(r.p.wastePct??r.inv.wastePct??0);r.inv.yieldFactor=Number(r.p.yieldFactor??r.inv.yieldFactor??(1-r.inv.wastePct/100));
-   r.inv.appliedPurchaseIds=Array.from(new Set([...(r.inv.appliedPurchaseIds||[]),pid]));
-   x.inventoryApplied=true;x.inventoryQtyAdded=add;x.inventoryUnit=r.imp.unit;x.inventoryAppliedAt=x.inventoryAppliedAt||now();
-   if(pid)applied.add(pid);changed=true;
+  const pid=String(x.id||'');
+  if(pid&&x.inventoryApplied)return;
+  const r=ensure(x);if(!r)return;
+  const old=Number(r.inv.qty||0),add=Number(r.imp.qty||0),cost=Number(r.imp.unitCost||0);
+  r.inv.qty=old+add;
+  if(old+add>0)r.inv.unitCost=old>0?((old*Number(r.inv.unitCost||0))+(add*cost))/(old+add):cost;
+  r.inv.usableUnitCost=Number(r.p.finalCost??r.p.usableCost??r.inv.unitCost??0);
+  r.inv.presentation=r.p.purchaseUnit||r.inv.presentation||x.unit||'';r.inv.packQty=Number(r.p.packQty||r.inv.packQty||0);r.inv.packUnit=r.p.packUnit||r.inv.packUnit||r.inv.unit;r.inv.packPrice=Number(r.p.packPrice??r.inv.packPrice??0);r.inv.wastePct=Number(r.p.wastePct??r.inv.wastePct??0);r.inv.yieldFactor=Number(r.p.yieldFactor??r.inv.yieldFactor??(1-r.inv.wastePct/100));r.inv.usableQty=Number(r.p.usableQty ?? ((r.inv.packQty*r.inv.yieldFactor) || r.inv.usableQty || 0));
+  r.inv.appliedPurchaseIds=Array.from(new Set([...(r.inv.appliedPurchaseIds||[]),pid]));
+  x.inventoryApplied=true;x.inventoryQtyAdded=add;x.inventoryUnit=r.imp.unit;x.inventoryAppliedAt=x.inventoryAppliedAt||now();
+  const ref=`COMPRA-${pid}`;
+  if(!state.movements.some(m=>String(m.ref||'')===ref))state.movements.push({id:'MOV-'+pid,date:x.date||now(),type:'ENTRADA COMPRA',product:r.p.name,productId:r.p.id,qty:add,unit:r.imp.unit,unitCost:cost,total:add*cost,ref,supplier:x.supplier||r.p.supplier||'',invoice:x.invoice||'',purchaseId:x.purchaseId||pid});
+  changed=true;
  });
- if(changed)save();
- return changed;
+ if(changed)save();return changed;
 }
-function savePurchase(){
- const d=window._lrxPurchaseDraft;
- if(!d||d.form!=='purchase')return toast('No hay una compra activa para guardar.');
- // Always capture the visible form one last time before committing.
- capturePurchaseDraft();
- const lines=Array.isArray(window._lrxPurchaseDraft?.lines)?window._lrxPurchaseDraft.lines.map(x=>({...x,product:String(x.product||'').trim()})).filter(x=>x.product&&Number(x.qty||0)>0):[];
- if(!lines.length)return toast('Agrega al menos un producto con cantidad.');
- const supplier=String(window._lrxPurchaseDraft?.supplier||'').trim(), invoice=String(window._lrxPurchaseDraft?.invoice||'').trim(), status=String(window._lrxPurchaseDraft?.status||'RECIBIDA').toUpperCase();
- const norm=s=>String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
- // Do not create a second purchase for the same supplier + invoice.
- if(invoice){
+
+async function savePurchase(){
+ if(window._lrxPurchaseSaveBusy)return;
+ const d=window._lrxPurchaseDraft;if(!d||d.form!=='purchase')return toast('No hay una compra activa para guardar.');
+ window._lrxPurchaseSaveBusy=true;
+ const btn=document.querySelector('[data-action="save-purchase"]');if(btn){btn.disabled=true;btn.textContent='Guardando compra…'}
+ try{
+  capturePurchaseDraft();
+  const draft=window._lrxPurchaseDraft;
+  const lines=Array.isArray(draft?.lines)?draft.lines.map(x=>({...x,product:String(x.product||'').trim()})).filter(x=>x.product&&Number(x.qty||0)>0):[];
+  if(!lines.length)return toast('Agrega al menos un producto con cantidad.');
+  const supplier=String(draft.supplier||'').trim(),invoice=String(draft.invoice||'').trim(),status=String(draft.status||'RECIBIDA').toUpperCase();
+  const norm=s=>String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+  if(invoice){
    const duplicate=(state.purchases||[]).find(x=>norm(x.invoice||x.reference)===norm(invoice)&&(!supplier||norm(x.supplier)===norm(supplier)));
-   if(duplicate){
-     window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;
-     sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');
-     close();go('compras');
-     return toast(`La factura ${invoice} ya está registrada. No se creó una compra duplicada.`);
-   }
+   if(duplicate){window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');close();go('compras');return toast(`La factura ${invoice} ya está registrada. No se creó una compra duplicada.`)}
+  }
+  const purchaseId=draft.purchaseId||('BUY-'+Date.now());
+  const products=[...(master.products||[]),...(state.products||[])];
+  const records=lines.map((x,i)=>{const p=products.find(z=>String(z.id||'')===String(x.productId||'')||[z.code,z.sku,z.itemCode,z.item_code,z.upc,z.barcode].some(v=>String(v??'').replace(/[^A-Za-z0-9]/g,'').toLowerCase()===String(x.code??'').replace(/[^A-Za-z0-9]/g,'').toLowerCase()&&String(x.code||''))||String(z.name||'').trim().toLowerCase()===x.product.toLowerCase());return {id:purchaseId+'-'+i,purchaseId,date:draft.date||now(),supplier,invoice,productId:p?.id||'',product:x.product,productName:x.product,code:x.code||p?.code||'',qty:Number(x.qty||0),unit:x.unit||p?.purchaseUnit||p?.unit||'unidad',unitCost:Number(x.unitCost||0),total:Number(x.qty||0)*Number(x.unitCost||0),status,source:'OCR/MANUAL',inventoryApplied:false,createdAt:now()}});
+  state.purchases=(state.purchases||[]).filter(x=>String(x.purchaseId||'')!==purchaseId&&!(String(x.id||'').startsWith(purchaseId+'-')));
+  state.purchases.push(...records);
+  save();
+  reconcileInventoryFromPurchases();
+  // Preserve the original invoice/document when it is reasonably small enough for local storage.
+  const att=window._lrxPurchaseAttachment;
+  if(att?.file){
+   const file=att.file;let dataUrl='';
+   if(file.size<=3500000){dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=reject;reader.readAsDataURL(file)})}
+   state.documents=Array.isArray(state.documents)?state.documents:[];
+   const docId='DOC-'+purchaseId;
+   state.documents=state.documents.filter(x=>String(x.id)!==docId);
+   state.documents.unshift({id:docId,name:file.name,type:'Factura de compra',description:`Factura ${invoice||purchaseId} · ${supplier||'Proveedor'}`,mime:file.type||'application/octet-stream',size:file.size,dataUrl,ocrText:String(att.ocrText||''),routeArea:'Compras',routeCollection:'purchases',contextModule:'compras',contextRecordId:purchaseId,purchaseId,supplier,invoice,createdAt:now(),createdBy:currentUser().name});
+  }
+  save();
+  state._lastPurchaseId=purchaseId;
+  window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;window._lrxPurchaseCreateContext=null;
+  sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');
+  close();
+  go('compras');
+  render();
+  toast(`Compra ${invoice||purchaseId} guardada e inventario actualizado.`);
+ }catch(err){
+  console.error('purchase transaction',err);
+  toast('No se pudo completar la compra. El borrador permanece abierto.');
+ }finally{
+  window._lrxPurchaseSaveBusy=false;
+  const b=document.querySelector('[data-action="save-purchase"]');if(b){b.disabled=false;b.textContent='Guardar compra'}
  }
- const total=Number(window._lrxPurchaseDraft?.total||0)||lines.reduce((a,x)=>a+Number(x.qty||0)*Number(x.unitCost||0),0);
- const purchaseId=window._lrxPurchaseDraft.purchaseId||('BUY-'+Date.now());
- const products=[...(master.products||[]),...(state.products||[])];
- const records=lines.map((x,i)=>{
-   const p=products.find(z=>String(z.id||'')===String(x.productId||'')||String(z.code||z.sku||'')===String(x.code||'')||String(z.name||'').trim().toLowerCase()===x.product.toLowerCase());
-   return {id:purchaseId+'-'+i,purchaseId,date:window._lrxPurchaseDraft.date||now(),supplier,invoice,productId:p?.id||'',product:x.product,productName:x.product,code:x.code||p?.code||'',qty:Number(x.qty||0),unit:x.unit||p?.purchaseUnit||p?.unit||'unidad',unitCost:Number(x.unitCost||0),total:Number(x.qty||0)*Number(x.unitCost||0),status,source:'OCR/MANUAL',inventoryApplied:false,createdAt:now()}
- });
- state.purchases=(state.purchases||[]).filter(x=>!String(x.id||'').startsWith(purchaseId+'-')&&String(x.purchaseId||'')!==purchaseId);
- state.purchases.push(...records);
- try{save();reconcileInventoryFromPurchases();}catch(err){console.error('purchase persist',err);return toast('No se pudo guardar la compra. El borrador permanece abierto.')}
- state._lastPurchaseId=purchaseId;
- window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;
- sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');
- close();
- go('compras');
- render();
- toast(`Compra ${invoice||purchaseId} guardada e inventario actualizado.`);
 }
+
 function inventory(){
  const rows=inventoryMasterRows().sort((a,b)=>String(a.product||'').localeCompare(String(b.product||'')));
  const total=rows.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unitCost||0),0), low=rows.filter(x=>Number(x.minQty||0)>Number(x.qty||0)&&Number(x.minQty||0)>0).length;
@@ -1241,7 +1273,7 @@ const V={
  configuracion:()=>generic(['configuracion','Configuración','Parámetros'])
 };
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v164')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v164',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v165')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v165',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
