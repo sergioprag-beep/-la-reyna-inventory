@@ -94,9 +94,9 @@
   if(!invoice){for(const line of lines){const ms=line.match(/(?:invoice|factura)\s*(?:number|numero|número|no\.?|#)?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-\/\.]{4,})\b/i);if(ms){invoice=ms[1];break}}}
   let date='';const dm=compact.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})\b/);if(dm)date=`${dm[3]}-${String(dm[1]).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;else{const iso=compact.match(/\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/);if(iso)date=`${iso[1]}-${String(iso[2]).padStart(2,'0')}-${String(iso[3]).padStart(2,'0')}`}
   const labeled=(rx)=>{for(let i=0;i<lines.length;i++){const m=lines[i].match(rx);if(m)return num(m[1]);if(rx.test(lines[i])){const n=lines[i+1]?.match(/^\$?\s*([0-9][0-9,.]*)\s*$/);if(n)return num(n[1])}}return 0};
-  const subtotal=labeled(/(?:^|\s)(?:subtotal|sub\s*total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
-  const tax=labeled(/(?:^|\s)(?:sales\s*tax|tax\s+amount|taxes|impuesto|impuestos|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
-  const totals=[];for(const l of lines){const m=l.match(/(?:invoice\s+total|grand\s+total|total\s+due|amount\s+due|balance\s+due|total\s+factura|^total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);if(m)totals.push(num(m[1]))}
+  let subtotal=labeled(/(?:^|\s)(?:subtotal|sub\s*total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
+  let tax=labeled(/(?:^|\s)(?:sales\s*tax|tax\s+amount|taxes|impuesto|impuestos|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
+  const totals=[];for(const l of lines){const m=l.match(/(?:invoice\s+total|grand\s+total|total\s+due|amount\s+due|balance\s+due|total\s+factura|^total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)/i);if(m)totals.push(num(m[1]))}
   let total=totals.length?totals[totals.length-1]:0;if(!total&&subtotal)total=subtotal+tax;
   return {supplier,invoice,date,subtotal,tax,total,lines:[]};
  }
@@ -126,6 +126,11 @@
     lines.push({product:mt?.p?.name||m[3],qty:q,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(m[3]),unitCost:unitPrice,lineTotal,source:'structured-text',matchScore:mt?.score||0,code});
    }
   }
+  if(!base.subtotal&&lines.length)base.subtotal=lines.reduce((a,r)=>a+Number(r.lineTotal||Number(r.qty||0)*Number(r.unitCost||0)),0);
+  if(!base.tax){
+    const implied=Number(base.total||0)-Number(base.subtotal||0);
+    base.tax=Math.abs(implied)<0.01?0:(implied>0?implied:0);
+  }
   base.lines=lines;
   if(!/\b(?:tax|sales\s+tax|taxes|impuesto|impuestos|iva|total\s+tax)\b/i.test(text||''))base.tax=0;
   if(base.subtotal>0&&base.total>0&&base.tax>0&&Math.abs(base.subtotal+base.tax-base.total)>Math.max(.1,base.total*.03))base.tax=0;
@@ -134,11 +139,30 @@
  async function ensureTesseract(){if(global.Tesseract)return global.Tesseract;const el=document.querySelector('script[data-lrx-ocr]');if(el){await new Promise((res,rej)=>{if(global.Tesseract)return res();el.addEventListener('load',res,{once:true});el.addEventListener('error',rej,{once:true})});if(global.Tesseract)return global.Tesseract}return await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.async=true;s.dataset.lrxOcr='1';s.onload=()=>global.Tesseract?resolve(global.Tesseract):reject(new Error('OCR no disponible'));s.onerror=()=>reject(new Error('No se pudo cargar OCR'));document.head.appendChild(s)})}
  function tsvLayout(tsv){const by=new Map();for(const raw of String(tsv||'').split(/\r?\n/)){const a=raw.split('\t');if(a.length<12||a[0]!=='5')continue;const text=(a[11]||'').trim(),conf=Number(a[10]);if(!text||(!Number.isNaN(conf)&&conf<20))continue;const key=[a[1],a[2],a[3],a[4],a[5]].join(':');let arr=by.get(key);if(!arr){arr=[];by.set(key,arr)}arr.push({x:Number(a[6]||0),y:Number(a[7]||0),text})}const items=[...by.values()].flat();return items.length?[{items}]:[]}
  async function ocrImage(file){const T=await ensureTesseract();const r=await T.recognize(file,'spa+eng');return {text:String(r?.data?.text||'').trim(),layout:tsvLayout(r?.data?.tsv||'')}}
- async function readDocument(file){if(!file)return {text:'',layout:[]};const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);if(!isPdf){if(file.type?.startsWith('image/'))return await ocrImage(file);if(file.type==='text/plain'||/\.txt$/i.test(file.name))return {text:await file.text(),layout:[]};return {text:'',layout:[]}}
-  let lastError=null;const loaders=[async()=>await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm'),async()=>await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs')];
-  for(const load of loaders){try{const pdfjs=await load();if(pdfjs?.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:await file.arrayBuffer(),useWorkerFetch:false,isEvalSupported:true}).promise;let text='',layout=[];const pages=Math.min(pdf.numPages,12);for(let i=1;i<=pages;i++){const page=await pdf.getPage(i);const tc=await page.getTextContent({normalizeWhitespace:true,disableCombineTextItems:false});const items=(tc?.items||[]).filter(x=>String(x?.str||'').trim()).map(x=>({x:Number(x.transform?.[4]||0),y:Number(x.transform?.[5]||0),text:String(x.str||'').trim()}));const groups=groupLayout(items);const pageText=groups.map(g=>g.text).join('\n').trim();if(pageText)text+=(text?'\n':'')+pageText;layout.push({items})}
-   if(text.trim())return {text:text.trim(),layout};
-  }catch(e){lastError=e}}
+ async function pdfTextWith(pdfjs,file){
+  if(!pdfjs)return null;
+  if(pdfjs.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await pdfjs.getDocument({data:await file.arrayBuffer(),useWorkerFetch:true,isEvalSupported:true}).promise;
+  let text='',layout=[];const pages=Math.min(pdf.numPages,12);
+  for(let i=1;i<=pages;i++){
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent({normalizeWhitespace:true,disableCombineTextItems:false});
+    const items=(tc?.items||[]).filter(x=>String(x?.str||'').trim()).map(x=>({x:Number(x.transform?.[4]||0),y:Number(x.transform?.[5]||0),text:String(x.str||'').trim()}));
+    const groups=groupLayout(items);const pageText=groups.map(g=>g.text).join('\n').trim();
+    if(pageText)text+=(text?'\n':'')+pageText;layout.push({items});
+  }
+  return text.trim()?{text:text.trim(),layout}:null;
+ }
+ async function readDocument(file){
+  if(!file)return {text:'',layout:[]};
+  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+  if(!isPdf){if(file.type?.startsWith('image/'))return await ocrImage(file);if(file.type==='text/plain'||/\.txt$/i.test(file.name))return {text:await file.text(),layout:[]};return {text:'',layout:[]}}
+  let lastError=null;
+  // Preferred path: classic PDF.js is loaded by index.html for Safari/iOS compatibility.
+  try{const r=await pdfTextWith(global.pdfjsLib,file);if(r)return r;}catch(e){lastError=e}
+  // Secondary path for environments where the classic global is unavailable.
+  const loaders=[async()=>await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.mjs')];
+  for(const load of loaders){try{const mod=await load();const pdfjs=mod?.default||mod;const r=await pdfTextWith(pdfjs,file);if(r)return r;}catch(e){lastError=e}}
   throw lastError||new Error('No se pudo leer el PDF');
  }
  global.LRXPurchaseEngine={version:ENGINE_VERSION,parseInvoice,readDocument};
