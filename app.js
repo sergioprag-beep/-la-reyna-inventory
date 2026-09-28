@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v163';
+const APP_VERSION='v164';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
@@ -829,11 +829,33 @@ function purchaseCreateProductModal(lineIndex){
   const d=window._lrxPurchaseDraft||(window._lrxPurchaseDraft={form:'purchase',context:'compras',lines:[]});
   d.lines=Array.isArray(d.lines)?d.lines:[];
   d.lines[lineIndex]={...(d.lines[lineIndex]||{}),product:n,code:c,unit:pu,unitCost:packP,standardUnit:standardU,packQty:packQ,packUnit:packU,standardUnitCost:stdC,finalCost:effectiveCost,wastePct:w,yieldFactor};
-  save();
-  const activeRow=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);
-  if(activeRow){activeRow.dataset.code=c;const pi=activeRow.querySelector('.bp-line-product'),ui=activeRow.querySelector('.bp-line-unit'),ci=activeRow.querySelector('.bp-line-cost');if(pi)pi.value=n;if(ui)ui.value=pu;if(ci)ci.value=packP;updatePurchaseLineCreateState(activeRow)}
-  const list=document.getElementById('buyProducts');if(list&&!Array.from(list.options).some(o=>String(o.value).trim().toLowerCase()===n.toLowerCase()))list.insertAdjacentHTML('beforeend',`<option value="${esc(n)}">`);
-  persistPurchaseDraft();const draft=JSON.parse(JSON.stringify(window._lrxPurchaseDraft||{}));window._lrxPurchaseCreateContext=null;close();window._lrxPurchaseDraft=draft;purchaseModal();requestAnimationFrame(()=>persistPurchaseDraft());toast(`Producto creado: ${n} · ${money(effectiveCost)} / ${standardU} después de merma`);
+  try{
+   save();
+   const activeRow=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);
+   if(activeRow){
+    activeRow.dataset.code=c;
+    const pi=activeRow.querySelector('.bp-line-product'),ui=activeRow.querySelector('.bp-line-unit'),ci=activeRow.querySelector('.bp-line-cost');
+    if(pi)pi.value=n;if(ui)ui.value=pu;if(ci)ci.value=packP;
+    updatePurchaseLineCreateState(activeRow);
+   }
+   const list=document.getElementById('buyProducts');
+   if(list&&!Array.from(list.options).some(o=>String(o.value).trim().toLowerCase()===n.toLowerCase()))list.insertAdjacentHTML('beforeend',`<option value="${esc(n)}">`);
+   // Preserve the complete purchase draft and reopen the SAME purchase form.
+   capturePurchaseDraft();
+   window._lrxPurchaseDraft={...(window._lrxPurchaseDraft||{}),lines:[...(window._lrxPurchaseDraft?.lines||[])],lastCreatedProductId:id};
+   window._lrxPurchaseDraft.lines[lineIndex]={...(window._lrxPurchaseDraft.lines[lineIndex]||{}),product:n,code:c,unit:pu,unitCost:packP,standardUnit:standardU,packQty:packQ,packUnit:packU,standardUnitCost:stdC,finalCost:effectiveCost,wastePct:w,yieldFactor};
+   persistPurchaseDraft();
+   const draft=JSON.parse(JSON.stringify(window._lrxPurchaseDraft||{}));
+   window._lrxPurchaseCreateContext=null;
+   close();
+   window._lrxPurchaseDraft=draft;
+   purchaseModal();
+   requestAnimationFrame(()=>{persistPurchaseDraft();const r=document.querySelector(`.purchase-line[data-i="${CSS.escape(String(lineIndex))}"]`);if(r)updatePurchaseLineCreateState(r);});
+   toast(`Producto creado: ${n} · ${money(effectiveCost)} / ${standardU} después de merma`);
+  }catch(err){
+   console.error('purchase create product',err);
+   toast('El producto no pudo guardarse. La compra permanece abierta.');
+  }
  };
 }
 
@@ -937,22 +959,42 @@ function reconcileInventoryFromPurchases(){
  return changed;
 }
 function savePurchase(){
- const d=window._lrxPurchaseDraft; if(!d||d.form!=='purchase')return toast('No hay una compra activa para guardar.');
- const lines=Array.isArray(d.lines)?d.lines.map(x=>({...x,product:String(x.product||'').trim()})).filter(x=>x.product&&Number(x.qty||0)>0):[];
+ const d=window._lrxPurchaseDraft;
+ if(!d||d.form!=='purchase')return toast('No hay una compra activa para guardar.');
+ // Always capture the visible form one last time before committing.
+ capturePurchaseDraft();
+ const lines=Array.isArray(window._lrxPurchaseDraft?.lines)?window._lrxPurchaseDraft.lines.map(x=>({...x,product:String(x.product||'').trim()})).filter(x=>x.product&&Number(x.qty||0)>0):[];
  if(!lines.length)return toast('Agrega al menos un producto con cantidad.');
- const supplier=String(d.supplier||'').trim(), invoice=String(d.invoice||'').trim(), status=String(d.status||'RECIBIDA').toUpperCase();
- const total=Number(d.total||0)||lines.reduce((a,x)=>a+Number(x.qty||0)*Number(x.unitCost||0),0);
- const purchaseId=d.purchaseId||('BUY-'+Date.now());
+ const supplier=String(window._lrxPurchaseDraft?.supplier||'').trim(), invoice=String(window._lrxPurchaseDraft?.invoice||'').trim(), status=String(window._lrxPurchaseDraft?.status||'RECIBIDA').toUpperCase();
+ const norm=s=>String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');
+ // Do not create a second purchase for the same supplier + invoice.
+ if(invoice){
+   const duplicate=(state.purchases||[]).find(x=>norm(x.invoice||x.reference)===norm(invoice)&&(!supplier||norm(x.supplier)===norm(supplier)));
+   if(duplicate){
+     window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;
+     sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');
+     close();go('compras');
+     return toast(`La factura ${invoice} ya está registrada. No se creó una compra duplicada.`);
+   }
+ }
+ const total=Number(window._lrxPurchaseDraft?.total||0)||lines.reduce((a,x)=>a+Number(x.qty||0)*Number(x.unitCost||0),0);
+ const purchaseId=window._lrxPurchaseDraft.purchaseId||('BUY-'+Date.now());
  const products=[...(master.products||[]),...(state.products||[])];
- const records=lines.map((x,i)=>{const p=products.find(z=>String(z.id||'')===String(x.productId||'')||String(z.code||z.sku||'')===String(x.code||'')||String(z.name||'').trim().toLowerCase()===x.product.toLowerCase());return {id:purchaseId+'-'+i,purchaseId,date:d.date||now(),supplier,invoice,productId:p?.id||'',product:x.product,productName:x.product,code:x.code||p?.code||'',qty:Number(x.qty||0),unit:x.unit||p?.purchaseUnit||p?.unit||'unidad',unitCost:Number(x.unitCost||0),total:Number(x.qty||0)*Number(x.unitCost||0),status,source:'OCR/MANUAL',inventoryApplied:false,createdAt:now()}});
- state.purchases=(state.purchases||[]).filter(x=>!String(x.id||'').startsWith(purchaseId+'-') && String(x.purchaseId||'')!==purchaseId);state.purchases.push(...records);
- const attachment=window._lrxPurchaseAttachment?.file;
- if(attachment){state.documents=Array.isArray(state.documents)?state.documents:[];const exists=state.documents.some(x=>x.contextRecordId===purchaseId||x.purchaseId===purchaseId);if(!exists){const reader=new FileReader();reader.onload=()=>{state.documents.unshift({id:'DOC-'+Date.now(),name:attachment.name,type:'Factura de compra',description:`Factura ${invoice||purchaseId}`,mime:attachment.type,size:attachment.size,dataUrl:String(reader.result||'').slice(0,5000000),ocrText:String(window._lrxPurchaseAttachment?.ocrText||''),routeArea:'Compras',contextModule:'compras',contextRecordId:purchaseId,purchaseId,createdAt:now(),createdBy:currentUser().name});save();reconcileInventoryFromPurchases();};reader.readAsDataURL(attachment)}}
- reconcileInventoryFromPurchases();
- state._lastPurchaseId=purchaseId;save();
- window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');close();render();toast('Compra guardada e inventario actualizado.');
+ const records=lines.map((x,i)=>{
+   const p=products.find(z=>String(z.id||'')===String(x.productId||'')||String(z.code||z.sku||'')===String(x.code||'')||String(z.name||'').trim().toLowerCase()===x.product.toLowerCase());
+   return {id:purchaseId+'-'+i,purchaseId,date:window._lrxPurchaseDraft.date||now(),supplier,invoice,productId:p?.id||'',product:x.product,productName:x.product,code:x.code||p?.code||'',qty:Number(x.qty||0),unit:x.unit||p?.purchaseUnit||p?.unit||'unidad',unitCost:Number(x.unitCost||0),total:Number(x.qty||0)*Number(x.unitCost||0),status,source:'OCR/MANUAL',inventoryApplied:false,createdAt:now()}
+ });
+ state.purchases=(state.purchases||[]).filter(x=>!String(x.id||'').startsWith(purchaseId+'-')&&String(x.purchaseId||'')!==purchaseId);
+ state.purchases.push(...records);
+ try{save();reconcileInventoryFromPurchases();}catch(err){console.error('purchase persist',err);return toast('No se pudo guardar la compra. El borrador permanece abierto.')}
+ state._lastPurchaseId=purchaseId;
+ window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;
+ sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');
+ close();
+ go('compras');
+ render();
+ toast(`Compra ${invoice||purchaseId} guardada e inventario actualizado.`);
 }
-
 function inventory(){
  const rows=inventoryMasterRows().sort((a,b)=>String(a.product||'').localeCompare(String(b.product||'')));
  const total=rows.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unitCost||0),0), low=rows.filter(x=>Number(x.minQty||0)>Number(x.qty||0)&&Number(x.minQty||0)>0).length;
@@ -1199,7 +1241,7 @@ const V={
  configuracion:()=>generic(['configuracion','Configuración','Parámetros'])
 };
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v162')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v162',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v164')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v164',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
