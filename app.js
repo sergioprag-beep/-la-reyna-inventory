@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v157';
+const APP_VERSION='v158';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
@@ -100,7 +100,7 @@ function icon(id){const paths={
 };const d=paths[id]||'<circle cx="12" cy="12" r="8"/>';return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">${d}</svg>`}
 function go(id){if(!MODULES.some(m=>m[0]===id))return;if(!perms().view){toast('Módulo no autorizado');return;}current=id;if(location.hash!=='#'+id)history.pushState(null,'','#'+id);render()}
 function enhanceMobileTables(){document.querySelectorAll('#content table').forEach(t=>{const hs=[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim());t.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>{if(td.tagName==='TD'&&hs[i]&&td.colSpan<2)td.dataset.label=hs[i]}))})}
-function render(){renderNav();const m=MODULES.find(x=>x[0]===current);const titleEl=document.getElementById('title');if(titleEl)titleEl.textContent=m[1];const body=(V[current]||generic)(m);document.getElementById('content').innerHTML=current==='dashboard'?body:`<section class="module-page" data-module="${esc(current)}">${body}</section>`;bind();if(current==='productos'||current==='sup')renderCatalog();if(current==='recetas'||current==='preelaborados')renderRecipePager(current==='preelaborados'?'prep':'final');enhanceMobileTables();document.getElementById('sidebar').classList.remove('open')}
+function render(){if(!MODULES.some(x=>x[0]===current))current='dashboard';renderNav();const m=MODULES.find(x=>x[0]===current)||MODULES[0];const titleEl=document.getElementById('title');if(titleEl)titleEl.textContent=m[1];const body=(V[current]||generic)(m);document.getElementById('content').innerHTML=current==='dashboard'?body:`<section class="module-page" data-module="${esc(current)}">${body}</section>`;bind();if(current==='productos'||current==='sup')renderCatalog();if(current==='recetas'||current==='preelaborados')renderRecipePager(current==='preelaborados'?'prep':'final');enhanceMobileTables();document.getElementById('sidebar').classList.remove('open')}
 function moduleCaptureBar(){
  const ctx=String(current||'');
  if(!ctx||ctx==='dashboard')return '';
@@ -891,8 +891,67 @@ function purchaseInvoiceOcrModal(){
  document.getElementById('pUseOcr').onclick=()=>{const parsed=applyInvoiceToPurchase(txt.value||'');window._lrxPurchaseAttachment={file:f.files?.[0]||window._lrxPurchaseAttachment?.file,ocrText:txt.value||'',parsed};close();toast(parsed.lines.length?`OCR aplicado: ${parsed.lines.length} línea(s) detectadas`:'OCR asociado al borrador; revisa los campos')};
 }
 
-function inventory(){
+function purchaseInventoryQuantity(product, qty, purchaseUnit){
+ const q=Number(qty||0); if(!(q>0)) return {qty:0,unit:String(product?.standardUnit||product?.unit||purchaseUnit||'unidad'),unitCost:Number(product?.finalCost??product?.cost??0)};
+ const standard=String(product?.standardUnit||product?.unit||purchaseUnit||'unidad');
+ const from=String(product?.purchaseUnit||purchaseUnit||standard);
+ const packQty=Number(product?.packQty||0);
+ const packUnit=String(product?.packUnit||standard);
+ let quantity=q, unitCost=Number(product?.finalCost??product?.usableCost??product?.standardUnitCost??product?.cost??0);
+ if(packQty>0 && (String(from).toLowerCase()!==String(standard).toLowerCase() || /caja|case|bolsa|saco|paquete|pack|contenedor|botella|gal[oó]n|jarra/i.test(from))){
+   quantity=q*packQty;
+   if(String(packUnit).toLowerCase()===String(standard).toLowerCase()){
+     const packPrice=Number(product?.packPrice??product?.purchasePrice??0);
+     if(packPrice>0) unitCost=packPrice/packQty;
+   }
+ } else if(packQty>0 && String(product?.purchaseUnit||'').toLowerCase()===String(purchaseUnit||'').toLowerCase() && String(packUnit).toLowerCase()===String(standard).toLowerCase()){
+   quantity=q*packQty;
+   const packPrice=Number(product?.packPrice??product?.purchasePrice??0);
+   if(packPrice>0) unitCost=packPrice/packQty;
+ }
+ if(!Number.isFinite(unitCost)||unitCost<0)unitCost=0;
+ return {qty:quantity,unit:standard,unitCost};
+}
+function reconcileInventoryFromPurchases(){
+ state.inventory=Array.isArray(state.inventory)?state.inventory:[];
+ const products=[...(master.products||[]),...(state.products||[])];
+ const findProduct=x=>products.find(p=>String(p.id||'')===String(x.productId||'') || String(p.code||p.sku||'')===String(x.code||'') || String(p.name||'').trim().toLowerCase()===String(x.product||x.productName||'').trim().toLowerCase());
+ const ensure=(x)=>{const p=findProduct(x); if(!p)return null; const imp=purchaseInventoryQuantity(p,x.qty,x.unit); let inv=state.inventory.find(i=>String(i.productId||'')===String(p.id||'') || (String(i.product||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase() && String(i.unit||'').toLowerCase()===String(imp.unit).toLowerCase())); if(!inv){inv={id:'INV-'+p.id,productId:p.id,product:p.name,unit:imp.unit,qty:0,unitCost:imp.unitCost,minQty:Number(p.minQty??p.min??0),supplier:p.supplier||'',source:'PURCHASE'};state.inventory.push(inv)} return {p,inv,imp};};
+ const applied=new Set((state.inventory||[]).flatMap(i=>Array.isArray(i.appliedPurchaseIds)?i.appliedPurchaseIds.map(String):[]));
+ let changed=false;
+ (state.purchases||[]).filter(x=>String(x.status||'RECIBIDA').toUpperCase()==='RECIBIDA').forEach(x=>{
+   const pid=String(x.id||''); if(pid && applied.has(pid))return;
+   const r=ensure(x); if(!r)return;
+   const old=Number(r.inv.qty||0), add=Number(r.imp.qty||0), cost=Number(r.imp.unitCost||0);
+   r.inv.qty=old+add;
+   if(old+add>0)r.inv.unitCost=old>0?((old*Number(r.inv.unitCost||0))+(add*cost))/(old+add):cost;
+   r.inv.usableUnitCost=Number(r.p?.finalCost ?? r.p?.usableCost ?? r.inv.unitCost ?? 0);
+   r.inv.presentation=r.p.purchaseUnit||r.inv.presentation||x.unit||'';r.inv.packQty=Number(r.p.packQty||r.inv.packQty||0);r.inv.packUnit=r.p.packUnit||r.inv.packUnit||r.inv.unit;r.inv.packPrice=Number(r.p.packPrice??r.inv.packPrice??0);r.inv.wastePct=Number(r.p.wastePct??r.inv.wastePct??0);r.inv.yieldFactor=Number(r.p.yieldFactor??r.inv.yieldFactor??(1-r.inv.wastePct/100));
+   r.inv.appliedPurchaseIds=Array.from(new Set([...(r.inv.appliedPurchaseIds||[]),pid]));
+   x.inventoryApplied=true;x.inventoryQtyAdded=add;x.inventoryUnit=r.imp.unit;x.inventoryAppliedAt=x.inventoryAppliedAt||now();
+   if(pid)applied.add(pid);changed=true;
+ });
+ if(changed)save();
+ return changed;
+}
+function savePurchase(){
+ const d=window._lrxPurchaseDraft; if(!d||d.form!=='purchase')return toast('No hay una compra activa para guardar.');
+ const lines=Array.isArray(d.lines)?d.lines.map(x=>({...x,product:String(x.product||'').trim()})).filter(x=>x.product&&Number(x.qty||0)>0):[];
+ if(!lines.length)return toast('Agrega al menos un producto con cantidad.');
+ const supplier=String(d.supplier||'').trim(), invoice=String(d.invoice||'').trim(), status=String(d.status||'RECIBIDA').toUpperCase();
+ const total=Number(d.total||0)||lines.reduce((a,x)=>a+Number(x.qty||0)*Number(x.unitCost||0),0);
+ const purchaseId=d.purchaseId||('BUY-'+Date.now());
+ const products=[...(master.products||[]),...(state.products||[])];
+ const records=lines.map((x,i)=>{const p=products.find(z=>String(z.id||'')===String(x.productId||'')||String(z.code||z.sku||'')===String(x.code||'')||String(z.name||'').trim().toLowerCase()===x.product.toLowerCase());return {id:purchaseId+'-'+i,purchaseId,date:d.date||now(),supplier,invoice,productId:p?.id||'',product:x.product,productName:x.product,code:x.code||p?.code||'',qty:Number(x.qty||0),unit:x.unit||p?.purchaseUnit||p?.unit||'unidad',unitCost:Number(x.unitCost||0),total:Number(x.qty||0)*Number(x.unitCost||0),status,source:'OCR/MANUAL',inventoryApplied:false,createdAt:now()}});
+ state.purchases=(state.purchases||[]).filter(x=>!String(x.id||'').startsWith(purchaseId+'-') && String(x.purchaseId||'')!==purchaseId);state.purchases.push(...records);
+ const attachment=window._lrxPurchaseAttachment?.file;
+ if(attachment){state.documents=Array.isArray(state.documents)?state.documents:[];const exists=state.documents.some(x=>x.contextRecordId===purchaseId||x.purchaseId===purchaseId);if(!exists){const reader=new FileReader();reader.onload=()=>{state.documents.unshift({id:'DOC-'+Date.now(),name:attachment.name,type:'Factura de compra',description:`Factura ${invoice||purchaseId}`,mime:attachment.type,size:attachment.size,dataUrl:String(reader.result||'').slice(0,5000000),ocrText:String(window._lrxPurchaseAttachment?.ocrText||''),routeArea:'Compras',contextModule:'compras',contextRecordId:purchaseId,purchaseId,createdAt:now(),createdBy:currentUser().name});save();reconcileInventoryFromPurchases();};reader.readAsDataURL(attachment)}}
  reconcileInventoryFromPurchases();
+ state._lastPurchaseId=purchaseId;save();
+ window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft');close();render();toast('Compra guardada e inventario actualizado.');
+}
+
+function inventory(){
  const rows=inventoryMasterRows().sort((a,b)=>String(a.product||'').localeCompare(String(b.product||'')));
  const total=rows.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unitCost||0),0), low=rows.filter(x=>Number(x.minQty||0)>Number(x.qty||0)&&Number(x.minQty||0)>0).length;
  return head('Inventario','Existencias, inventario físico, códigos de barras y diferencias.',`<button class="btn primary" data-action="inventory-count">▣ Inventario físico</button> <button class="btn" data-action="inventory-adjust">＋ Ajustar existencia</button> <button class="btn" data-action="inventory-export">Excel / CSV</button> <button class="btn" data-action="inventory-print">Imprimir / PDF</button>`)+
@@ -1014,7 +1073,87 @@ function parseInvoiceToPurchase(text){
  return window.LRXPurchaseEngine.parseInvoice(text,window._lrxPurchaseLayout||[],purchaseEngineContext());
 }
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v156')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v156',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+function action(name,id,el){
+ try{
+  const a=String(name||'');
+  if(a==='close'||a==='cancel-purchase'){if(a==='cancel-purchase'){window._lrxPurchaseDraft=null;window._lrxPurchaseAttachment=null;sessionStorage.removeItem('lrx_purchase_draft');localStorage.removeItem('lrx_purchase_draft')}close();return}
+  if(a==='new-purchase'||a==='invoice-ocr'){if(a==='invoice-ocr')return purchaseInvoiceOcrModal();return purchaseModal()}
+  if(a==='purchase-create-product')return purchaseCreateProductModal(el?.dataset?.line??id);
+  if(a==='save-purchase')return savePurchase();
+  if(a==='inventory-view')return inventoryProductDetail(id);
+  if(a==='inventory-adjust')return adjustInventoryModal(id);
+  if(a==='inventory-count')return inventoryCountModal(id);
+  if(a==='save-physical-count')return savePhysicalCount();
+  if(a==='start-scanner')return startScanner();
+  if(a==='save-adjust'){const product=document.getElementById('ip')?.value.trim(),qty=Number(document.getElementById('iq')?.value||0),unit=document.getElementById('iu')?.value.trim()||'unidad',cost=Number(document.getElementById('ic')?.value||0),min=Number(document.getElementById('im')?.value||0);if(!product||qty<0)return toast('Completa producto y existencia');let inv=inventoryMasterRows().find(x=>String(x.product||'').toLowerCase()===product.toLowerCase());let target=state.inventory.find(x=>String(x.product||'').toLowerCase()===product.toLowerCase()&&String(x.unit||'').toLowerCase()===unit.toLowerCase());if(!target){target={id:'INV-'+Date.now(),productId:inv?.productId||'',product,unit,qty:0,unitCost:cost,minQty:min};state.inventory.push(target)}const before=Number(target.qty||0);target.qty=qty;target.unitCost=cost||Number(target.unitCost||0);target.minQty=min;state.movements.push({id:'MOV-'+Date.now(),date:now(),type:qty-before>=0?'AJUSTE +':'AJUSTE -',product,productId:target.productId||'',qty:qty-before,unit,unitCost:target.unitCost,ref:'AJUSTE-'+Date.now()});save();close();render();return toast('Inventario actualizado')}
+  if(a==='inventory-export')return exportRowsCSV('inventario',inventoryMasterRows());
+  if(a==='inventory-print')return printHtml('Inventario',`<h2>Inventario</h2>${exportRows('inventario',inventoryMasterRows())}`);
+  if(a==='new-product')return productModal?.();
+  if(a==='edit-product')return editProduct?.(id);
+  if(a==='delete-product')return deleteProduct?.(id);
+  if(a==='new-recipe')return recipeModal?.('final');
+  if(a==='edit-recipe')return recipeModal?.('final',id);
+  if(a==='delete-recipe')return deleteRecipe?.(id);
+  if(a==='new-sale')return saleModal?.();
+  if(a==='edit-sale')return saleModal?.(id);
+  if(a==='delete-sale')return deleteSale?.(id);
+  if(a==='save-sale')return saveSale(id||'');
+  if(a==='new-supplier')return supplierModal();
+  if(a==='edit-supplier')return supplierModal(id);
+  if(a==='new-bar-recipe')return barModal('RECIPE');
+  if(a==='new-bar-prep')return barModal('PREP');
+  if(a==='edit-bar'||a==='edit-bar-master')return barModal(el?.dataset?.kind==='PREP'?'PREP':'RECIPE',id);
+  if(a==='delete-bar')return deleteBar?.(id,el?.dataset?.kind);
+  if(a==='new-production')return productionModal();
+  if(a==='edit-production')return editProductionModal(id);
+  if(a==='update-production')return updateProduction(id);
+  if(a==='delete-production')return deleteProduction(id);
+  if(a==='start-production')return startProduction();
+  if(a==='finish-existing')return finishExisting(id);
+  if(a==='new-event')return eventModal();
+  if(a==='save-event')return saveEvent?.();
+  if(a==='new-note')return noteModal?.();
+  if(a==='edit-note')return noteModal?.(id);
+  if(a==='del-note')return deleteNote?.(id);
+  if(a==='pin-note')return pinNote?.(id);
+  if(a==='new-promotion')return promotionModal();
+  if(a==='edit-promotion')return promotionModal(id);
+  if(a==='delete-promotion')return deletePromotion?.(id);
+  if(a==='new-channel')return channelModal();
+  if(a==='edit-channel')return channelModal(id);
+  if(a==='delete-channel')return deleteChannel(id);
+  if(a==='save-channel')return saveChannel(id||'');
+  if(a==='save-fridge-move')return saveFridgeMove();
+  if(a==='fridge-move')return fridgeMoveModal();
+  if(a==='fridge-report')return fridgeReport();
+  if(a==='fridge-planning')return fridgePlanning();
+  if(a==='context-voice')return voiceModal(el?.dataset?.contextModule||current);
+  if(a==='context-document')return captureDocumentsModal(el?.dataset?.contextModule||current);
+  if(a==='context-camera')return cameraCapture();
+  if(a==='capture-documents')return captureDocumentsModal();
+  if(a==='camera-capture')return cameraCapture();
+  if(a==='voice-action')return voiceAction();
+  if(a==='go-users')return go('empleados');
+  if(a==='nas-settings')return nasSettingsModal();
+  if(a==='nas-voice')return nasVoice();
+  if(a==='nas-save'){const c=state.settings.nas||{};Object.assign(c,{endpoint:document.getElementById('nasEndpoint')?.value.trim()||'',folder:document.getElementById('nasFolder')?.value.trim()||'Documentos LRX',user:document.getElementById('nasUser')?.value.trim()||'',pass:document.getElementById('nasPass')?.value||''});state.settings.nas=c;save();close();render();return toast('Conexión NAS guardada')}
+  if(a==='print-label')return printLabel(id);if(a==='label')return labelModal(id);if(a==='pdf')return printHtml('LRX',document.getElementById('content')?.innerHTML||'');if(a==='png')return downloadPNG();
+  if(a==='recipe-page-next')return renderRecipePager('final',1);if(a==='recipe-page-prev')return renderRecipePager('final',-1);if(a==='catalog-page-next')return renderCatalog(1);if(a==='catalog-page-prev')return renderCatalog(-1);
+  if(a==='delete-purchase'){state.purchases=(state.purchases||[]).filter(x=>String(x.id)!==String(id));reconcileInventoryFromPurchases();save();render();return toast('Compra eliminada')}
+  if(a==='document-edit')return documentEditModal(id);if(a==='document-delete')return deleteDocument(id);if(a==='document-download')return downloadDocument(id);
+  if(a==='new-dre')return dreModal();if(a==='edit-dre')return dreModal(id);if(a==='del-dre'){state.dreRecords=state.dreRecords.filter(x=>String(x.id)!==String(id));save();render();return toast('Registro eliminado')}
+  if(a==='new-budget')return budgetModal();if(a==='edit-budget')return budgetModal(id);if(a==='save-budget'){const arr=state.budgets||[];const r=id?arr.find(x=>String(x.id)===String(id)):null;const obj={id:r?.id||'BUD-'+Date.now(),period:document.getElementById('budPeriod').value,category:document.getElementById('budCat').value.trim(),amount:Number(document.getElementById('budAmt').value||0)};state.budgets=id?arr.map(x=>x.id===id?obj:x):[...arr,obj];save();close();render();return toast('Presupuesto guardado')}
+  if(a==='secure-new'||a==='secure-edit'||a==='secure-delete'||a==='secure-export'||a==='secure-print')return secureAccess(a,el?.dataset?.key,id);
+  if(a==='generic-add'||a==='generic-edit'||a==='generic-delete'||a==='generic-export'||a==='generic-print')return genericAction?.(a,el?.dataset?.key,id);
+  if(a==='new-kitchen-note')return toast('Nota de cocina disponible en el módulo Cocina');
+  if(a==='supplier-comparison')return go('proveedores-comparacion');
+  if(a==='catalog-page-next'||a==='catalog-page-prev')return;
+  if(a==='close')return close();
+  toast('Acción aún no disponible: '+a);
+ }catch(e){console.error('LRX action',a,e);toast('No se pudo ejecutar esta acción: '+a)}
+}
+
+async function init(){try{master=await (await fetch('./master.json?v=2026-09-28-v158')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();action(a.dataset.action,a.dataset.id,a);return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb){vb.onclick=(e)=>{e.preventDefault();e.stopPropagation();voiceAction();};vb.setAttribute('data-action','voice-action')}const cb=document.getElementById('captureBtn');if(cb){cb.onclick=(e)=>{e.preventDefault();e.stopPropagation();captureDocumentsModal();};cb.setAttribute('data-action','capture-documents')}const cam=document.getElementById('cameraBtn');if(cam){cam.onclick=(e)=>{e.preventDefault();e.stopPropagation();cameraCapture();};cam.setAttribute('data-action','camera-capture')};const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.onclick=()=>notificationModal();if(pb)pb.onclick=()=>profileModal();if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-09-28-v158',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 

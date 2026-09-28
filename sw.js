@@ -1,5 +1,5 @@
-const CACHE='lrx-v157';
-const ASSETS=['./','./index.html','./styles.css','./app.js?v=2026-09-28-v157','./purchase-engine.js?v=2026-09-28-v157','./manifest.webmanifest','./hero-food.jpg','./LOGO XPRESS-4(5).jpg','./master.json?v=2026-09-28-v157'];
+const CACHE='lrx-v158';
+const ASSETS=['./','./index.html','./styles.css','./app.js?v=2026-09-28-v158','./purchase-engine.js?v=2026-09-28-v158','./manifest.webmanifest','./hero-food.jpg','./LOGO XPRESS-4(5).jpg','./master.json?v=2026-09-28-v158'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{
