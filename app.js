@@ -743,6 +743,17 @@ function updatePurchaseLineCreateState(row){
    ? `<label>Producto</label><button type="button" class="btn purchase-create-btn is-existing" disabled title="El producto ya existe en el catálogo">✓ Existe</button>`
    : `<label>Producto</label><button type="button" class="btn purchase-create-btn" data-action="purchase-create-product" data-line="${row.dataset.i}" title="Crear este producto en el catálogo">＋ Crear</button>`;
 }
+function updatePurchasePreview(){
+ const box=document.getElementById('buyPreview');
+ const rows=[...document.querySelectorAll('.purchase-line')];
+ const total=rows.reduce((sum,row)=>{
+   const qty=Number(row.querySelector('.bp-line-qty')?.value||0);
+   const cost=Number(row.querySelector('.bp-line-cost')?.value||0);
+   return sum+(qty>0&&cost>=0?qty*cost:0);
+ },0);
+ if(box)box.innerHTML=`Total estimado: <b>${money(total)}</b>`;
+ return total;
+}
 function bindPurchaseLines(products=[]){
  document.querySelectorAll('.purchase-line').forEach(row=>{
   const prod=row.querySelector('.bp-line-product'),qty=row.querySelector('.bp-line-qty'),unit=row.querySelector('.bp-line-unit'),cost=row.querySelector('.bp-line-cost');
@@ -1356,7 +1367,7 @@ async function savePurchase(){
   const match=purchaseLineMatch(line);
   const linkedProduct=match?.product||null;
   if(!linkedProduct)return toast(`No se puede guardar: “${line.product}” no existe en Productos. Pulsa + Crear en esa línea.`);
-  const masterProductId=productMaster?.id||linkedProduct?.masterId||linkedProduct?.id||'';const id='BUY-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);const total=line.qty*line.unitCost;
+  const masterProductId=linkedProduct?.masterId||linkedProduct?.id||'';const id='BUY-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);const total=line.qty*line.unitCost;
   const prior=(state.purchasePriceHistory||[]).filter(x=>String(x.productId)===String(linkedProduct.id)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))[0];
   const purchase={id,groupId,date:purchaseDate,supplier,supplierId,product:line.product,productCode:line.code||linkedProduct.code||linkedProduct.sku||'',productId:linkedProduct.id,masterProductId,qty:line.qty,orderedQty:line.qty,unit:line.unit,unitCost:line.unitCost,total,invoice,subtotal,tax,invoiceTotal,status,notes,createdAt:now(),inventoryApplied:false,source:'Manual/OCR'};
   state.purchases.push(purchase);created.push(purchase);
