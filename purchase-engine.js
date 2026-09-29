@@ -1,4 +1,4 @@
-/* LRX Purchase Engine v174
+/* LRX Purchase Engine v176
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
