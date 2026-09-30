@@ -1,10 +1,10 @@
-/* LRX Purchase Engine v177
+/* LRX Purchase Engine v178
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
 (function(global){
  'use strict';
- const ENGINE_VERSION='v177';
+ const ENGINE_VERSION='v178';
  const unitAliases={
   cs:'caja',case:'caja',cases:'caja',caja:'caja',cajas:'caja',carton:'caja',cartons:'caja',
   ea:'unidad',each:'unidad',unit:'unidad',units:'unidad',unidad:'unidad',unidades:'unidad',pc:'unidad',pcs:'unidad',piece:'unidad',pieces:'unidad',pieza:'unidad',piezas:'unidad',
