@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v196';
+const APP_VERSION='v197';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[['dashboard','Dashboard','Resumen'],['inteligencia','Inteligencia Administrativa','Indicadores y decisiones'],['sup','SUP','Maestros'],['dre','DRE','Estado de resultados'],['productos','Productos','Catálogo'],['ingredientes','Ingredientes','Insumos'],['categorias','Categorías','Departamentos'],['proveedores','Proveedores','Compras'],['proveedores-comparacion','Comparación Proveedores','Costos por proveedor'],['compras','Compras','Recepción'],['lista-compras','Lista de Compras','Necesidades'],['inventario','Inventario','Existencias'],['movimientos','Movimientos','Entradas y salidas'],['merma','Merma','Rendimientos'],['recetas','Recetas','Recetas finales'],['preelaborados','Pre-elaborados','Preparaciones'],['produccion','Producción','Producción y etiquetas'],['cocina','Cocina','Operación'],['bar','Bar','Bebidas'],['ventas','POS / Ventas','Ventas por canal'],['rentabilidad','Rentabilidad','Utilidad'],['foodcost','Food Cost','Costeo'],['menu','Menu Engineering','Análisis'],['finanzas','Finanzas','Presupuesto y equilibrio'],['promociones','Promociones / Marketing','Promociones'],['eventos','Eventos & Catering','Eventos'],['reportes','Reportes','Exportaciones'],['checklists','Checklists','Apertura y cierre'],['gerente','Gerente','Bitácora y mantenimiento'],['calculadora','Calculadora','Cálculos'],['convertidor','Convertidor de Medidas','Unidades'],['notas','Bloc de Notas','Ideas'],['empleados','Empleados','Personal y documentos'],['dieta','Dieta y Consumos','Consumos internos'],['recursos','Recursos','Manuales y procedimientos'],['inversion','Inversión / Registro Empresarial','Socios, activos y documentos'],['creditos','Créditos y Préstamos','Obligaciones financieras'],['activos-digitales','Activos Digitales y Accesos','Credenciales empresariales'],['documentos','Documentos','Archivo documental'],['documentos-permisos','Documentos y Permisos','Corporativo y vencimientos'],['nas','NAS / Archivo Documental','Almacenamiento empresarial y documentos'],['configuracion','Configuración','Parámetros']];
@@ -436,14 +436,14 @@ function drawLabelCanvas(p,f){
  const text=(value,x,y,size,weight='700',align='left')=>{ctx.font=`${weight} ${size}px Arial`;ctx.fillStyle='#111';ctx.textAlign=align;ctx.fillText(String(value||''),x,y)};
  ctx.strokeStyle='#111';ctx.lineWidth=3;ctx.strokeRect(20,20,1160,860);
  text('LA REYNA XPRESS',600,78,42,'900','center');
- ctx.fillStyle='#111';ctx.fillRect(45,92,1110,54);text('PRODUCCIÓN',600,129,27,'900','center');ctx.fillStyle='#fff';ctx.textAlign='center';
+ ctx.fillStyle='#111';ctx.fillRect(45,92,1110,54);ctx.font='900 27px Arial';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText('PRODUCCIÓN',600,129);ctx.fillStyle='#111';ctx.textAlign='left';
  const title=fit(d.product,860,43);text(title,48,181,43,'900','left');
  ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.strokeRect(940,153,215,55);text(fit(d.type,195,17),1047,188,17,'900','center');
  const y0=220,rowH=82,colW=555;
  const rows=[['PRODUCIDO',d.produced],['VENCE',d.expires],['CANTIDAD',d.qty],['DURACIÓN',d.duration],['DEPARTAMENTO',d.department],['ELABORÓ',d.employee]];
  rows.forEach((r,i)=>{const col=i%2,row=Math.floor(i/2),x=45+col*colW,y=y0+row*rowH;ctx.strokeStyle='#111';ctx.lineWidth=1.5;ctx.strokeRect(x,y,colW,rowH);text(r[0],x+12,y+27,19,'900','left');text(fit(r[1],colW-24,21),x+12,y+57,21,'700','left')});
  let y=y0+rowH*3+14;ctx.strokeRect(45,y,1110,48);text(`LOTE: ${d.lot}`,58,y+32,20,'900','left');
- y+=72;text(d.lot,600,y,30,'900','center');y+=38;ctx.strokeRect(45,y,1110,1);text('MANTENER SEGÚN PROCEDIMIENTO DE ALMACENAMIENTO',58,y+25,14,'900','left');
+ y+=88;text(d.lot,600,y,30,'900','center');y+=48;ctx.strokeRect(45,y,1110,1);text('MANTENER SEGÚN PROCEDIMIENTO DE ALMACENAMIENTO',58,y+25,14,'900','left');
  ctx.restore();return canvas
 }
 function labelModal(p){
