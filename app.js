@@ -386,6 +386,21 @@ function saveRecipe(type,id){
  if(!items.length)return toast('Agrega al menos un ingrediente');
  const cost=calculateRecipe(),key=type==='final'?'recipes':'preps';
  let r=id?(state[key]||[]).find(x=>String(x.id)===String(id)):null;
+ // MASTER records are read-only source data. When the user edits a MASTER recipe,
+ // create a local editable version linked to the original masterId, hide the MASTER
+ // row from the list, and continue saving into that local record. This prevents the
+ // edit from appearing to save while the MASTER card remains unchanged.
+ if(!r && id){
+   const masterBase=(master.recipes||[]).find(x=>String(x.id)===String(id));
+   if(masterBase){
+     r=JSON.parse(JSON.stringify({...masterBase,id:`USR-${type==='final'?'R':'P'}-${Date.now()}`,masterId:masterBase.id,source:'EDITADO DESDE MAESTRO',createdAt:now()}));
+     state[key]=Array.isArray(state[key])?state[key]:[];
+     state[key].push(r);
+     state.masterHidden=state.masterHidden&&typeof state.masterHidden==='object'?state.masterHidden:{};
+     state.masterHidden[key]=Array.isArray(state.masterHidden[key])?state.masterHidden[key]:[];
+     if(!state.masterHidden[key].includes(masterBase.id))state.masterHidden[key].push(masterBase.id);
+   }
+ }
  if(!r){r={id:`USR-${type==='final'?'R':'P'}-${Date.now()}`,createdAt:now()};state[key].push(r)}
  const old=JSON.parse(JSON.stringify(r));
  Object.assign(r,{code:document.getElementById('rCode')?.value.trim()||r.code||nextCode(type==='final'?'REC':'PRE',key),name,category:document.getElementById('rc')?.value.trim()||'Cocina',area:document.getElementById('rArea')?.value||'Cocina',yieldQty:y,yieldUnit:document.getElementById('ru')?.value,portions:Number(document.getElementById('rPortions')?.value||0),salePrice:Number(document.getElementById('rp')?.value||0),shelfLife:document.getElementById('rShelf')?.value.trim(),temperature:document.getElementById('rTemp')?.value.trim(),storage:document.getElementById('rStorage')?.value.trim(),method:document.getElementById('rMethod')?.value.trim(),plating:document.getElementById('rPlating')?.value.trim(),notes:document.getElementById('rNotes')?.value.trim(),items,cost,type:type==='final'?'final':'pre',source:'LOCAL',updatedAt:now(),history:[...(r.history||[]),{date:now(),user:currentUser().name,action:id?'EDIT':'CREATE',cost,items:items.length}]});
