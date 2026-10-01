@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v215';
+const APP_VERSION='v217';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -25,7 +25,27 @@ function effectiveMaster(type){
  const isSupplier=type==='suppliers';
  const base=isSupplier?((state.suppliers&&state.suppliers.length)?state.suppliers:(master.suppliers||[]).map((x,i)=>typeof x==='string'?{id:'SUPP-'+String(i+1).padStart(3,'0'),name:x}:x)):(type==='products'?(master.products||[]):(master.recipes||[]).filter(r=>isPrep?String(r.type||'').toLowerCase()==='pre':String(r.type||'').toLowerCase()!=='pre'));
  const hidden=new Set(state.masterHidden[isPrep?'recipes':type]||[]);
- return base.filter(x=>!hidden.has(String(x.id))).map(x=>({...x,...(state.masterOverrides[isPrep?'recipes':type]?.[x.id]||{})}));
+ const overrides=state.masterOverrides[isPrep?'recipes':type]||{};
+ return base.filter(x=>!hidden.has(String(x.id))).map(x=>({...x,...(overrides[x.id]||{})}));
+}
+function migrateLegacyMasterRecipeEdits(){
+ const overrides=state.masterOverrides.recipes=state.masterOverrides.recipes&&typeof state.masterOverrides.recipes==='object'?state.masterOverrides.recipes:{};
+ for(const key of ['recipes','preps']){
+   const rows=Array.isArray(state[key])?state[key]:[];
+   const migrated=[];
+   for(const r of rows){
+     const mid=r?.masterId?String(r.masterId):'';
+     if(!mid){migrated.push(r);continue;}
+     const base=(master.recipes||[]).find(x=>String(x.id)===mid);
+     if(!base){migrated.push(r);continue;}
+     const copy=JSON.parse(JSON.stringify(r));
+     delete copy.id; delete copy.createdAt;
+     overrides[mid]={...(overrides[mid]||{}),...copy,masterId:base.id,source:'EDITADO DESDE MAESTRO',updatedAt:r.updatedAt||now()};
+     (state.documents||[]).forEach(d=>{if(String(d.contextRecordId||'')===String(r.id))d.contextRecordId=base.id;});
+     if(Array.isArray(state.masterHidden.recipes))state.masterHidden.recipes=state.masterHidden.recipes.filter(x=>String(x)!==mid);
+   }
+   state[key]=rows.filter(r=>!r?.masterId||!(master.recipes||[]).some(x=>String(x.id)===String(r.masterId)));
+ }
 }
 function findRecipeAny(type,id){const key=type==='final'?'recipes':'preps';return (state[key]||[]).find(x=>String(x.id)===String(id)) || effectiveMaster(type==='final'?'recipes':'preps').find(x=>String(x.id)===String(id));}
 function cloneMasterProduct(id){const base=(master.products||[]).find(x=>String(x.id)===String(id));if(!base)return null;const clone={...base,id:'USR-P-'+Date.now(),masterId:base.id,source:'EDITADO DESDE SUP',createdAt:now()};state.products.push(clone);state.masterHidden.products.push(base.id);save();return clone;}
@@ -323,6 +343,23 @@ function fillRecipeFormFromImport(p){const set=(id,v)=>{const e=document.getElem
 function fillBarFormFromImport(p){const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v??''};set('brName',p.name);set('brDept','Bar');set('brYield',p.yieldQty);set('brUnit',p.yieldUnit);const box=document.getElementById('barIngredientRows');if(box){box.innerHTML=(p.items?.length?p.items:[{product:'',qty:'',unit:'unidad'}]).map((x,i)=>barIngredientRow(x,i)).join('');bindBarRows()}}
 function barImportChoice(){modal(`<h3>Importar en Bar</h3><p class="muted">Selecciona el tipo de registro.</p><div class="actions"><button class="btn primary" id="bir">🍹 Receta de Bar</button><button class="btn" id="bip">🧪 Pre-elaborado de Bar</button><button class="btn" data-action="close">Cancelar</button></div>`);document.getElementById('bir').onclick=()=>{close();recipeImportAction('barRecipe')};document.getElementById('bip').onclick=()=>{close();recipeImportAction('barPrep')}}
 async function recipeImportAction(target='final'){const input=document.createElement('input');input.type='file';input.accept='image/*,application/pdf,.txt,.csv,.xlsx,.xls';input.style.display='none';document.body.appendChild(input);input.onchange=async()=>{const file=input.files?.[0];input.remove();if(!file)return;modal(`<h3>Procesando receta</h3><p class="muted">${esc(file.name)}</p><div class="resultbox">Extrayendo texto. Los PDF escaneados se convierten página por página a imagen y pasan por OCR.</div>`);try{const r=await readRecipeImportFile(file),p=parseRecipeImportText(r.text);p.rawText=r.text;recipeImportReviewModal(target,file,p)}catch(e){console.error('LRX recipe import',e);modal(`<h3>No se pudo procesar el archivo</h3><p>${esc(e?.message||e)}</p><div class="resultbox">No se inventaron datos. Prueba con JPG/PNG o un PDF con mejor resolución.</div><div class="actions"><button class="btn" data-action="close">Cerrar</button></div>`)}};input.click()}
+function recipeYieldUnits(current=''){
+ const builtins=['unidad','oz','lb','kg','g','mL','L','gal','qt','pt'];
+ const custom=(state.masterUnits||[]).map(u=>String(u.symbol||u.name||'').trim()).filter(Boolean);
+ return [...new Set([...builtins,...custom,String(current||'').trim()].filter(Boolean))];
+}
+function createRecipeYieldUnit(selectId='ru'){
+ const name=prompt('Nombre de la nueva unidad de rendimiento (ej. bandeja, jarra, porción):');
+ if(!name?.trim())return;
+ const symbol=prompt('Símbolo de la unidad (ej. bdj, jra, porción):',name.trim());
+ if(!symbol?.trim())return;
+ const dup=(state.masterUnits||[]).find(u=>normMaster(u.name)===normMaster(name)||normMaster(u.symbol)===normMaster(symbol));
+ if(dup){const el=document.getElementById(selectId);if(el){el.value=dup.symbol||dup.name;}return toast('La unidad ya existe y fue seleccionada.');}
+ state.masterUnits=[...(state.masterUnits||[]),{id:'UNIT-'+Date.now(),name:name.trim(),symbol:symbol.trim(),type:'Unidad',baseUnit:symbol.trim(),factor:1,source:'RECETA',createdAt:now(),updatedAt:now()}];
+ save();
+ const el=document.getElementById(selectId);if(el){el.innerHTML=recipeYieldUnits(symbol).map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('')+'<option value="__custom">＋ Crear unidad</option>';el.value=symbol.trim();}
+ toast('Unidad de rendimiento creada y guardada');
+}
 function recipeModal(type,id){
  const key=type==='final'?'recipes':'preps';
  const r=id?findRecipeAny(type,id):null;
@@ -338,7 +375,7 @@ function recipeModal(type,id){
   <div class="field"><label>Clasificación / departamento</label><select id="rc">${catList.map(c=>`<option ${String(c)===String(r?.category||'Cocina')?'selected':''}>${esc(c)}</option>`).join('')}<option value="__custom">＋ Crear clasificación</option></select></div>
   <div class="field"><label>Área</label><select id="rArea"><option ${r?.area==='Cocina'||!r?.area?'selected':''}>Cocina</option><option ${r?.area==='Bar'?'selected':''}>Bar</option><option ${r?.area==='Producción'?'selected':''}>Producción</option></select></div>
   <div class="field"><label>Rendimiento / yield</label><input id="ry" type="number" step="0.001" min="0.001" value="${esc(r?.yieldQty||'')}" required></div>
-  <div class="field"><label>Unidad de rendimiento</label><select id="ru"><option ${r?.yieldUnit==='lb'?'selected':''}>lb</option><option ${r?.yieldUnit==='oz'?'selected':''}>oz</option><option ${r?.yieldUnit==='kg'?'selected':''}>kg</option><option ${r?.yieldUnit==='unidad'||!r?.yieldUnit?'selected':''}>unidad</option><option ${r?.yieldUnit==='L'?'selected':''}>L</option><option ${r?.yieldUnit==='lt'?'selected':''}>lt</option></select></div>
+  <div class="field"><label>Unidad de rendimiento</label><select id="ru">${recipeYieldUnits(r?.yieldUnit||'unidad').map(u=>`<option value="${esc(u)}" ${String(r?.yieldUnit||'unidad')===String(u)?'selected':''}>${esc(u)}</option>`).join('')}<option value="__custom">＋ Crear unidad</option></select></div>
   <div class="field"><label>Porciones</label><input id="rPortions" type="number" step="1" min="0" value="${Number(r?.portions||r?.servings||0)||''}"></div>
   <div class="field"><label>Precio de venta</label><input id="rp" type="number" min="0" step=".01" value="${Number(r?.salePrice||r?.price||0)}"></div>
   <div class="field"><label>Vida útil</label><input id="rShelf" value="${esc(r?.shelfLife||'')}" placeholder="Ej. 3 días"></div>
@@ -359,7 +396,7 @@ function recipeModal(type,id){
  const box=document.getElementById('ingredientRows');
  document.getElementById('addIng').onclick=()=>{box.insertAdjacentHTML('beforeend',recipeRow({product:'',qty:'',unit:'lb'},box.children.length));bindRecipeRows();calculateRecipe()};
  document.getElementById('saveRecipe').onclick=()=>saveRecipe(type,id);
- document.getElementById('rc').onchange=e=>{if(e.target.value==='__custom'){const v=prompt('Nueva clasificación:');if(v?.trim()){state.settings.recipeCategories=Array.isArray(state.settings.recipeCategories)?state.settings.recipeCategories:[];state.settings.recipeCategories.push(v.trim());e.target.insertAdjacentHTML('afterbegin',`<option selected>${esc(v.trim())}</option>`);e.target.value=v.trim();}else e.target.value=r?.category||'Cocina';}};
+ document.getElementById('rc').onchange=e=>{if(e.target.value==='__custom'){const v=prompt('Nueva clasificación:');if(v?.trim()){state.settings.recipeCategories=Array.isArray(state.settings.recipeCategories)?state.settings.recipeCategories:[];state.settings.recipeCategories.push(v.trim());e.target.insertAdjacentHTML('afterbegin',`<option selected>${esc(v.trim())}</option>`);e.target.value=v.trim();}else e.target.value=r?.category||'Cocina';}}; document.getElementById('ru').onchange=e=>{if(e.target.value==='__custom'){createRecipeYieldUnit('ru');if(e.target.value==='__custom')e.target.value=r?.yieldUnit||'unidad';} calculateRecipe();};
  const raf=document.getElementById('recipeAttachInput');
  document.getElementById('recipeAttachBtn')?.addEventListener('click',()=>raf?.click());
  raf?.addEventListener('change',()=>{const fs=[...(raf.files||[])];if(fs.length){window._lrxRecipeAttachments=fs.map(file=>({file}));const e=document.getElementById('recipeDocStatus');if(e)e.innerHTML=fs.map(f=>`📎 ${esc(f.name)}`).join('<br>')}});
@@ -385,30 +422,29 @@ function saveRecipe(type,id){
  const items=[...document.querySelectorAll('.recipe-row')].map(r=>{const input=r.querySelector('.ri-product'),product=input.value.trim(),qty=Number(r.querySelector('.ri-qty').value||0),unit=r.querySelector('.ri-unit').value;let productId=input.dataset.productId||'',prepId=input.dataset.prepId||'';const p=(master.products||[]).find(x=>String(x.id)===String(productId))||((master.products||[]).find(x=>String(x.name||'').trim().toLowerCase()===product.toLowerCase()));const prep=effectiveMaster('preps').find(x=>String(x.id)===String(prepId))||effectiveMaster('preps').find(x=>String(x.name||'').trim().toLowerCase()===product.toLowerCase());productId=p?.id||productId||undefined;prepId=prep?.id||prepId||undefined;return {product,ingredient:product,productId,prepId,qty,unit}}).filter(x=>x.product&&x.qty>0);
  if(!items.length)return toast('Agrega al menos un ingrediente');
  const cost=calculateRecipe(),key=type==='final'?'recipes':'preps';
- let r=id?(state[key]||[]).find(x=>String(x.id)===String(id)):null;
- // MASTER records are read-only source data. When the user edits a MASTER recipe,
- // create a local editable version linked to the original masterId, hide the MASTER
- // row from the list, and continue saving into that local record. This prevents the
- // edit from appearing to save while the MASTER card remains unchanged.
- if(!r && id){
-   const masterBase=(master.recipes||[]).find(x=>String(x.id)===String(id));
-   if(masterBase){
-     r=JSON.parse(JSON.stringify({...masterBase,id:`USR-${type==='final'?'R':'P'}-${Date.now()}`,masterId:masterBase.id,source:'EDITADO DESDE MAESTRO',createdAt:now()}));
-     state[key]=Array.isArray(state[key])?state[key]:[];
-     state[key].push(r);
-     state.masterHidden=state.masterHidden&&typeof state.masterHidden==='object'?state.masterHidden:{};
-     state.masterHidden[key]=Array.isArray(state.masterHidden[key])?state.masterHidden[key]:[];
-     if(!state.masterHidden[key].includes(masterBase.id))state.masterHidden[key].push(masterBase.id);
-   }
+ const nowIso=now();
+ const patch={code:document.getElementById('rCode')?.value.trim()||'',name,category:document.getElementById('rc')?.value.trim()||'Cocina',area:document.getElementById('rArea')?.value||'Cocina',yieldQty:y,yieldUnit:document.getElementById('ru')?.value==='__custom'?'unidad':document.getElementById('ru')?.value,portions:Number(document.getElementById('rPortions')?.value||0),salePrice:Number(document.getElementById('rp')?.value||0),shelfLife:document.getElementById('rShelf')?.value.trim(),temperature:document.getElementById('rTemp')?.value.trim(),storage:document.getElementById('rStorage')?.value.trim(),method:document.getElementById('rMethod')?.value.trim(),plating:document.getElementById('rPlating')?.value.trim(),notes:document.getElementById('rNotes')?.value.trim(),items,cost,type:type==='final'?'final':'pre',updatedAt:nowIso};
+ let r=(state[key]||[]).find(x=>String(x.id)===String(id));
+ const masterBase=!r&&id?(master.recipes||[]).find(x=>String(x.id)===String(id)):null;
+ if(masterBase){
+   state.masterOverrides=state.masterOverrides&&typeof state.masterOverrides==='object'?state.masterOverrides:{};
+   state.masterOverrides.recipes=state.masterOverrides.recipes&&typeof state.masterOverrides.recipes==='object'?state.masterOverrides.recipes:{};
+   const previous=state.masterOverrides.recipes[masterBase.id]||{};
+   state.masterOverrides.recipes[masterBase.id]={...previous,...patch,masterId:masterBase.id,source:'EDITADO DESDE MAESTRO',history:[...(previous.history||masterBase.history||[]),{date:nowIso,user:currentUser().name,action:'EDIT',cost,items:items.length}]};
+   if(Array.isArray(state.masterHidden.recipes))state.masterHidden.recipes=state.masterHidden.recipes.filter(x=>String(x)!==String(masterBase.id));
+   // If a legacy clone exists from an earlier broken version, remove it and move its documents to the MASTER id.
+   const legacyIds=(state[key]||[]).filter(x=>String(x.masterId||'')===String(masterBase.id)).map(x=>x.id);
+   if(legacyIds.length){state[key]=state[key].filter(x=>!legacyIds.includes(x.id));(state.documents||[]).forEach(d=>{if(legacyIds.includes(d.contextRecordId))d.contextRecordId=masterBase.id;});}
+   r={...masterBase,...state.masterOverrides.recipes[masterBase.id]};
+ }else{
+   if(!r){r={id:`USR-${type==='final'?'R':'P'}-${Date.now()}`,createdAt:nowIso};state[key].push(r)}
+   const oldHistory=Array.isArray(r.history)?r.history:[];
+   Object.assign(r,patch,{code:patch.code||r.code||nextCode(type==='final'?'REC':'PRE',key),source:'LOCAL',history:[...oldHistory,{date:nowIso,user:currentUser().name,action:id?'EDIT':'CREATE',cost,items:items.length}]});
  }
- if(!r){r={id:`USR-${type==='final'?'R':'P'}-${Date.now()}`,createdAt:now()};state[key].push(r)}
- const old=JSON.parse(JSON.stringify(r));
- Object.assign(r,{code:document.getElementById('rCode')?.value.trim()||r.code||nextCode(type==='final'?'REC':'PRE',key),name,category:document.getElementById('rc')?.value.trim()||'Cocina',area:document.getElementById('rArea')?.value||'Cocina',yieldQty:y,yieldUnit:document.getElementById('ru')?.value,portions:Number(document.getElementById('rPortions')?.value||0),salePrice:Number(document.getElementById('rp')?.value||0),shelfLife:document.getElementById('rShelf')?.value.trim(),temperature:document.getElementById('rTemp')?.value.trim(),storage:document.getElementById('rStorage')?.value.trim(),method:document.getElementById('rMethod')?.value.trim(),plating:document.getElementById('rPlating')?.value.trim(),notes:document.getElementById('rNotes')?.value.trim(),items,cost,type:type==='final'?'final':'pre',source:'LOCAL',updatedAt:now(),history:[...(r.history||[]),{date:now(),user:currentUser().name,action:id?'EDIT':'CREATE',cost,items:items.length}]});
+ const recordId=r.id;
  const attachments=window._lrxRecipeAttachments||[];
- // Persist the recipe record immediately. Attachments are persisted independently afterward,
- // so a large PDF/image or a FileReader delay can never prevent the recipe itself from saving.
  save();
- audit(type==='final'?'RECETA_GUARDADA':'PREELABORADO_GUARDADO',`${r.id} · ${r.name} · costo ${cost.toFixed(4)}`);
+ audit(type==='final'?'RECETA_GUARDADA':'PREELABORADO_GUARDADO',`${recordId} · ${name} · costo ${cost.toFixed(4)}`);
  if(attachments.length){
    state.documents=Array.isArray(state.documents)?state.documents:[];
    let remaining=attachments.length;
@@ -416,7 +452,7 @@ function saveRecipe(type,id){
      if(!att?.file)return void(--remaining);
      const reader=new FileReader();
      reader.onload=()=>{
-       state.documents.unshift({id:'DOC-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name:att.file.name,type:'Ficha técnica / foto de proceso',description:`Documento asociado a ${name}`,mime:att.file.type||'application/octet-stream',size:att.file.size,dataUrl:String(reader.result||'').slice(0,5000000),ocrText:String(att.ocrText||''),routeArea:type==='prep'?'SUP / Pre-elaborados':'SUP / Recetas',routeCollection:key,contextModule:type==='prep'?'preelaborados':'recetas',contextRecordId:r.id,createdAt:now(),createdBy:currentUser().name});
+       state.documents.unshift({id:'DOC-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name:att.file.name,type:'Ficha técnica / foto de proceso',description:`Documento asociado a ${name}`,mime:att.file.type||'application/octet-stream',size:att.file.size,dataUrl:String(reader.result||'').slice(0,5000000),ocrText:String(att.ocrText||''),routeArea:type==='prep'?'SUP / Pre-elaborados':'SUP / Recetas',routeCollection:key,contextModule:type==='prep'?'preelaborados':'recetas',contextRecordId:recordId,createdAt:now(),createdBy:currentUser().name});
        save();
        if(--remaining===0)toast('Receta guardada y documentos asociados');
      };
@@ -2395,7 +2431,7 @@ const V={
  configuracion:()=>generic(['configuracion','Configuración','Parámetros'])
 };
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-10-01-v215')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; hydrateMasterData();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();try{action(a.dataset.action,a.dataset.id,a)}catch(err){console.error("LRX action",a.dataset.action,err);toast("No se pudo ejecutar la acción: "+(err?.message||err))}return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const pq=document.getElementById('purchaseQ');if(pq){pq.oninput=e=>{state._purchaseQ=e.target.value;state._purchasePage=0;render();requestAnimationFrame(()=>{const x=document.getElementById('purchaseQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})}}const pf=document.getElementById('purchaseFilter');if(pf)pf.onchange=e=>{state._purchaseFilter=e.target.value;state._purchasePage=0;render()};const ps=document.getElementById('purchaseSize');if(ps)ps.onchange=e=>{state._purchaseSize=Number(e.target.value||25);state._purchasePage=0;render()};const dq=document.getElementById('digitalQ');if(dq)dq.addEventListener('input',e=>{state._digitalQ=e.target.value;render();requestAnimationFrame(()=>{const x=document.getElementById('digitalQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})});const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb)vb.setAttribute('data-action','voice-action');const cb=document.getElementById('captureBtn');if(cb)cb.setAttribute('data-action','capture-documents');const cam=document.getElementById('cameraBtn');if(cam)cam.setAttribute('data-action','camera-capture');const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.setAttribute('data-action','notifications');if(pb)pb.setAttribute('data-action','profile');if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-01-v215',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-10-01-v217')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(r=>String(r.type||'').toLowerCase()==='pre'); master.finalRecipes=master.recipes.filter(r=>String(r.type||'').toLowerCase()!=='pre'); master.suppliers=[...(master.suppliers||[])]; migrateLegacyMasterRecipeEdits(); hydrateMasterData();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();try{action(a.dataset.action,a.dataset.id,a)}catch(err){console.error("LRX action",a.dataset.action,err);toast("No se pudo ejecutar la acción: "+(err?.message||err))}return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const pq=document.getElementById('purchaseQ');if(pq){pq.oninput=e=>{state._purchaseQ=e.target.value;state._purchasePage=0;render();requestAnimationFrame(()=>{const x=document.getElementById('purchaseQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})}}const pf=document.getElementById('purchaseFilter');if(pf)pf.onchange=e=>{state._purchaseFilter=e.target.value;state._purchasePage=0;render()};const ps=document.getElementById('purchaseSize');if(ps)ps.onchange=e=>{state._purchaseSize=Number(e.target.value||25);state._purchasePage=0;render()};const dq=document.getElementById('digitalQ');if(dq)dq.addEventListener('input',e=>{state._digitalQ=e.target.value;render();requestAnimationFrame(()=>{const x=document.getElementById('digitalQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})});const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}updateDateChip();const vb=document.getElementById('voiceBtn');if(vb)vb.setAttribute('data-action','voice-action');const cb=document.getElementById('captureBtn');if(cb)cb.setAttribute('data-action','capture-documents');const cam=document.getElementById('cameraBtn');if(cam)cam.setAttribute('data-action','camera-capture');const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.setAttribute('data-action','notifications');if(pb)pb.setAttribute('data-action','profile');if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-01-v217',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
