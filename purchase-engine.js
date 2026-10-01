@@ -172,7 +172,29 @@
   // Secondary path for environments where the classic global is unavailable.
   const loaders=[async()=>await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.mjs')];
   for(const load of loaders){try{const mod=await load();const pdfjs=mod?.default||mod;const r=await pdfTextWith(pdfjs,file);if(r)return r;}catch(e){lastError=e}}
-  throw lastError||new Error('No se pudo leer el PDF');
+  // Scanned-PDF fallback: render each page to canvas and run Tesseract. This is
+  // required for recipe sheets and other PDFs that contain images instead of a
+  // selectable text layer.
+  try{
+    let pdfjs=global.pdfjsLib;
+    if(!pdfjs){const mod=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.mjs');pdfjs=mod?.default||mod}
+    if(pdfjs){
+      if(pdfjs.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdf=await pdfjs.getDocument({data:await file.arrayBuffer(),useWorkerFetch:true,isEvalSupported:true}).promise;
+      const pages=Math.min(pdf.numPages,12);let text='',layout=[];
+      for(let i=1;i<=pages;i++){
+        const page=await pdf.getPage(i);const viewport=page.getViewport({scale:2.1});
+        const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+        const ctx=canvas.getContext('2d',{willReadFrequently:true});await page.render({canvasContext:ctx,viewport}).promise;
+        const blob=await new Promise(res=>canvas.toBlob(res,'image/png',0.95));if(!blob)continue;
+        const f=new File([blob],`${file.name}-page-${i}.png`,{type:'image/png'});
+        const r=await ocrImage(f);if(r.text)text+=(text?'\n':'')+r.text;if(r.layout?.[0]?.items?.length)layout.push(r.layout[0]);
+        canvas.width=canvas.height=1;
+      }
+      if(text.trim())return {text:text.trim(),layout};
+    }
+  }catch(e){lastError=e}
+  throw lastError||new Error('No se pudo leer el PDF ni ejecutar OCR sobre sus páginas');
  }
  global.LRXPurchaseEngine={version:ENGINE_VERSION,parseInvoice,readDocument};
 })(window);
