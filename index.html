@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="La Reyna Xpress">
 <title>La Reyna Xpress — Sistema de Gestión</title>
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./LOGO XPRESS-4(5).jpg">
+<link rel="icon" href="./LRX-LOGO-PLANTILLAS.png">
 <link rel="stylesheet" href="./styles.css">
 <style id="lrx-v176-purchase-css">.purchase-create-btn{width:100%;white-space:nowrap;min-height:40px}.purchase-create-btn.is-existing{opacity:1;border-color:#2e9b6f;background:#edf9f2;color:#16744d;cursor:default}.purchase-line .field label{font-weight:700}@media(max-width:760px){.purchase-line{grid-template-columns:1fr 1fr!important}.purchase-line .field:first-child{grid-column:1/-1}.purchase-line .purchase-create-btn{min-width:0}.purchase-line .bp-line-remove{align-self:end}.purchase-line label{font-size:11px}}</style><style id="lrx-v176-modal-fix">#modal.show{display:flex!important;pointer-events:auto!important;z-index:99999!important}#modal[hidden]{display:none!important;pointer-events:none!important}</style><style id="lrx-v176-product-cost-css">.product-cost-summary{margin-top:12px}.product-cost-summary b{font-weight:800}.product-cost-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:760px){.product-cost-grid{grid-template-columns:1fr 1fr}}</style><style id="lrx-v178-pager-css">.pager{margin:16px 0 24px}.pager-info{font-size:12px;color:#667085;margin-bottom:8px}.pager-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pager-actions .btn{min-width:38px}.pager-actions .btn:disabled{opacity:.45;cursor:not-allowed}.pager-actions .btn.primary{font-weight:800}.pager-ellipsis{display:inline-flex;align-items:center;justify-content:center;min-width:24px;padding:7px 2px;color:#667085}.pager-size-label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#667085}.pager-size-label select{padding:7px 8px;border:1px solid #d0d5dd;border-radius:8px;background:#fff}@media(max-width:760px){.pager-actions{gap:5px}.pager-actions .btn{padding:8px 10px;min-width:34px;font-size:12px}.pager-info{line-height:1.4}.pager-actions{max-width:100%;overflow-x:auto;padding-bottom:2px}}}</style>
 <style id="lrx-v191-responsive">
@@ -127,12 +127,33 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 @media(max-width:760px){.utensil-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:52vh}.recipe-utensils-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.utensil-library-head{flex-direction:column}.utensil-library-head .btn{width:100%}}
 @media print{.recipe-utensils-block{break-inside:avoid}.recipe-utensils-grid{grid-template-columns:repeat(4,minmax(0,1fr));font-size:7pt}.recipe-utensil-item{padding:2pt}.recipe-utensil-item img{width:28mm;height:18mm;flex-basis:28mm}.recipe-utensil-item b{font-size:7pt}.recipe-utensil-item small{font-size:6pt}}
 </style>
+<style id="lrx-v227-recipe-final">
+/* v227 — identidad visual y plantillas de recetas */
+.recipe-doc-brand{display:block!important;width:auto!important;height:42px!important;max-width:175px!important;object-fit:contain!important;object-position:left center!important;margin:0!important;background:#fff!important}
+.tech-brand-row{display:flex!important;align-items:flex-start!important;justify-content:flex-start!important;min-height:48px!important;padding:0 0 8px!important;background:#fff!important}
+.tech-head-main .recipe-doc-brand{height:42px!important;max-width:175px!important}
+.standard-brand,.cost-brand{display:flex!important;align-items:flex-start!important;justify-content:flex-start!important;min-height:48px!important;padding:0 0 8px!important;margin:0!important;background:#fff!important}
+.standard-brand .recipe-doc-brand{height:44px!important;max-width:180px!important}.cost-brand .recipe-doc-brand{height:40px!important;max-width:165px!important}
+.recipe-template-logo{display:none!important}
+.recipe-view-wrap{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+.recipe-view-wrap .tech-sheet,.recipe-view-wrap .standard-book,.recipe-view-wrap .cost-sheet{width:100%!important;max-width:100%!important;min-width:0!important;overflow:visible!important;box-sizing:border-box!important}
+.tech-sheet{padding:10px!important}.tech-head{grid-template-columns:minmax(0,1fr) 120px!important}.tech-top-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+.tech-name{overflow-wrap:anywhere!important;word-break:break-word!important}.tech-table{table-layout:fixed!important;width:100%!important}.tech-table th,.tech-table td{overflow-wrap:anywhere!important;word-break:break-word!important}
+.recipe-utensils-block{break-inside:avoid!important}.recipe-utensil-item img,.utensil-card img,.selected-ut-row img{background:#fff!important;object-fit:contain!important}
+@media(max-width:760px){.tech-head{grid-template-columns:minmax(0,1fr) 90px!important}.recipe-doc-brand{height:34px!important;max-width:145px!important}.tech-brand-row,.standard-brand,.cost-brand{min-height:40px!important;padding-bottom:6px!important}}
+@media print{
+ .recipe-print-page .tech-brand-row{display:flex!important;min-height:0!important;padding:0 0 1.5mm!important;background:#fff!important}
+ .recipe-print-page .tech-brand-row .recipe-doc-brand{height:10mm!important;max-width:34mm!important}
+ .recipe-print-page .standard-brand,.recipe-print-page .cost-brand{min-height:0!important;padding:0 0 1.5mm!important}
+ .recipe-print-page .standard-brand .recipe-doc-brand{height:11mm!important;max-width:40mm!important}.recipe-print-page .cost-brand .recipe-doc-brand{height:10mm!important;max-width:34mm!important}
+}
+</style>
 </head>
 <body>
 <div class="app" id="app">
   <aside id="sidebar">
     <div class="brand brand-approved">
-      <img src="./LOGO XPRESS-4(5).jpg" alt="La Reyna Xpress">
+      <img src="./LRX-LOGO-PLANTILLAS.png" alt="La Reyna Xpress">
       <div class="brand-wordmark"><b>LRX</b><span>LA REYNA XPRESS</span></div>
     </div>
     <nav class="nav" id="nav" aria-label="Navegación principal"></nav>
@@ -173,8 +194,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="./app.js?v=2026-10-01-v213" defer></script>
 </body>
 </html>
-<style id="lrx-v226-recipe-fix">
-/* v226 — utensilios reales, selección persistente y documentos adaptables */
+<style id="lrx-v227-recipe-fix">
+/* v227 — utensilios reales, selección persistente y documentos adaptables */
 .recipe-doc-brand{display:block;width:auto;height:30px;max-width:145px;object-fit:contain;object-position:left center;margin:0 0 6px 0}
 .tech-head-main .recipe-doc-brand{height:30px;max-width:145px}
 .standard-brand,.cost-brand{margin:0 0 7px 0}
