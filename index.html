@@ -158,6 +158,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 .standard-title-row>div,.cost-title-row>div{min-width:0}
 @media(max-width:760px){.recipe-doc-brand.doc-head-logo{height:34px!important;max-width:120px!important}.compact-doc-head .tech-head-main{gap:8px}.standard-title-row,.cost-title-row{gap:8px}}
 </style>
+
+
 </head>
 <body>
 <div class="app" id="app">
@@ -200,8 +202,21 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./purchase-engine.js?v=2026-10-02-v230" defer></script>
-<script src="./app.js?v=2026-10-02-v230" defer></script>
+<script src="./purchase-engine.js?v=2026-10-02-v231" defer></script>
+<script src="./app.js?v=2026-10-02-v231" defer></script>
+
+<style id="lrx-v231-final">
+/* v231 final cascade: logo padded/proportional and technical utensil iconography */
+.recipe-doc-brand.doc-head-logo{width:78px!important;height:78px!important;max-width:78px!important;max-height:78px!important;flex:0 0 78px!important;object-fit:contain!important;object-position:center!important;padding:2px!important;box-sizing:border-box!important;background:#fff!important;border:0!important;border-radius:0!important}
+.compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:12px!important;padding:6px 8px!important;overflow:visible!important}
+.compact-doc-head .tech-title-copy{min-width:0!important;flex:1 1 auto!important;overflow:visible!important}
+.compact-doc-head .tech-name{font-size:15px!important;line-height:1.08!important;font-weight:800!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+.compact-doc-head .tech-subtitle{font-size:7.5px!important;line-height:1.15!important;margin-top:4px!important;white-space:nowrap!important;overflow:visible!important}
+.utensil-card img{height:108px!important;padding:8px!important;background:#fff!important}
+.recipe-utensil-item img{width:52px!important;height:44px!important;padding:2px!important;background:#fff!important}
+@media(max-width:760px){.recipe-doc-brand.doc-head-logo{width:64px!important;height:64px!important;max-width:64px!important;max-height:64px!important;flex-basis:64px!important}.compact-doc-head .tech-name{font-size:14px!important;white-space:normal!important}.compact-doc-head .tech-subtitle{white-space:normal!important}}
+@media print{.recipe-print-page .recipe-doc-brand.doc-head-logo{width:20mm!important;height:20mm!important;max-width:20mm!important;max-height:20mm!important;flex-basis:20mm!important;padding:.5mm!important}.recipe-print-page .compact-doc-head .tech-head-main{gap:3mm!important;padding:1.5mm!important}.recipe-print-page .compact-doc-head .tech-name{font-size:12.5pt!important;white-space:nowrap!important}.recipe-print-page .compact-doc-head .tech-subtitle{font-size:6pt!important}.recipe-print-page .standard-title-row .recipe-doc-brand.doc-head-logo,.recipe-print-page .cost-title-row .recipe-doc-brand.doc-head-logo{width:18mm!important;height:18mm!important;max-width:18mm!important;max-height:18mm!important;flex-basis:18mm!important}}
+</style>
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
@@ -228,17 +243,17 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
  .recipe-submodal{display:none!important}
 }
 </style>
-<style id="lrx-v230-brand-utensils">
-/* v230 — branding y utensilios: logo protagonista, wordmark sin recorte, iconografía técnica */
+<style id="lrx-v231-brand-utensils">
+/* v231 — branding y utensilios: logo protagonista, wordmark sin recorte, iconografía técnica */
 .recipe-doc-brand.doc-head-logo{
-  width:72px!important;height:72px!important;max-width:72px!important;max-height:72px!important;
-  object-fit:contain!important;object-position:center!important;flex:0 0 72px!important;
+  width:78px!important;height:78px!important;max-width:78px!important;max-height:78px!important;
+  object-fit:contain!important;object-position:center!important;flex:0 0 78px!important;
   margin:0!important;border-radius:6px!important;background:#fff!important;
 }
-.compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:14px!important;padding:10px!important}
+.compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:12px!important;padding:6px 8px!important;overflow:visible!important}
 .compact-doc-head .tech-title-copy{min-width:0!important;flex:1 1 auto!important}
-.compact-doc-head .tech-name{font-size:clamp(18px,2.1vw,26px)!important;line-height:1.08!important;letter-spacing:.01em!important;overflow-wrap:anywhere!important}
-.compact-doc-head .tech-subtitle{font-size:clamp(8px,.95vw,12px)!important;line-height:1.15!important;margin-top:5px!important}
+.compact-doc-head .tech-name{font-size:15px!important;line-height:1.08!important;letter-spacing:.01em!important;overflow-wrap:anywhere!important}
+.compact-doc-head .tech-subtitle{font-size:7.5px!important;line-height:1.15!important;margin-top:5px!important}
 .standard-title-row,.cost-title-row{display:flex!important;align-items:center!important;gap:14px!important;min-width:0!important}
 .standard-title-row>div,.cost-title-row>div{min-width:0!important;flex:1 1 auto!important}
 .standard-title-row h1{font-size:22px!important;line-height:1.05!important;margin:0 0 3px!important}
@@ -249,16 +264,16 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 .utensil-card img{height:105px!important;padding:5px!important;box-sizing:border-box!important}
 .utensil-card{border-radius:8px!important;box-shadow:0 1px 3px rgba(20,42,82,.05)!important}
 @media(max-width:760px){
- .recipe-doc-brand.doc-head-logo{width:58px!important;height:58px!important;max-width:58px!important;max-height:58px!important;flex-basis:58px!important}
+ .recipe-doc-brand.doc-head-logo{width:64px!important;height:64px!important;max-width:64px!important;max-height:64px!important;flex-basis:64px!important}
  .compact-doc-head .tech-head-main{gap:9px!important;padding:7px!important}
- .compact-doc-head .tech-name{font-size:17px!important}
+ .compact-doc-head .tech-name{font-size:14px!important}
  .standard-title-row,.cost-title-row{gap:9px!important}
 }
 @media print{
- .recipe-print-page .recipe-doc-brand.doc-head-logo{width:18mm!important;height:18mm!important;max-width:18mm!important;max-height:18mm!important;flex-basis:18mm!important;margin:0!important}
+ .recipe-print-page .recipe-doc-brand.doc-head-logo{width:20mm!important;height:20mm!important;max-width:20mm!important;max-height:20mm!important;flex-basis:20mm!important;margin:0!important;padding:.5mm!important}
  .recipe-print-page .compact-doc-head .tech-head-main{gap:3mm!important;padding:2mm!important}
- .recipe-print-page .compact-doc-head .tech-name{font-size:14pt!important;line-height:1.05!important}
- .recipe-print-page .compact-doc-head .tech-subtitle{font-size:6.5pt!important;margin-top:1.2mm!important}
+ .recipe-print-page .compact-doc-head .tech-name{font-size:12.5pt!important;line-height:1.05!important}
+ .recipe-print-page .compact-doc-head .tech-subtitle{font-size:6pt!important;margin-top:1.2mm!important}
  .recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{gap:3mm!important;padding:0 0 1.5mm!important}
  .recipe-print-page .standard-title-row h1{font-size:15pt!important}
  .recipe-print-page .standard-title-row h2,.recipe-print-page .cost-title-row h2{font-size:12pt!important}
