@@ -200,8 +200,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./purchase-engine.js?v=2026-10-02-v229" defer></script>
-<script src="./app.js?v=2026-10-02-v229" defer></script>
+<script src="./purchase-engine.js?v=2026-10-02-v230" defer></script>
+<script src="./app.js?v=2026-10-02-v230" defer></script>
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
@@ -226,5 +226,42 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
  .standard-brand .recipe-doc-brand{height:12mm!important;max-width:42mm!important}
  .cost-brand .recipe-doc-brand{height:10mm!important;max-width:36mm!important}
  .recipe-submodal{display:none!important}
+}
+</style>
+<style id="lrx-v230-brand-utensils">
+/* v230 — branding y utensilios: logo protagonista, wordmark sin recorte, iconografía técnica */
+.recipe-doc-brand.doc-head-logo{
+  width:72px!important;height:72px!important;max-width:72px!important;max-height:72px!important;
+  object-fit:contain!important;object-position:center!important;flex:0 0 72px!important;
+  margin:0!important;border-radius:6px!important;background:#fff!important;
+}
+.compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:14px!important;padding:10px!important}
+.compact-doc-head .tech-title-copy{min-width:0!important;flex:1 1 auto!important}
+.compact-doc-head .tech-name{font-size:clamp(18px,2.1vw,26px)!important;line-height:1.08!important;letter-spacing:.01em!important;overflow-wrap:anywhere!important}
+.compact-doc-head .tech-subtitle{font-size:clamp(8px,.95vw,12px)!important;line-height:1.15!important;margin-top:5px!important}
+.standard-title-row,.cost-title-row{display:flex!important;align-items:center!important;gap:14px!important;min-width:0!important}
+.standard-title-row>div,.cost-title-row>div{min-width:0!important;flex:1 1 auto!important}
+.standard-title-row h1{font-size:22px!important;line-height:1.05!important;margin:0 0 3px!important}
+.standard-title-row h2,.cost-title-row h2{font-size:17px!important;line-height:1.08!important;margin:0 0 3px!important;overflow-wrap:anywhere!important}
+.standard-title-row p,.cost-title-row p{font-size:10px!important;margin:0!important}
+.cost-title-row .cost-head-price{flex:0 0 auto!important}
+.utensil-card img,.recipe-utensil-item img,.selected-ut-row img{background:#fff!important;object-fit:contain!important}
+.utensil-card img{height:105px!important;padding:5px!important;box-sizing:border-box!important}
+.utensil-card{border-radius:8px!important;box-shadow:0 1px 3px rgba(20,42,82,.05)!important}
+@media(max-width:760px){
+ .recipe-doc-brand.doc-head-logo{width:58px!important;height:58px!important;max-width:58px!important;max-height:58px!important;flex-basis:58px!important}
+ .compact-doc-head .tech-head-main{gap:9px!important;padding:7px!important}
+ .compact-doc-head .tech-name{font-size:17px!important}
+ .standard-title-row,.cost-title-row{gap:9px!important}
+}
+@media print{
+ .recipe-print-page .recipe-doc-brand.doc-head-logo{width:18mm!important;height:18mm!important;max-width:18mm!important;max-height:18mm!important;flex-basis:18mm!important;margin:0!important}
+ .recipe-print-page .compact-doc-head .tech-head-main{gap:3mm!important;padding:2mm!important}
+ .recipe-print-page .compact-doc-head .tech-name{font-size:14pt!important;line-height:1.05!important}
+ .recipe-print-page .compact-doc-head .tech-subtitle{font-size:6.5pt!important;margin-top:1.2mm!important}
+ .recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{gap:3mm!important;padding:0 0 1.5mm!important}
+ .recipe-print-page .standard-title-row h1{font-size:15pt!important}
+ .recipe-print-page .standard-title-row h2,.recipe-print-page .cost-title-row h2{font-size:12pt!important}
+ .recipe-print-page .standard-title-row p,.recipe-print-page .cost-title-row p{font-size:6pt!important}
 }
 </style>
