@@ -1,7 +1,0 @@
-LRX v240 — Utensilios editables
-
-La biblioteca permite crear, modificar y eliminar cualquier utensilio, tanto los incluidos en la biblioteca como los agregados por el usuario. Al eliminar un elemento, deja de estar disponible y se retira de las recetas y pre-elaborados donde estaba seleccionado. Los elementos borrados no vuelven a aparecer al iniciar la aplicación.
-
-Al reemplazar una imagen monocromática negra (SVG, PNG, JPEG o WebP), se convierte al azul de La Reyna Xpress. Las fotografías a color se conservan.
-
-Archivos principales actualizados: index.html, app.js y sw.js. El paquete incluye master.json, purchase-engine.js, recursos de marca y los SVG de assets/utensils.
