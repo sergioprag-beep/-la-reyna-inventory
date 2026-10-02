@@ -92,6 +92,34 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 @media(max-width:760px){.tech-top-grid{grid-template-columns:1fr}.tech-process-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tech-bottom-grid{grid-template-columns:1fr}.standard-kpis,.cost-kpis{grid-template-columns:1fr 1fr}.standard-photo-grid{grid-template-columns:1fr 1fr}.recipe-doc-tabs .btn{min-width:0;flex:1 1 150px}}
 @media print{html,body{width:100%!important;overflow:visible!important}.recipe-template-logo{max-height:34px;max-width:190px;margin:0 0 4px}.recipe-print-page{width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;box-sizing:border-box!important}.recipe-print-page .recipe-template-logo{display:none!important}.recipe-print-page .tech-sheet,.recipe-print-page .standard-book,.recipe-print-page .cost-sheet{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;box-sizing:border-box!important;overflow:visible!important}.recipe-print-page .tech-name{font-size:23pt}.recipe-print-page .tech-subtitle{font-size:8.5pt}.recipe-print-page .tech-code strong{font-size:17pt}.recipe-print-page .tech-table{font-size:7.5pt}.recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:3pt}.recipe-print-page .tech-main-photo{height:72mm}.recipe-print-page .tech-process-grid img{height:31mm}.recipe-print-page .tech-text{font-size:8pt;padding:4pt}.recipe-print-page .tech-section-title{font-size:9pt;padding:4pt 5pt}.recipe-print-page .tech-footer{font-size:6.5pt}.recipe-print-page .standard-kpis,.recipe-print-page .cost-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.recipe-print-page .standard-book section,.recipe-print-page .cost-sheet section{break-inside:auto}.recipe-print-page table{max-width:100%!important}.recipe-print-page img{max-width:100%!important}.recipe-print-page .standard-photo-grid img{height:31mm}.recipe-print-page .standard-book{font-size:8pt}.recipe-print-page .standard-cover h1{font-size:21pt}.recipe-print-page .standard-cover h2{font-size:16pt}.recipe-print-page .standard-kpis b,.recipe-print-page .cost-kpis b{font-size:11pt}}
 </style>
+<style id="lrx-v223-recipe-final-fix">
+/* v223 — Recetas: pantalla, modal, plantillas e impresión coherentes */
+#modalBox:has(.recipe-view-wrap),#modalBox:has(.utensil-library),#modalBox:has(.utensil-create){width:min(1120px,calc(100vw - 28px));max-width:calc(100vw - 28px);box-sizing:border-box;overflow-x:hidden;overflow-y:auto}
+.recipe-view-wrap{width:100%!important;max-width:100%!important;overflow-x:hidden!important;box-sizing:border-box}
+.recipe-view-wrap .tech-sheet,.recipe-view-wrap .standard-book,.recipe-view-wrap .cost-sheet{width:100%!important;max-width:100%!important;min-width:0!important;overflow:visible!important;box-sizing:border-box}
+.tech-top-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.tech-table{table-layout:fixed!important}
+.tech-table th,.tech-table td{overflow-wrap:anywhere;word-break:break-word}
+.recipe-doc-actions,.recipe-doc-tabs{max-width:100%;overflow-x:auto;padding-bottom:2px}
+.recipe-doc-actions .btn,.recipe-doc-tabs .btn{white-space:nowrap}
+.utensil-library{width:100%;box-sizing:border-box}.utensil-library-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}.utensil-library-head h3{margin:0 0 5px}.utensil-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;max-width:100%;max-height:58vh;overflow-y:auto;overflow-x:hidden}.utensil-card{min-width:0}.utensil-card img{height:105px!important;object-fit:contain!important}
+@media(max-width:900px){#modalBox:has(.recipe-view-wrap),#modalBox:has(.utensil-library),#modalBox:has(.utensil-create){width:calc(100vw - 14px);max-width:calc(100vw - 14px)}.tech-top-grid{grid-template-columns:1fr!important}.utensil-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.utensil-library-head{flex-direction:column}.utensil-library-head .btn{width:100%}}
+@media(max-width:560px){.utensil-grid{grid-template-columns:1fr!important}.recipe-doc-actions,.recipe-doc-tabs{display:flex;flex-wrap:wrap;overflow:visible}.recipe-doc-actions .btn,.recipe-doc-tabs .btn{flex:1 1 145px}}
+@media print{
+ html,body{width:100%!important;min-width:0!important;max-width:none!important;overflow:visible!important;background:#fff!important}
+ #lrxRecipePrint{position:static!important;inset:auto!important;width:100%!important;max-width:none!important;padding:0!important;margin:0!important;overflow:visible!important;background:#fff!important}
+ .recipe-print-page{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;box-sizing:border-box!important;overflow:visible!important}
+ .recipe-print-page .recipe-template-logo{display:block!important;max-width:48mm!important;max-height:16mm!important;width:auto!important;height:auto!important;object-fit:contain!important;margin:0 0 3mm 0!important}
+ .recipe-print-page .tech-head{grid-template-columns:minmax(0,1fr) 32mm!important}
+ .recipe-print-page .tech-top-grid{grid-template-columns:1fr 1fr!important}
+ .recipe-print-page .tech-table{table-layout:fixed!important;width:100%!important;font-size:7.5pt!important}
+ .recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:2.2pt!important}
+ .recipe-print-page .tech-name{font-size:20pt!important}.recipe-print-page .tech-subtitle{font-size:7.5pt!important}.recipe-print-page .tech-code strong{font-size:15pt!important}
+ .recipe-print-page .standard-book,.recipe-print-page .cost-sheet,.recipe-print-page .tech-sheet{width:100%!important;max-width:none!important;min-width:0!important;padding:0!important;margin:0!important;border:0!important;overflow:visible!important}
+ .recipe-print-page .standard-kpis,.recipe-print-page .cost-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ .recipe-print-page .standard-photo-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+}
+</style>
 </head>
 <body>
 <div class="app" id="app">
