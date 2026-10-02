@@ -148,6 +148,16 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
  .recipe-print-page .standard-brand .recipe-doc-brand{height:11mm!important;max-width:40mm!important}.recipe-print-page .cost-brand .recipe-doc-brand{height:10mm!important;max-width:34mm!important}
 }
 </style>
+
+<style id="lrx-v228-recipe-print-final">
+/* v228 — logo en encabezado + ficha técnica compacta para impresión */
+.recipe-doc-brand.doc-head-logo{height:42px!important;max-width:145px!important;width:auto!important;object-fit:contain!important;object-position:left center!important;margin:0!important;flex:0 0 auto!important}
+.compact-doc-head .tech-head-main{display:flex;align-items:center;gap:12px;min-width:0}
+.compact-doc-head .tech-title-copy{min-width:0}
+.standard-title-row,.cost-title-row{display:flex;align-items:center;gap:12px;min-width:0}
+.standard-title-row>div,.cost-title-row>div{min-width:0}
+@media(max-width:760px){.recipe-doc-brand.doc-head-logo{height:34px!important;max-width:120px!important}.compact-doc-head .tech-head-main{gap:8px}.standard-title-row,.cost-title-row{gap:8px}}
+</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -190,8 +200,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./purchase-engine.js?v=2026-10-02-v222" defer></script>
-<script src="./app.js?v=2026-10-01-v213" defer></script>
+<script src="./purchase-engine.js?v=2026-10-02-v228" defer></script>
+<script src="./app.js?v=2026-10-02-v228" defer></script>
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
