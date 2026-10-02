@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v234';
+const APP_VERSION='v236';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -388,7 +388,7 @@ function recipeTechnicalHtml(r,type){
  const pt=r?.productType||(type==='prep'?'Pre-elaborado':'Producto Final');
  const code=r?.code||r?.sku||r?.id||'—';
  return `<div class="tech-sheet print-target compact-tech-sheet">
-  <div class="tech-head compact-doc-head"><div class="tech-head-main"><picture class="recipe-doc-lockup"><source media="print" srcset="./LRX-LOGO-FULL-BRANDSAFE-SQUARE.svg"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div class="tech-title-copy"><div class="tech-name">${esc(r?.name||'RECETA')}</div><div class="tech-subtitle">FICHA TÉCNICA DE PRODUCTO · USO INTERNO | PRODUCCIÓN | CONTROL</div></div></div><div class="tech-code"><b>CÓDIGO</b><strong>${esc(code)}</strong></div></div>
+  <div class="tech-head compact-doc-head"><div class="tech-head-main"><picture class="recipe-doc-lockup"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div class="tech-title-copy"><div class="tech-name">${esc(r?.name||'RECETA')}</div><div class="tech-subtitle">FICHA TÉCNICA DE PRODUCTO · USO INTERNO | PRODUCCIÓN | CONTROL</div></div></div><div class="tech-code"><b>CÓDIGO</b><strong>${esc(code)}</strong></div></div>
   <div class="tech-top-grid compact-tech-top">
    <div><div class="tech-section-title">1. INFORMACIÓN GENERAL</div><table class="tech-table"><tr><th>Nombre</th><td>${esc(r?.name||'—')}</td><th>Tipo</th><td>${esc(pt)}</td></tr><tr><th>Categoría</th><td>${esc(r?.category||'—')}</td><th>Área / uso</th><td>${esc(r?.area||r?.department||'Cocina')}</td></tr><tr><th>Presentación</th><td>${esc(r?.presentation||'—')}</td><th>Vida útil</th><td>${esc(r?.shelfLife||'—')}</td></tr><tr><th>Temperatura</th><td>${esc(r?.temperature||r?.temp||'—')}</td><th>Almacenamiento</th><td>${esc(r?.storage||'—')}</td></tr></table></div>
    <div><div class="tech-section-title">3. FOTO DEL PRODUCTO</div><div class="tech-main-photo compact-tech-photo">${main?`<img src="${esc(main)}" alt="Producto">`:'<span>Agregar foto principal</span>'}</div></div>
@@ -402,8 +402,8 @@ function recipeTechnicalHtml(r,type){
   <div class="tech-footer"><span>FICHAS TÉCNICAS | PRODUCCIÓN | CONTROL DE PROCESOS | CALIDAD</span><span>${esc(r?.revision||'REV. 01')} · ${esc((r?.updatedAt||now()).slice(0,10))}</span></div>
  </div>`;
 }
-function recipeStandardHtml(r,type){const d=recipeCostDetail(r),items=Array.isArray(r?.items)?r.items:[],y=Number(r?.yieldQty||r?.yield||0),u=String(r?.yieldUnit||''),photos=Array.isArray(r?.processPhotos)?r.processPhotos:[];return `<div class="standard-book print-target compact-standard"><div class="standard-cover compact-doc-cover"><div class="standard-title-row"><picture class="recipe-doc-lockup"><source media="print" srcset="./LRX-LOGO-FULL-BRANDSAFE-SQUARE.svg"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div><h1>Receta Estándar</h1><h2>${esc(r?.name||'Receta')}</h2><p>${esc(type==='final'?'Receta final':'Pre-elaborado')} · ${esc(r?.code||r?.id||'')}</p></div></div></div><div class="standard-kpis"><div><small>Rendimiento</small><b>${esc(y||'—')} ${esc(u)}</b></div><div><small>Costo total</small><b>${money(d.cost||r?.cost||0)}</b></div><div><small>Costo / unidad</small><b>${y?money((d.cost||0)/y):'—'}</b></div><div><small>Food Cost</small><b>${Number(r?.salePrice||r?.price||0)&&y?((d.cost/y)/(Number(r.salePrice||r.price))*100).toFixed(1)+'%':'—'}</b></div></div><section><h3>Ingredientes / componentes</h3><table class="tech-table"><tr><th>Ingrediente</th><th>Cantidad</th><th>Unidad</th></tr>${items.map(x=>`<tr><td>${esc(x.product||x.ingredient||x.name||'')}</td><td>${esc(x.qty||0)}</td><td>${esc(x.unit||'')}</td></tr>`).join('')||'<tr><td colspan="3">Sin componentes.</td></tr>'}</table></section><section><h3>Procedimiento</h3><div class="standard-text">${esc(r?.method||r?.procedure||'No registrado.')}</div></section><section><h3>Presentación y servicio</h3><div class="standard-text">${esc(r?.plating||r?.service||'No registrado.')}</div></section>${recipeUtensilsHtml(r)}${photos.length?`<section><h3>Fotos de proceso</h3><div class="standard-photo-grid">${photos.slice(0,4).map((ph,i)=>`<figure><img src="${esc(ph.dataUrl||'')}"><figcaption>${i+1}. ${esc(ph.caption||'Paso de proceso')}</figcaption></figure>`).join('')}</div></section>`:''}<section><h3>Conservación, vida útil y notas</h3><div class="standard-text">Almacenamiento: ${esc(r?.storage||'—')} · Temperatura: ${esc(r?.temperature||'—')} · Vida útil: ${esc(r?.shelfLife||'—')}<br>${esc(r?.notes||'')}</div></section></div>`}
-function recipeCostingHtml(r,type){const d=recipeCostDetail(r),items=Array.isArray(r?.items)?r.items:[],y=Number(r?.yieldQty||r?.yieldValue||r?.yield||0),unit=String(r?.yieldUnit||''),cost=Number(d?.cost||r?.cost||0),unitCost=y?cost/y:0,price=Number(r?.salePrice||r?.price||0),food=price&&unitCost?(unitCost/price*100):0;return `<div class="cost-sheet print-target compact-cost"><div class="cost-brand compact-doc-cover"><div class="cost-title-row"><picture class="recipe-doc-lockup"><source media="print" srcset="./LRX-LOGO-FULL-BRANDSAFE-SQUARE.svg"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div><span class="status">${esc(r?.productType||(type==='prep'?'PRE-ELABORADO':'PRODUCTO FINAL'))}</span><h2>${esc(r?.name||'Receta')}</h2><p>${esc(r?.code||r?.sku||r?.id||'')}</p></div><div class="cost-head-price"><small>Precio venta</small><b>${price?money(price):'—'}</b></div></div></div><div class="cost-kpis"><div><small>Costo total</small><b>${money(cost)}</b></div><div><small>Rendimiento</small><b>${esc(y||'—')} ${esc(unit)}</b></div><div><small>Costo / unidad</small><b>${unitCost?money(unitCost):'—'}</b></div><div><small>Food Cost</small><b>${food?food.toFixed(1)+'%':'—'}</b></div></div><section><div class="tech-section-title">1. ESCANDALLO DE INGREDIENTES</div><table class="tech-table"><tr><th>#</th><th>Ingrediente / componente</th><th>Cantidad</th><th>Unidad</th><th>Costo</th></tr>${items.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.product||x.ingredient||x.name||'—')}</td><td>${esc(x.qty||0)}</td><td>${esc(x.unit||'')}</td><td>${money(recipeItemCost(x))}</td></tr>`).join('')||'<tr><td colspan="5">Sin componentes.</td></tr>'}<tr><td colspan="4" style="text-align:right"><b>COSTO TOTAL</b></td><td><b>${money(cost)}</b></td></tr></table></section><section><div class="tech-section-title">2. RENDIMIENTO Y MERMA</div><table class="tech-table"><tr><th>Rendimiento teórico</th><td>${esc(r?.theoreticalQty||'—')} ${esc(unit)}</td><th>Merma</th><td>${esc(r?.wasteQty||'—')} ${esc(unit)}</td></tr><tr><th>Rendimiento final</th><td>${esc(y||'—')} ${esc(unit)}</td><th>% merma</th><td>${r?.theoreticalQty?((Number(r.wasteQty||0)/Number(r.theoreticalQty))*100).toFixed(1)+'%':'—'}</td></tr></table></section><section><div class="tech-section-title">3. RENTABILIDAD</div><table class="tech-table"><tr><th>Precio de venta</th><td>${price?money(price):'—'}</td><th>Costo por unidad</th><td>${unitCost?money(unitCost):'—'}</td></tr><tr><th>Food Cost</th><td>${food?food.toFixed(1)+'%':'—'}</td><th>Margen bruto</th><td>${price&&unitCost?money(price-unitCost):'—'}</td></tr></table></section>${recipeUtensilsHtml(r)}<section><div class="tech-section-title">4. HISTORIAL / CONTROL DE COSTO</div><div class="standard-text">${esc(r?.notes||'Sin notas de costo registradas.')}</div></section></div>`}
+function recipeStandardHtml(r,type){const d=recipeCostDetail(r),items=Array.isArray(r?.items)?r.items:[],y=Number(r?.yieldQty||r?.yield||0),u=String(r?.yieldUnit||''),photos=Array.isArray(r?.processPhotos)?r.processPhotos:[];return `<div class="standard-book print-target compact-standard"><div class="standard-cover compact-doc-cover"><div class="standard-title-row"><picture class="recipe-doc-lockup"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div><h1>Receta Estándar</h1><h2>${esc(r?.name||'Receta')}</h2><p>${esc(type==='final'?'Receta final':'Pre-elaborado')} · ${esc(r?.code||r?.id||'')}</p></div></div></div><div class="standard-kpis"><div><small>Rendimiento</small><b>${esc(y||'—')} ${esc(u)}</b></div><div><small>Costo total</small><b>${money(d.cost||r?.cost||0)}</b></div><div><small>Costo / unidad</small><b>${y?money((d.cost||0)/y):'—'}</b></div><div><small>Food Cost</small><b>${Number(r?.salePrice||r?.price||0)&&y?((d.cost/y)/(Number(r.salePrice||r.price))*100).toFixed(1)+'%':'—'}</b></div></div><section><h3>Ingredientes / componentes</h3><table class="tech-table"><tr><th>Ingrediente</th><th>Cantidad</th><th>Unidad</th></tr>${items.map(x=>`<tr><td>${esc(x.product||x.ingredient||x.name||'')}</td><td>${esc(x.qty||0)}</td><td>${esc(x.unit||'')}</td></tr>`).join('')||'<tr><td colspan="3">Sin componentes.</td></tr>'}</table></section><section><h3>Procedimiento</h3><div class="standard-text">${esc(r?.method||r?.procedure||'No registrado.')}</div></section><section><h3>Presentación y servicio</h3><div class="standard-text">${esc(r?.plating||r?.service||'No registrado.')}</div></section>${recipeUtensilsHtml(r)}${photos.length?`<section><h3>Fotos de proceso</h3><div class="standard-photo-grid">${photos.slice(0,4).map((ph,i)=>`<figure><img src="${esc(ph.dataUrl||'')}"><figcaption>${i+1}. ${esc(ph.caption||'Paso de proceso')}</figcaption></figure>`).join('')}</div></section>`:''}<section><h3>Conservación, vida útil y notas</h3><div class="standard-text">Almacenamiento: ${esc(r?.storage||'—')} · Temperatura: ${esc(r?.temperature||'—')} · Vida útil: ${esc(r?.shelfLife||'—')}<br>${esc(r?.notes||'')}</div></section></div>`}
+function recipeCostingHtml(r,type){const d=recipeCostDetail(r),items=Array.isArray(r?.items)?r.items:[],y=Number(r?.yieldQty||r?.yieldValue||r?.yield||0),unit=String(r?.yieldUnit||''),cost=Number(d?.cost||r?.cost||0),unitCost=y?cost/y:0,price=Number(r?.salePrice||r?.price||0),food=price&&unitCost?(unitCost/price*100):0;return `<div class="cost-sheet print-target compact-cost"><div class="cost-brand compact-doc-cover"><div class="cost-title-row"><picture class="recipe-doc-lockup"><img class="recipe-doc-brand doc-head-logo" src="./LRX-LOGO-LOCKUP-BRANDSAFE.svg" alt="La Reyna Xpress"></picture><div><span class="status">${esc(r?.productType||(type==='prep'?'PRE-ELABORADO':'PRODUCTO FINAL'))}</span><h2>${esc(r?.name||'Receta')}</h2><p>${esc(r?.code||r?.sku||r?.id||'')}</p></div><div class="cost-head-price"><small>Precio venta</small><b>${price?money(price):'—'}</b></div></div></div><div class="cost-kpis"><div><small>Costo total</small><b>${money(cost)}</b></div><div><small>Rendimiento</small><b>${esc(y||'—')} ${esc(unit)}</b></div><div><small>Costo / unidad</small><b>${unitCost?money(unitCost):'—'}</b></div><div><small>Food Cost</small><b>${food?food.toFixed(1)+'%':'—'}</b></div></div><section><div class="tech-section-title">1. ESCANDALLO DE INGREDIENTES</div><table class="tech-table"><tr><th>#</th><th>Ingrediente / componente</th><th>Cantidad</th><th>Unidad</th><th>Costo</th></tr>${items.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.product||x.ingredient||x.name||'—')}</td><td>${esc(x.qty||0)}</td><td>${esc(x.unit||'')}</td><td>${money(recipeItemCost(x))}</td></tr>`).join('')||'<tr><td colspan="5">Sin componentes.</td></tr>'}<tr><td colspan="4" style="text-align:right"><b>COSTO TOTAL</b></td><td><b>${money(cost)}</b></td></tr></table></section><section><div class="tech-section-title">2. RENDIMIENTO Y MERMA</div><table class="tech-table"><tr><th>Rendimiento teórico</th><td>${esc(r?.theoreticalQty||'—')} ${esc(unit)}</td><th>Merma</th><td>${esc(r?.wasteQty||'—')} ${esc(unit)}</td></tr><tr><th>Rendimiento final</th><td>${esc(y||'—')} ${esc(unit)}</td><th>% merma</th><td>${r?.theoreticalQty?((Number(r.wasteQty||0)/Number(r.theoreticalQty))*100).toFixed(1)+'%':'—'}</td></tr></table></section><section><div class="tech-section-title">3. RENTABILIDAD</div><table class="tech-table"><tr><th>Precio de venta</th><td>${price?money(price):'—'}</td><th>Costo por unidad</th><td>${unitCost?money(unitCost):'—'}</td></tr><tr><th>Food Cost</th><td>${food?food.toFixed(1)+'%':'—'}</td><th>Margen bruto</th><td>${price&&unitCost?money(price-unitCost):'—'}</td></tr></table></section>${recipeUtensilsHtml(r)}<section><div class="tech-section-title">4. HISTORIAL / CONTROL DE COSTO</div><div class="standard-text">${esc(r?.notes||'Sin notas de costo registradas.')}</div></section></div>`}
 
 function recipeViewModal(r,type){
  const source=r?.source||((r?.masterId)?'Editado desde MASTER':'Registro local');
@@ -427,34 +427,35 @@ function recipeDocumentPrint(r,type,format,paper){
  .recipe-print-page{width:${ps.w-10}mm!important;min-height:${ps.h-10}mm!important;overflow:visible!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#fff!important;font-family:Arial,sans-serif}
  .recipe-print-scale{width:100%!important;box-sizing:border-box!important}
  .recipe-print-page .tech-sheet,.recipe-print-page .standard-book,.recipe-print-page .cost-sheet{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;box-sizing:border-box!important;overflow:visible!important}
- .recipe-print-page .recipe-doc-brand{display:block!important;width:auto!important;height:9mm!important;max-width:31mm!important;object-fit:contain!important;object-position:left center!important;margin:0!important}
+ .recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:15mm!important;max-width:52mm!important;max-height:15mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:15mm!important;max-width:52mm!important;max-height:15mm!important;flex-basis:52mm!important}
+ .recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo,.recipe-print-page .standard-title-row .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo,.recipe-print-page .cost-title-row .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;flex:0 0 auto!important;object-fit:contain!important;object-position:left center!important;margin:0!important;padding:0!important}
  .recipe-print-page .doc-head-logo{flex:0 0 auto!important}
  .recipe-print-page .compact-doc-head,.recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{display:flex!important;align-items:center!important;gap:3mm!important}
  .recipe-print-page .compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:3mm!important;padding:2mm!important;min-width:0!important}
  .recipe-print-page .tech-head{display:grid!important;grid-template-columns:minmax(0,1fr) 25mm!important;gap:2mm!important;margin-bottom:1.5mm!important}
- .recipe-print-page .tech-name{font-size:15pt!important;line-height:1!important}.recipe-print-page .tech-subtitle{font-size:6pt!important;line-height:1.05!important;margin-top:1mm!important}
- .recipe-print-page .tech-code{padding:1.5mm!important}.recipe-print-page .tech-code b{font-size:6pt!important}.recipe-print-page .tech-code strong{font-size:10pt!important;margin-top:.5mm!important;padding:1mm!important}
+ .recipe-print-page .tech-name{font-size:19pt!important;line-height:1.03!important}.recipe-print-page .tech-subtitle{font-size:8pt!important;line-height:1.1!important;margin-top:1.2mm!important}
+ .recipe-print-page .tech-code{padding:1.8mm!important}.recipe-print-page .tech-code b{font-size:8pt!important}.recipe-print-page .tech-code strong{font-size:13pt!important;margin-top:.7mm!important;padding:1.2mm!important}
  .recipe-print-page .tech-top-grid{display:grid!important;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)!important;gap:1.5mm!important}
  .recipe-print-page .compact-tech-photo{height:31mm!important}.recipe-print-page .tech-main-photo img{max-height:29mm!important}
- .recipe-print-page .tech-section-title{font-size:6.4pt!important;padding:1.05mm 1.4mm!important;margin:0 0 .7mm!important}
- .recipe-print-page .tech-table{table-layout:fixed!important;width:100%!important;font-size:5.5pt!important;line-height:1.04!important}
- .recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:.7mm!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+ .recipe-print-page .tech-section-title{font-size:9pt!important;padding:1.3mm 1.6mm!important;margin:0 0 1mm!important}
+ .recipe-print-page .tech-table{table-layout:fixed!important;width:100%!important;font-size:8pt!important;line-height:1.1!important}
+ .recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:1.15mm!important;overflow-wrap:anywhere!important;word-break:break-word!important}
  .recipe-print-page .compact-tech-two{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:1.5mm!important;margin-top:1.2mm!important}
- .recipe-print-page .tech-text{font-size:5.3pt!important;line-height:1.08!important;padding:1mm!important}.recipe-print-page .compact-tech-block{margin-top:1.2mm!important}
+ .recipe-print-page .tech-text{font-size:8pt!important;line-height:1.2!important;padding:1.5mm!important}.recipe-print-page .compact-tech-block{margin-top:1.6mm!important}
  .recipe-print-page .recipe-utensils-block{margin-top:1.2mm!important;break-inside:avoid!important}.recipe-print-page .recipe-utensils-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:.7mm!important;padding:.7mm!important}.recipe-print-page .recipe-utensil-item{padding:.7mm!important;gap:.7mm!important}.recipe-print-page .recipe-utensil-item img{width:8mm!important;height:6mm!important;flex:0 0 8mm!important}.recipe-print-page .recipe-utensil-item b{font-size:4.7pt!important}.recipe-print-page .recipe-utensil-item small{font-size:4pt!important}
  .recipe-print-page .compact-process{margin-top:1.2mm!important}.recipe-print-page .compact-process-grid{gap:.7mm!important}.recipe-print-page .compact-process-grid img{height:11mm!important}.recipe-print-page .compact-process-grid figcaption{font-size:4pt!important;padding:.5mm!important}
  .recipe-print-page .tech-footer{font-size:4.3pt!important;margin-top:1mm!important;padding-top:.7mm!important}
  .recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{padding:0 0 1.5mm!important;border-bottom:1mm solid #0d3b78!important}
  .recipe-print-page .standard-title-row>div:nth-child(2),.recipe-print-page .cost-title-row>div:nth-child(2){min-width:0;flex:1}
- .recipe-print-page .standard-cover h1{font-size:15pt!important;margin:0!important}.recipe-print-page .standard-cover h2{font-size:12pt!important;margin:0!important}.recipe-print-page .standard-cover p{margin:.7mm 0 0!important;font-size:6pt!important}
- .recipe-print-page .cost-title-row h2{font-size:13pt!important;margin:0!important}.recipe-print-page .cost-title-row p{margin:.5mm 0 0!important;font-size:6pt!important}.recipe-print-page .cost-head-price{margin-left:auto!important;padding:1mm 2mm!important;min-width:22mm!important}.recipe-print-page .cost-head-price b{font-size:9pt!important}
- .recipe-print-page .standard-book,.recipe-print-page .cost-sheet{font-size:6pt!important}.recipe-print-page .standard-kpis,.recipe-print-page .cost-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:1mm!important;margin:1.5mm 0!important}.recipe-print-page .standard-kpis>div,.recipe-print-page .cost-kpis>div{padding:1.1mm!important}.recipe-print-page .standard-kpis b,.recipe-print-page .cost-kpis b{font-size:7.2pt!important;margin-top:.4mm!important}
- .recipe-print-page .standard-book section,.recipe-print-page .cost-sheet section{margin-top:1.1mm!important}.recipe-print-page .standard-book section h3{padding:1mm 1.2mm!important;margin:0 0 .7mm!important;font-size:6.5pt!important}.recipe-print-page .standard-text{padding:1mm!important;line-height:1.08!important}.recipe-print-page .standard-photo-grid{gap:.7mm!important}.recipe-print-page .standard-photo-grid img{height:12mm!important}.recipe-print-page .standard-photo-grid figcaption{font-size:4pt!important;padding:.5mm!important}
+ .recipe-print-page .standard-cover h1{font-size:21pt!important;margin:0!important}.recipe-print-page .standard-cover h2{font-size:16pt!important;margin:0!important}.recipe-print-page .standard-cover p{margin:1mm 0 0!important;font-size:8pt!important}
+ .recipe-print-page .cost-title-row h2{font-size:17pt!important;margin:0!important}.recipe-print-page .cost-title-row p{margin:.8mm 0 0!important;font-size:8pt!important}.recipe-print-page .cost-head-price{margin-left:auto!important;padding:1.4mm 2mm!important;min-width:25mm!important}.recipe-print-page .cost-head-price b{font-size:12pt!important}
+ .recipe-print-page .standard-book,.recipe-print-page .cost-sheet{font-size:9pt!important}.recipe-print-page .standard-kpis,.recipe-print-page .cost-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:1.5mm!important;margin:2mm 0!important}.recipe-print-page .standard-kpis>div,.recipe-print-page .cost-kpis>div{padding:1.8mm!important}.recipe-print-page .standard-kpis b,.recipe-print-page .cost-kpis b{font-size:10pt!important;margin-top:.7mm!important}
+ .recipe-print-page .standard-book section,.recipe-print-page .cost-sheet section{margin-top:1.8mm!important}.recipe-print-page .standard-book section h3{padding:1.5mm 1.8mm!important;margin:0 0 1mm!important;font-size:9pt!important}.recipe-print-page .standard-text{padding:1.5mm!important;line-height:1.2!important}.recipe-print-page .standard-photo-grid{gap:1mm!important}.recipe-print-page .standard-photo-grid img{height:22mm!important}.recipe-print-page .standard-photo-grid figcaption{font-size:7pt!important;padding:.7mm!important}
  .recipe-print-page img{max-width:100%!important;break-inside:avoid!important}
  @media screen{#lrxRecipePrint{position:fixed!important;inset:0!important;width:auto!important;height:auto!important;overflow:auto!important;padding:18px!important;z-index:2147483647!important}.recipe-print-page{width:min(1100px,calc(100vw - 36px))!important;min-height:calc(100vh - 36px)!important;height:auto!important;margin:auto!important}.recipe-print-scale{width:100%!important}}
  </style>`;
  const ov=document.createElement('div');ov.id='lrxRecipePrint';ov.innerHTML=`<div class="recipe-print-page"><div class="recipe-print-scale">${body}</div></div>`;document.body.appendChild(ov);
- const st=document.createElement('div');st.innerHTML=css;document.head.appendChild(st.firstChild);
+ const st=document.createElement('div');st.innerHTML=css;document.body.appendChild(st.firstChild);
  let done=false;const restore=()=>{if(done)return;done=true;ov.remove();document.getElementById('lrxRecipeDocPrint')?.remove();window.removeEventListener('afterprint',restore)};window.addEventListener('afterprint',restore);
  setTimeout(()=>{window.print();setTimeout(restore,1800)},260);
 }
@@ -2000,135 +2001,131 @@ function languageModal(){
 }
 function saveLanguage(lang){const v=String(lang||'es')==='en'?'en':'es';state.settings=state.settings||{};state.settings.language=v;save();close();updateLanguageChip();render();toast(v==='en'?'Language saved':'Idioma guardado');}
 function utensilSvg(label,iconKey=''){
- const safe=String(label||'').replace(/[<>&]/g,'');
- const n=safe.toLowerCase();
- const stroke='#0d3b78', soft='#eaf2fb', mid='#9bb5d5', dark='#082b5f';
- const L=(x1,y1,x2,y2,w=2.8)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round"/>`;
- const P=(d,fill='none',sw=2.8)=>`<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/>`;
- const R=(x,y,w,h,rx=5,fill='#fff',sw=2.8)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
- const C=(cx,cy,r,fill='#fff',sw=2.8)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
- const k=String(iconKey||'').toLowerCase();
- let f='';
- if(k.includes('knife'))f='knife'; else if(k.includes('scissors'))f='scissors'; else if(k.includes('board'))f='board'; else if(k.includes('bowl'))f='bowl';
- else if(k.includes('spoon'))f='spoon'; else if(k.includes('tongs'))f='tongs'; else if(k.includes('spatula'))f='spatula'; else if(k.includes('whisk'))f='whisk';
- else if(k.includes('grater'))f='grater'; else if(k.includes('colander'))f='colander'; else if(k.includes('measure'))f='measure'; else if(k.includes('scale'))f='scale';
- else if(k.includes('thermometer'))f='thermometer'; else if(k.includes('timer'))f='timer'; else if(k.includes('blender'))f='blender'; else if(k.includes('citrus'))f='citrus';
- else if(k.includes('brush'))f='brush'; else if(k.includes('squeeze'))f='squeeze'; else if(k.includes('plate'))f='plate'; else if(k.includes('glove'))f='glove';
- else if(k.includes('ice'))f='ice';
- if(!f){
-  if(/cuchillo/.test(n))f='knife'; else if(/tijera/.test(n))f='scissors'; else if(/tabla/.test(n))f='board'; else if(/tazón|tazon|bowl|ramekin/.test(n))f='bowl';
-  else if(/cuchar|cucharón|cucharon/.test(n))f='spoon'; else if(/pinza/.test(n))f='tongs'; else if(/espátula|espatula/.test(n))f='spatula';
-  else if(/batidor/.test(n))f='whisk'; else if(/rallador|microplane/.test(n))f='grater'; else if(/colador|tamiz|escurridor/.test(n))f='colander';
-  else if(/medidora|taza medidora|jarra medidora|jigger|regla de porciones/.test(n))f='measure'; else if(/báscula|bascula|balanza/.test(n))f='scale';
-  else if(/termómetro|termometro/.test(n))f='thermometer'; else if(/temporizador|cronómetro|cronometro/.test(n))f='timer';
-  else if(/licuadora|procesador|batidora de pedestal/.test(n))f='blender'; else if(/exprimidor/.test(n))f='citrus'; else if(/brocha/.test(n))f='brush';
-  else if(/squeeze|dispensador|vertedor/.test(n))f='squeeze'; else if(/plato|charola|bandeja|canasta|rack/.test(n))f='plate'; else if(/guante/.test(n))f='glove'; else if(/hielo|pala para hielo/.test(n))f='ice';
-  else if(/sartén|sarten|comal|plancha|parrilla/.test(n))f='pan'; else if(/olla|cacerola|freidora|salamandra|horno|microondas/.test(n))f='pot';
-  else if(/pelador/.test(n))f='peeler'; else if(/mandolina/.test(n))f='mandoline'; else if(/prensa de ajo/.test(n))f='garlic'; else if(/mortero|machacador|muddler/.test(n))f='mortar';
-  else if(/rodillo/.test(n))f='rolling'; else if(/prensa de papa/.test(n))f='ricer'; else if(/abrelatas/.test(n))f='canopener';
-  else if(/coctelera/.test(n))f='shaker'; else if(/vaso mezclador/.test(n))f='mixingglass'; else if(/sacacorchos/.test(n))f='corkscrew'; else if(/delantal/.test(n))f='apron';
-  else if(/porta tacos/.test(n))f='tacoholder'; else if(/sartén|sarten/.test(n))f='pan';
+ const name=String(label||'Utensilio'), n=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(), k=String(iconKey||'').toLowerCase();
+ const blue='#0d3b78', mid='#2366ad', pale='#d8e7f7', white='#fff';
+ const path=(d,fill=blue,extra='')=>`<path d="${d}" fill="${fill}" ${extra}/>`;
+ const rect=(x,y,w,h,r=5,fill=blue,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" ${extra}/>`;
+ const ellipse=(cx,cy,rx,ry,fill=blue,extra='')=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" ${extra}/>`;
+ const line=(d,w=5,color=blue)=>`<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+ let f=k.replace(/^board-.*/, 'board');
+ if(!f||f==='other'||f==='bar'){
+  if(/tabla/.test(n))f='board';else if(/cuchillo/.test(n))f='knife';else if(/tijera/.test(n))f='scissors';
+  else if(/tenedor|trinche/.test(n))f='fork';else if(/cuchar|cucharon|muddler/.test(n))f='spoon';
+  else if(/pinza/.test(n))f='tongs';else if(/espatula/.test(n))f='spatula';else if(/batidor/.test(n))f='whisk';
+  else if(/bowl|tazon|ramekin/.test(n))f='bowl';else if(/rallador|microplane/.test(n))f='grater';
+  else if(/colador|tamiz|escurridor/.test(n))f='colander';else if(/medidora|medidor|jigger|regla de porciones/.test(n))f='measure';
+  else if(/bascula|balanza/.test(n))f='scale';else if(/termometro/.test(n))f='thermometer';else if(/temporizador|cronometro/.test(n))f='timer';
+  else if(/licuadora|procesador|batidora/.test(n))f='blender';else if(/exprimidor/.test(n))f='citrus';else if(/brocha/.test(n))f='brush';
+  else if(/squeeze|dispensador|vertedor/.test(n))f='squeeze';else if(/plato|charola|bandeja|canasta|rack/.test(n))f='plate';
+  else if(/guante/.test(n))f='glove';else if(/hielo|pala para hielo/.test(n))f='ice';else if(/sarten|comal|plancha|parrilla/.test(n))f='pan';
+  else if(/olla|cacerola|freidora|salamandra|horno|microondas/.test(n))f='pot';else if(/pelador/.test(n))f='peeler';
+  else if(/mandolina/.test(n))f='mandoline';else if(/prensa de ajo/.test(n))f='garlic';else if(/mortero|machacador/.test(n))f='mortar';
+  else if(/rodillo/.test(n))f='rolling';else if(/prensa de papa/.test(n))f='ricer';else if(/abrelatas/.test(n))f='canopener';
+  else if(/coctelera/.test(n))f='shaker';else if(/vaso mezclador/.test(n))f='mixingglass';else if(/sacacorchos/.test(n))f='corkscrew';
+  else if(/delantal/.test(n))f='apron';else if(/porta tacos/.test(n))f='tacoholder';else f='equipment';
  }
- let shape='';
- if(f==='knife'){
-   let blade='M24 57 C42 34 72 24 105 31 C91 46 73 56 51 61 L34 67 Z';
-   if(/puntilla/.test(n)) blade='M31 58 C46 41 68 33 94 36 C82 47 68 54 52 59 L41 65 Z';
-   if(/filetear|filete/.test(n)) blade='M22 58 C44 27 78 20 108 28 C94 44 74 54 52 60 L35 68 Z';
-   if(/deshuesar/.test(n)) blade='M29 58 C45 39 65 31 95 34 C83 47 68 54 50 60 L40 68 Z';
-   if(/pan|serrucho/.test(n)) blade='M24 57 C45 35 76 27 106 32 L84 53 L51 67 Z';
-   if(/queso/.test(n)) blade='M29 48 H95 L74 75 H29 Z';
-   shape=P(blade,soft,3)+P('M24 57 L44 69 L39 78 L20 66 Z',dark,2.2)+R(15,62,31,16,7,dark,2)+C(40,70,2.6,'#fff',1.5);
-   if(/pan|serrucho/.test(n)) for(let i=0;i<9;i++) shape+=P(`M${48+i*5} ${61-i*1.1} l3 4`,'none',1.6);
-   if(/queso/.test(n)) for(let x of [47,62,77,90]) shape+=C(x,58,2.5,'#fff',1.3);
- } else if(f==='scissors'){
-   shape=C(34,43,11)+C(34,83,11)+P('M42 49 L109 24 M42 77 L109 102','none',3.3)+P('M49 52 L76 64 L49 73','none',2.2)+C(79,63,3,soft,1.5);
- } else if(f==='board'){
-   let tone='#8b9299';
-   if(/roja|carnes rojas/.test(n))tone='#d71920';
-   else if(/azul|pescados|mariscos/.test(n))tone='#1684d8';
-   else if(/amarilla|amarillo|aves/.test(n))tone='#f4c20d';
-   else if(/verde|frutas|verduras/.test(n))tone='#1c9b45';
-   else if(/blanca|blanco|lácteos|lacteos|panes/.test(n))tone='#f4f4f2';
-   else if(/marr[oó]n|marron|cocinados|cocinado/.test(n))tone='#8b5a2b';
-   else if(/morada|morado|alérgen|alergen/.test(n))tone='#6d3fa8';
-   else if(/naranja|naranj|listos|consumo/.test(n))tone='#f28c18';
-   else if(/negra|negro|panader|pasteler/.test(n))tone='#252525';
-   const boardFill=/blanca|blanco/.test(n)?'#fbfbfa':tone;
-   shape=R(22,18,84,92,11,boardFill,3)+R(30,27,68,66,7,'none',1.1)+C(42,33,3.3,'#fff',1.3);
- } else if(f==='bowl'){
-   shape=P('M18 48 Q64 58 110 48 C106 79 91 98 64 101 C37 98 22 79 18 48 Z','#f5f7f8',3)+P('M18 48 Q64 61 110 48','none',3)+P('M30 64 Q64 73 98 64 M35 77 Q64 84 93 77','none',1.4);
- } else if(f==='spoon'){
-   shape=P('M37 69 C20 66 17 48 27 39 C38 29 55 35 58 47 C60 57 52 66 42 69 L110 69','none',3)+C(37,51,11,'#fff',3)+L(58,69,110,69,3);
- } else if(f==='tongs'){
-   shape=P('M25 94 C20 101 29 108 38 99 L103 37','none',3)+P('M25 37 C19 29 28 21 38 30 L103 92','none',3)+C(25,95,6,'#fff',2)+C(25,34,6,'#fff',2)+P('M96 31 L111 24 M96 97 L111 104','none',2.2);
- } else if(f==='spatula'){
-   const fish=/fish|pescado/.test(n); shape=R(18,44,51,31,5,soft,3)+P('M69 60 H112','none',5)+P('M101 53 L112 60 L101 67','none',2.3);
-   if(fish)for(const [x,y] of [[30,54],[42,54],[54,54],[30,65],[42,65],[54,65]])shape+=C(x,y,2,'#fff',1.4);
- } else if(f==='whisk'){
-   shape=L(27,94,82,38,4)+P('M79 34 C102 28 112 39 94 49 C109 57 109 69 93 75 C108 83 102 95 84 94','none',2.5)+P('M82 38 C94 45 96 56 87 64 C98 72 98 82 86 91','none',2)+P('M83 39 C73 51 76 65 88 75','none',1.7);
- } else if(f==='grater'){
-   shape=P('M40 20 H88 L94 103 H34 Z',soft,3)+R(51,16,26,8,4,dark,2)+P('M48 31 L54 92 M60 30 L66 92 M72 29 L78 92','none',1.5);
-   for(let y=40;y<91;y+=12)for(let x of [48,61,74])shape+=C(x,y,1.7,'#fff',1.1);
- } else if(f==='colander'){
-   shape=P('M18 43 Q64 53 110 43 L100 82 Q64 105 28 82 Z',soft,3)+P('M18 43 Q64 56 110 43','none',3)+L(110,43,120,28,2.5);
-   for(let x=38;x<=90;x+=13)for(let y=62;y<=79;y+=10)shape+=C(x,y,2,'#fff',1.2);
- } else if(f==='measure'){
-   if(/jigger/.test(n)) shape=P('M39 30 H62 L57 65 H44 Z',soft,3)+P('M67 65 H90 L85 30 H72 Z',soft,3)+L(48,45,57,45,1.5)+L(74,45,83,45,1.5);
-   else if(/regla/.test(n)) shape=R(19,48,92,25,3,'#fff',3)+[28,40,52,64,76,88,100].map((x,i)=>L(x,48,x, i%2?59:65,1.5)).join('');
-   else shape=R(28,23,57,76,4,'#fff',3)+P('M85 43 Q111 43 111 61 Q111 79 85 79','none',3)+L(38,42,72,42,1.4)+L(38,57,72,57,1.4)+L(38,72,72,72,1.4)+L(46,92,76,92,2);
- } else if(f==='scale'){
-   shape=R(28,37,72,56,8,soft,3)+R(45,49,38,19,3,'#fff',2)+P('M64 58 L73 53','none',2)+L(52,78,76,78,2)+P('M23 94 H105','none',3)+P('M42 37 Q64 25 86 37','none',2);
- } else if(f==='thermometer'){
-   shape=R(57,17,14,75,7,'#fff',3)+C(64,99,15,'#eef2f5',2.5)+L(64,30,64,91,3)+L(71,42,77,42,1.4)+L(71,55,77,55,1.4)+L(71,68,77,68,1.4);
- } else if(f==='timer'){
-   shape=C(64,66,34,'#fff',3)+P('M64 66 L64 46 M64 66 L82 75','none',3)+R(57,19,14,10,3,soft,2)+L(52,24,43,24,2)+L(76,24,85,24,2)+P('M44 43 L37 36 M84 43 L91 36','none',1.8);
- } else if(f==='blender'){
-   shape=R(39,19,50,10,4,soft,3)+P('M40 29 L45 77 Q64 91 83 77 L88 29 Z','#fff',3)+R(45,77,38,23,5,soft,3)+C(64,89,5,'#fff',2)+L(49,42,79,42,1.3)+L(50,54,78,54,1.3);
- } else if(f==='citrus'){
-   shape=P('M27 100 L39 46 Q64 30 89 46 L101 100 Z',soft,3)+P('M39 47 Q64 74 89 47','none',3)+P('M46 47 Q64 38 82 47','none',2)+C(64,64,4,'#fff',1.5);
- } else if(f==='brush'){
-   shape=L(27,96,84,39,7)+R(79,27,29,19,3,soft,2)+P('M82 29 L107 17 L99 48 L82 40','none',2)+L(86,31,101,23,1.2)+L(87,36,102,28,1.2);
- } else if(f==='squeeze'){
-   shape=P('M38 28 H88 L95 96 Q64 106 33 96 Z','#fff',3)+P('M70 28 L95 17 L108 25','none',3)+L(46,45,83,45,1.4)+L(48,57,85,57,1.4)+L(49,69,86,69,1.4);
- } else if(f==='plate'){
-   shape=`<ellipse cx="64" cy="64" rx="48" ry="35" fill="#fff" stroke="${stroke}" stroke-width="3"/><ellipse cx="64" cy="64" rx="34" ry="24" fill="#eef2f5" stroke="${stroke}" stroke-width="2"/><ellipse cx="64" cy="64" rx="20" ry="12" fill="#fff" stroke="${stroke}" stroke-width="2"/>`;
- } else if(f==='glove'){
-   shape=P('M47 99 L32 61 Q29 52 36 49 Q42 47 46 55 L49 66 L48 39 Q48 30 55 30 Q62 30 62 39 V62 L64 32 Q65 24 72 25 Q79 26 78 35 L76 64 L81 42 Q83 34 90 36 Q96 38 93 47 L87 74 Q82 96 65 101 Z',soft,3)+L(55,75,78,87,1.2);
- } else if(f==='ice'){
-   shape=P('M33 28 L89 28 L104 80 L64 104 L24 80 Z',soft,3)+P('M33 28 L64 54 L89 28 M64 54 V104 M24 80 L64 54 L104 80','none',2);
- } else if(f==='pan'){
-   shape=R(24,42,69,44,18,soft,3)+P('M90 53 H111 Q119 53 119 60 Q119 67 111 67 H91','none',3)+P('M30 49 Q64 59 88 49','none',1.5);
-   if(/comal|plancha|parrilla/.test(n)) shape=R(21,42,78,46,8,soft,3)+P('M31 53 H89 M31 65 H89 M31 77 H89','none',1.5)+P('M99 55 H116 M99 75 H116','none',3);
- } else if(f==='pot'){
-   shape=R(34,34,60,60,9,soft,3)+P('M30 46 H21 Q15 46 15 52 Q15 58 21 58 H34 M94 46 H107 Q113 46 113 52 Q113 58 107 58 H94','none',3)+P('M42 33 Q64 20 86 33','none',3)+P('M47 27 Q64 19 81 27','none',2)+C(64,23,3,soft,2);
- } else if(f==='peeler'){
-   shape=R(27,49,58,15,7,soft,3)+P('M85 56 H112','none',3)+P('M91 49 L99 63','none',2)+L(35,56,77,56,1.4);
- } else if(f==='mandoline'){
-   shape=P('M33 23 L96 31 L83 102 L20 94 Z',soft,3)+P('M37 39 L88 46 M34 53 L86 60 M31 67 L83 74','none',1.5)+P('M47 30 L53 87','none',1.5)+R(46,41,38,7,2,'#fff',2);
- } else if(f==='garlic'){
-   shape=P('M42 35 Q53 22 64 35 L88 83 Q92 97 78 102 H50 Q36 97 40 83 Z',soft,3)+P('M64 35 V83 M49 55 Q64 48 79 55','none',1.7)+C(64,90,3,'#fff',1.3);
- } else if(f==='mortar'){
-   shape=P('M28 46 Q64 60 100 46 L93 91 Q64 105 35 91 Z',soft,3)+P('M28 46 Q64 57 100 46','none',3)+P('M91 31 L76 71','none',7)+P('M91 31 L101 24','none',3);
- } else if(f==='rolling'){
-   shape=L(24,64,104,64,7)+C(19,64,8,soft,3)+C(109,64,8,soft,3)+L(37,55,91,55,1.4)+L(37,73,91,73,1.4);
- } else if(f==='ricer'){
-   shape=P('M31 43 H83 L92 57 L82 91 H39 Z',soft,3)+P('M83 43 L105 32 L111 39 L92 57','none',3)+P('M47 59 H75 M45 69 H73 M44 79 H72','none',1.5);
- } else if(f==='canopener'){
-   shape=C(55,57,22,soft,3)+P('M69 44 L101 29 Q109 26 112 33 L91 48','none',3)+C(91,48,5,'#fff',2)+P('M33 72 L22 89','none',4);
- } else if(f==='shaker'){
-   shape=P('M39 27 H89 L84 96 Q64 106 44 96 Z',soft,3)+P('M39 27 L47 17 H81 L89 27','none',3)+R(50,11,28,8,3,soft,2)+L(50,44,79,44,1.2);
- } else if(f==='mixingglass'){
-   shape=P('M35 27 H93 L84 101 H44 Z','#fff',3)+P('M93 35 H108 Q115 35 115 42 Q115 49 108 49 H91','none',3)+L(47,44,81,44,1.4)+L(46,58,80,58,1.4);
- } else if(f==='corkscrew'){
-   shape=P('M44 29 H83 L75 62 H52 Z',soft,3)+P('M64 62 C46 72 47 90 62 96 C78 102 91 89 78 76','none',3)+L(63,29,63,55,2.5)+P('M55 22 H72','none',3);
- } else if(f==='apron'){
-   shape=P('M44 25 Q64 37 84 25 L93 101 H35 Z',soft,3)+P('M47 25 Q64 37 81 25','none',3)+P('M35 65 H93','none',1.3)+P('M47 73 H58 V89 H47 Z','none',1.5);
- } else if(f==='tacoholder'){
-   shape=R(26,38,76,51,7,soft,3)+P('M40 38 V57 Q40 64 47 64 H50 Q57 64 57 57 V38 M71 38 V57 Q71 64 78 64 H81 Q88 64 88 57 V38','none',3);
- } else {
-   shape=R(25,34,78,62,8,soft,3)+L(42,52,86,52,1.6)+L(42,70,80,70,1.6);
+ let art='';
+ if(f==='board'){
+  let c='#8d969f';if(/roja/.test(n))c='#cf202d';else if(/azul/.test(n))c='#1684d8';else if(/amarilla/.test(n))c='#f4c20d';else if(/verde/.test(n))c='#178c4a';else if(/blanca/.test(n))c='#fafafa';else if(/marron/.test(n))c='#8b5a2b';else if(/morada/.test(n))c='#7044a5';else if(/naranja/.test(n))c='#ef801d';else if(/negra/.test(n))c='#30343a';
+  art=rect(20,15,88,100,13,c,`stroke="${blue}" stroke-width="3"`)+rect(29,24,70,80,8,'none',`stroke="${/blanca/.test(n)?blue:'rgba(255,255,255,.38)'}" stroke-width="1.6"`)+ellipse(42,29,3.2,3.2,white);
+ }else if(f==='knife'){
+  let blade='M36 74 L46 43 Q73 19 112 17 Q99 45 69 63 L43 79 Z';
+  if(/puntilla/.test(n))blade='M36 74 L49 50 Q73 31 104 27 Q88 48 65 65 L43 79 Z';
+  if(/filetear/.test(n))blade='M36 74 Q58 35 110 19 Q99 49 69 64 L43 79 Z';
+  if(/deshuesar/.test(n))blade='M36 74 Q49 48 97 28 Q88 50 66 66 L43 79 Z';
+  if(/pan|serrucho/.test(n))blade='M36 74 L47 45 Q78 23 111 20 L88 50 L69 63 L43 79 Z';
+  if(/queso/.test(n))blade='M36 72 L48 44 L104 42 L80 76 L43 80 Z';
+  art=path(blade)+path('M48 45 Q73 26 101 23 Q84 43 56 57 Z',pale)+path('M39 68 L53 78 L40 96 Q34 103 26 98 L14 91 Q10 88 14 82 L25 68 Q30 63 39 68 Z')+rect(14,81,31,20,8,blue)+ellipse(26,91,2.2,2.2,white);
+  if(/pan|serrucho/.test(n))art+=line('M49 60 l4 4 3-5 4 4 3-5 4 4 3-5 4 4 3-5',2.5,white);
+  if(/queso/.test(n))for(const [x,y] of [[62,55],[76,54],[89,53],[68,67],[82,66]])art+=ellipse(x,y,2.2,2.2,white);
+ }else if(f==='scissors'){
+  art=path('M47 62 L105 23 Q111 20 114 25 Q117 30 111 34 L58 69 Z')+path('M47 69 L106 97 Q112 100 109 105 Q106 110 100 107 L43 81 Z')+ellipse(29,47,15,15,'none',`stroke="${blue}" stroke-width="8"`)+ellipse(29,89,15,15,'none',`stroke="${blue}" stroke-width="8"`)+ellipse(29,47,7,7,white)+ellipse(29,89,7,7,white)+ellipse(53,66,5,5,mid);
+ }else if(f==='fork'){
+  art=rect(57,58,14,58,7)+path('M45 15 Q49 15 49 21 L49 50 Q49 54 53 54 Q57 54 57 50 L57 17 Q57 12 64 12 Q71 12 71 17 L71 50 Q71 54 75 54 Q79 54 79 50 L79 21 Q79 15 83 15 Q88 15 88 21 L88 47 Q88 69 64 72 Q40 69 40 47 L40 21 Q40 15 45 15 Z');
+ }else if(f==='bowl'){
+  art=path('M16 49 Q64 60 112 49 Q108 92 82 104 Q64 112 46 104 Q20 92 16 49 Z')+path('M21 56 Q64 66 107 56 L105 66 Q64 77 23 66 Z',mid)+path('M37 86 Q64 96 91 86', 'none',`stroke="${pale}" stroke-width="4" stroke-linecap="round"`);
+ }else if(f==='spoon'){
+  art=path('M33 68 C13 62 11 40 25 27 C39 14 61 22 63 41 C64 54 54 65 42 69 L113 69 Q120 69 120 75 Q120 81 113 81 L41 81 Q33 80 33 68 Z')+path('M24 43 Q26 30 39 29 Q49 29 52 40 Q53 49 43 55 Q32 60 24 43 Z',mid);
+  if(/ranurada|slotted|cuchara de servicio/.test(n))for(const x of [31,40,49])art+=rect(x,42,3,10,1,white);
+  if(/cucharon|cucharón/.test(n))art=path('M36 71 C10 63 10 34 29 22 C48 10 70 24 68 45 C67 59 55 69 44 72 L112 72 Q120 72 120 79 Q120 86 112 86 L42 86 Q34 85 36 71 Z')+path('M25 43 Q28 26 43 27 Q58 30 56 44 Q54 56 41 60 Q29 59 25 43 Z',mid);
+ }else if(f==='tongs'){
+  art=path('M28 27 Q36 20 43 29 L104 92 Q111 99 104 106 Q97 113 90 105 L29 43 Q21 35 28 27 Z')+path('M91 26 Q98 19 105 26 Q112 33 105 40 L43 103 Q36 110 29 103 Q22 96 29 89 Z')+ellipse(32,34,7,7,mid)+ellipse(100,33,7,7,mid);
+ }else if(f==='spatula'){
+  if(/fish|pescado|plancha|metalica/.test(n))art=path('M18 36 Q25 26 39 27 L70 29 Q80 30 81 39 L81 64 Q81 72 70 73 L38 73 Q24 73 18 64 Z')+path('M81 48 L116 48 Q121 48 121 53 Q121 58 116 58 L81 58 Z');
+  else art=path('M31 23 Q39 17 47 23 L70 38 L83 38 L83 47 L73 47 L51 109 Q48 117 41 114 Q34 111 37 103 L57 48 L48 48 L25 36 Q18 31 23 25 Z');
+  if(/fish|pescado/.test(n))for(const [x,y] of [[34,41],[48,41],[62,41],[34,57],[48,57],[62,57]])art+=ellipse(x,y,2.2,2.2,white);
+ }else if(f==='whisk'){
+  art=rect(58,62,12,57,6)+ellipse(64,47,32,37,'none',`stroke="${blue}" stroke-width="5"`)+ellipse(64,47,23,30,'none',`stroke="${mid}" stroke-width="3"`)+ellipse(64,47,13,22,'none',`stroke="${blue}" stroke-width="3"`)+ellipse(64,47,5,13,'none',`stroke="${blue}" stroke-width="3"`)+rect(55,109,18,9,4,mid);
+ }else if(f==='grater'||f==='mandoline'){
+  if(f==='grater'){
+   art=path('M41 19 Q64 10 87 19 L102 99 Q103 106 95 107 L33 107 Q25 106 27 98 Z')+rect(48,12,32,10,4,mid);
+   for(let x of [44,59,74,88])for(let y of [39,54,69,84])art+=ellipse(x,y,3,4,white)+ellipse(x,y+1,1.4,2,mid);
+  }else art=path('M25 17 L104 27 L88 111 L12 99 Z')+path('M35 32 L91 39 L88 50 L32 43 Z',mid)+rect(31,55,56,6,2,white)+rect(28,73,55,5,2,white)+rect(25,88,52,5,2,white);
+ }else if(f==='colander'){
+  art=path('M17 38 Q64 50 111 38 L101 81 Q64 110 27 81 Z')+path('M20 43 Q64 55 108 43 L105 55 Q64 67 23 55 Z',mid)+path('M19 43 L10 29 Q7 23 13 20 Q19 18 22 24 L31 41 Z')+path('M109 43 L118 29 Q121 23 115 20 Q109 18 106 24 L97 41 Z');
+  for(let x of [39,53,67,81])for(let y of [68,81])art+=ellipse(x,y,2.3,2.3,white);
+ }else if(f==='measure'){
+  if(/jigger/.test(n))art=path('M27 17 L56 17 L52 57 L63 65 L74 57 L70 17 L100 17 L96 62 L64 78 L31 62 Z')+path('M34 28 H51 L50 37 H33 Z M76 28 H93 L92 37 H75 Z',mid);
+  else if(/regla/.test(n))art=rect(12,43,104,39,7,pale)+rect(12,43,104,10,5,blue)+[25,39,53,67,81,95,109].map((x,i)=>rect(x,54,3,i%2?12:21,1,blue)).join('');
+  else if(/cuchara medidora/.test(n))art=ellipse(35,57,21,17,blue)+ellipse(35,55,14,9,pale)+rect(51,52,64,10,5,blue)+rect(104,52,12,10,4,mid);
+  else art=path('M30 17 H82 L78 96 Q77 104 69 108 H41 Q33 104 33 96 Z')+path('M82 34 Q111 30 112 48 L111 71 Q110 84 80 82 Z')+path('M38 49 H72 V56 H38 Z M38 67 H72 V74 H38 Z M38 85 H69 V91 H38 Z',pale);
+ }else if(f==='scale'){
+  art=path('M28 38 Q64 19 100 38 L108 99 Q109 107 100 108 H28 Q19 107 20 99 Z')+rect(40,48,48,29,6,pale)+path('M64 64 L76 54 L71 68 Z',mid)+rect(43,85,42,7,3,mid)+rect(48,14,32,8,4,blue);
+ }else if(f==='thermometer'){
+  art=rect(55,15,18,76,9,blue)+ellipse(64,96,20,20,blue)+rect(61,31,6,59,3,white)+ellipse(64,96,9,9,mid)+rect(72,39,13,4,2,blue)+rect(72,55,10,4,2,blue)+rect(72,71,13,4,2,blue);
+ }else if(f==='timer'){
+  art=ellipse(64,68,40,40,blue)+ellipse(64,68,31,31,white)+rect(54,14,20,13,5,blue)+rect(45,24,38,7,3,mid)+path('M64 67 L64 43 L70 43 L70 64 L88 76 L84 82 Z');
+ }else if(f==='blender'){
+  if(/pedestal/.test(n))art=path('M33 24 Q64 14 95 24 L90 73 Q87 81 64 83 Q41 81 38 73 Z')+path('M40 82 Q29 90 28 109 L100 109 Q99 90 88 82 Z')+rect(44,94,40,8,4,mid)+ellipse(64,70,4,4,white);
+  else if(/inmersion/.test(n))art=rect(54,13,20,28,6)+rect(59,38,10,62,4)+path('M55 96 Q64 88 73 96 L81 112 Q64 121 47 112 Z')+path('M54 105 Q64 110 74 105', 'none',`stroke="${white}" stroke-width="3"`);
+  else art=rect(42,16,44,12,5)+path('M39 28 H89 L84 78 Q64 91 44 78 Z')+path('M45 78 Q64 86 83 78 L91 105 H37 Z')+ellipse(64,94,7,7,mid)+rect(49,42,30,5,2,pale)+rect(51,55,26,5,2,pale);
+ }else if(f==='citrus'){
+  art=path('M23 101 Q25 54 42 43 Q51 37 64 40 Q77 37 86 43 Q103 54 105 101 Z')+path('M35 49 Q64 73 93 49 L87 63 Q64 82 41 63 Z',mid)+path('M42 45 Q64 26 86 45 L78 54 Q64 46 50 54 Z');
+ }else if(f==='brush'){
+  art=path('M25 94 L77 40 L91 54 L40 107 Q32 113 25 106 Q20 100 25 94 Z')+path('M76 40 L98 17 Q104 12 110 18 L112 34 L91 55 Z')+path('M99 18 L103 43 M105 22 L109 38', 'none',`stroke="${white}" stroke-width="3"`);
+ }else if(f==='squeeze'){
+  art=path('M37 26 H89 L96 105 Q64 116 32 105 Z')+path('M54 26 L58 16 H79 L85 26 Z')+path('M77 17 L99 7 L106 14 L88 28 Z')+rect(44,44,42,5,2,pale)+rect(46,59,42,5,2,pale)+rect(47,75,42,5,2,pale);
+ }else if(f==='plate'){
+  if(/gastronorm|hotel pan|charola|bandeja/.test(n))art=rect(17,30,94,72,10,blue)+rect(23,36,82,59,7,pale)+rect(30,43,68,45,5,'#f5f8fc');
+  else if(/canasta/.test(n))art=path('M22 42 H106 L96 92 Q64 110 32 92 Z')+path('M17 39 Q64 48 111 39 L108 50 Q64 60 20 50 Z',mid)+[38,54,70,86].map(x=>rect(x,63,4,18,2,white)).join('');
+  else art=ellipse(64,65,51,37,blue)+ellipse(64,64,41,28,white)+ellipse(64,64,27,17,pale)+ellipse(64,64,15,9,white);
+ }else if(f==='glove'){
+  art=path('M38 108 L22 70 Q17 58 25 54 Q34 51 40 66 L37 38 Q36 28 45 26 Q54 25 56 36 L59 58 L60 29 Q61 19 70 19 Q79 20 79 31 L78 60 L84 39 Q87 30 96 34 Q104 38 100 49 L90 83 Q84 106 67 113 Z')+path('M46 78 Q61 87 80 77', 'none',`stroke="${white}" stroke-width="4"`);
+ }else if(f==='ice'){
+  art=path('M33 21 H84 L101 52 L86 103 H31 L16 52 Z')+path('M31 36 L70 36 L81 52 L69 86 H34 L25 52 Z',mid)+path('M28 48 H79 M34 68 H74', 'none',`stroke="${white}" stroke-width="3"`);
+ }else if(f==='pan'){
+  if(/comal|plancha|parrilla/.test(n))art=path('M20 35 Q64 24 108 35 L101 84 Q64 100 27 84 Z')+rect(46,82,36,9,4,blue)+rect(93,49,26,11,5,blue)+rect(29,45,69,6,2,pale)+rect(30,61,68,6,2,pale);
+  else art=ellipse(58,63,44,35,blue)+ellipse(58,58,36,27,pale)+rect(91,54,32,12,6,blue)+ellipse(118,60,5,6,mid);
+ }else if(f==='pot'){
+  if(/horno|microondas|salamandra/.test(n))art=rect(20,22,88,83,9,blue)+rect(28,31,72,55,5,pale)+rect(37,39,54,39,3,'#f5f8fc')+ellipse(97,96,4,4,white)+ellipse(84,96,4,4,white);
+  else art=path('M29 43 H99 L95 96 Q64 110 33 96 Z')+rect(20,48,16,10,5,blue)+rect(92,48,16,10,5,blue)+path('M23 37 Q64 22 105 37 L100 45 H28 Z')+rect(56,18,16,7,4,mid)+path('M40 65 Q64 74 88 65', 'none',`stroke="${pale}" stroke-width="4"`);
+ }else if(f==='peeler'){
+  art=rect(17,56,76,16,7,blue)+path('M89 51 L117 42 Q122 41 122 47 L120 82 Q119 87 114 84 L91 76 Z')+rect(97,55,18,8,3,pale)+rect(33,61,37,5,2,mid);
+ }else if(f==='garlic'){
+  art=path('M32 39 Q36 20 54 20 L80 20 Q96 21 99 39 L88 53 L103 91 Q105 104 91 108 H38 Q24 104 27 91 L42 53 Z')+path('M42 51 L87 51 L76 82 H53 Z',mid)+ellipse(64,91,8,6,white)+path('M48 39 Q64 30 82 39', 'none',`stroke="${white}" stroke-width="3"`);
+ }else if(f==='mortar'){
+  if(/machacador|muddler/.test(n))art=rect(54,17,20,53,9,blue)+path('M34 61 Q64 74 94 61 L88 96 Q64 107 40 96 Z')+path('M38 69 Q64 78 90 69', 'none',`stroke="${pale}" stroke-width="4"`);
+  else art=path('M29 42 Q64 54 99 42 L91 96 Q64 110 37 96 Z')+path('M34 43 Q64 52 94 43', 'none',`stroke="${pale}" stroke-width="4"`)+path('M88 16 L70 67 Q68 73 74 77 Q81 79 84 72 L104 22 Z')+rect(84,12,23,12,6,mid);
+ }else if(f==='rolling'){
+  art=rect(30,47,68,34,16,blue)+rect(9,57,29,14,7,mid)+rect(90,57,29,14,7,mid)+rect(43,54,42,20,8,pale);
+ }else if(f==='ricer'){
+  art=path('M23 36 H88 Q98 36 100 47 L94 77 Q90 88 78 88 H34 Q23 87 21 75 Z')+path('M84 41 L108 18 Q115 14 119 21 L122 28 L98 53 Z')+rect(35,54,46,7,3,pale)+rect(33,68,48,7,3,pale);
+ }else if(f==='canopener'){
+  art=ellipse(49,57,30,30,blue)+ellipse(49,57,17,17,pale)+path('M70 43 L106 25 Q113 22 116 30 L93 48 L85 74 L69 67 Z')+ellipse(94,47,7,7,mid)+rect(24,83,50,12,6,blue);
+ }else if(f==='shaker'){
+  art=path('M39 28 H89 L84 102 Q64 113 44 102 Z')+path('M34 27 L45 13 H83 L94 27 Z')+rect(52,9,24,7,3,mid)+rect(46,48,37,6,3,pale);
+ }else if(f==='mixingglass'){
+  art=path('M31 22 H91 L83 108 H39 Z')+path('M91 31 H106 Q117 31 117 42 Q117 53 106 53 H88 Z')+rect(43,45,38,5,2,pale)+rect(42,62,37,5,2,pale)+rect(41,79,36,5,2,pale);
+ }else if(f==='corkscrew'){
+  art=path('M43 19 H85 L79 54 H49 Z')+path('M64 54 C40 62 39 93 61 100 C82 107 99 88 82 70 Q76 64 69 64', 'none',`stroke="${blue}" stroke-width="8"`)+rect(58,19,12,43,5,mid)+rect(47,14,34,8,4,blue);
+ }else if(f==='apron'){
+  art=path('M42 22 Q64 38 86 22 L101 108 H27 Z')+path('M46 25 Q64 43 82 25', 'none',`stroke="${white}" stroke-width="4"`)+rect(43,67,42,25,4,mid)+path('M27 57 L11 45 M101 57 L117 45','none',`stroke="${blue}" stroke-width="5"`);
+ }else if(f==='tacoholder'){
+  art=rect(18,45,92,55,9,blue)+path('M37 44 V68 Q37 77 47 77 H52 Q62 77 62 68 V44 M67 44 V68 Q67 77 77 77 H82 Q92 77 92 68 V44','none',`stroke="${white}" stroke-width="7"`)+rect(25,88,78,6,3,mid);
+ }else{
+  art=rect(20,27,88,75,10,blue)+rect(28,35,72,59,6,pale)+rect(39,47,50,8,3,blue)+rect(39,65,40,7,3,blue)+rect(39,81,31,6,3,blue);
  }
- const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="${safe}"><rect width="128" height="128" fill="#fff"/>${shape}</svg>`;
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="${name.replace(/[<>&"']/g,'')}"><rect width="128" height="128" fill="#fff"/><g>${art}</g></svg>`;
  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 }
 function utensilDefaults(){return [
@@ -2146,13 +2143,13 @@ function utensilDefaults(){return [
 ]}
 function seedRecipeUtensils(){
  state.recipeUtensils=Array.isArray(state.recipeUtensils)?state.recipeUtensils:[];let changed=false;
- const refreshAll=state.settings?.utensilIconStyle!=='lrx-professional-blue-v235';
+ const refreshAll=state.settings?.utensilIconStyle!=='lrx-silhouette-blue-v236';
  for(const [name,category,icon] of utensilDefaults()){
   let existing=state.recipeUtensils.find(x=>normMaster(x.name)===normMaster(name));
   if(!existing){state.recipeUtensils.push({id:'UT-'+normMaster(name).replace(/[^a-z0-9]+/g,'-')+'-'+Date.now().toString(36),name,category,photo:utensilSvg(name,icon),icon,photoSource:'LRX-REFERENCIA',active:true,createdAt:now()});changed=true}
   else {if(!existing.icon){existing.icon=icon;changed=true} if(refreshAll||!existing.photo||existing.photoSource==='LRX-REFERENCIA'||existing.photoSource==='LRX-VECTOR'){existing.photo=utensilSvg(name,existing.icon||icon);existing.photoSource='LRX-REFERENCIA';changed=true}}
  }
- if(refreshAll){for(const item of state.recipeUtensils){item.icon=item.icon||'other';item.photo=utensilSvg(item.name,item.icon);item.photoSource='LRX-REFERENCIA';}state.settings=state.settings||{};state.settings.utensilIconStyle='lrx-professional-blue-v235';changed=true}
+ if(refreshAll){for(const item of state.recipeUtensils){item.icon=item.icon||'other';item.photo=utensilSvg(item.name,item.icon);item.photoSource='LRX-REFERENCIA';}state.settings=state.settings||{};state.settings.utensilIconStyle='lrx-silhouette-blue-v236';changed=true}
  if(changed)save();
 }
 function updateDateChip(){
@@ -2828,7 +2825,7 @@ const V={
  configuracion:()=>generic(['configuracion','Configuración','Parámetros'])
 };
 
-async function init(){try{master=await (await fetch('./master.json?v=2026-10-02-v235')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(masterRecipeIsPrep); master.finalRecipes=master.recipes.filter(r=>!masterRecipeIsPrep(r)); master.suppliers=[...(master.suppliers||[])]; hydrateLegacyRecipeStores(); migrateLegacyMasterRecipeEdits(); hydrateMasterData(); seedRecipeUtensils();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();try{action(a.dataset.action,a.dataset.id,a)}catch(err){console.error("LRX action",a.dataset.action,err);toast("No se pudo ejecutar la acción: "+(err?.message||err))}return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const pq=document.getElementById('purchaseQ');if(pq){pq.oninput=e=>{state._purchaseQ=e.target.value;state._purchasePage=0;render();requestAnimationFrame(()=>{const x=document.getElementById('purchaseQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})}}const pf=document.getElementById('purchaseFilter');if(pf)pf.onchange=e=>{state._purchaseFilter=e.target.value;state._purchasePage=0;render()};const ps=document.getElementById('purchaseSize');if(ps)ps.onchange=e=>{state._purchaseSize=Number(e.target.value||25);state._purchasePage=0;render()};const dq=document.getElementById('digitalQ');if(dq)dq.addEventListener('input',e=>{state._digitalQ=e.target.value;render();requestAnimationFrame(()=>{const x=document.getElementById('digitalQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})});const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}const langChip=document.querySelector('.language-chip');if(langChip){langChip.removeAttribute('data-action');langChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();languageModal();};langChip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();languageModal()},{capture:true});}document.documentElement.lang=state.settings?.language==='en'?'en':'es';updateDateChip();updateLanguageChip();const vb=document.getElementById('voiceBtn');if(vb)vb.setAttribute('data-action','voice-action');const cb=document.getElementById('captureBtn');if(cb)cb.setAttribute('data-action','capture-documents');const cam=document.getElementById('cameraBtn');if(cam)cam.setAttribute('data-action','camera-capture');const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.setAttribute('data-action','notifications');if(pb)pb.setAttribute('data-action','profile');if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-02-v235',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
+async function init(){try{master=await (await fetch('./master.json?v=2026-10-02-v236')).json(); master.products=[...(master.products||[])]; master.recipes=[...(master.recipes||[])]; master.preps=master.recipes.filter(masterRecipeIsPrep); master.finalRecipes=master.recipes.filter(r=>!masterRecipeIsPrep(r)); master.suppliers=[...(master.suppliers||[])]; hydrateLegacyRecipeStores(); migrateLegacyMasterRecipeEdits(); hydrateMasterData(); seedRecipeUtensils();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}}catch(e){console.error('LRX master load',e);master={products:[],recipes:[],suppliers:[]};toast('No se pudo cargar master.json')}const initialHash=location.hash.slice(1);if(MODULES.some(m=>m[0]===initialHash))current=initialHash;try{render();}catch(e){console.error('LRX render fatal',e);const c=document.getElementById('content');if(c)c.innerHTML=`<div class="card"><h2>Error al cargar LRX</h2><p>El sistema encontró un error al iniciar.</p><pre style="white-space:pre-wrap;overflow:auto">${esc(e?.stack||e)}</pre><button class="btn primary" onclick="location.reload()">Recargar</button></div>`}try{console.info('LRX integration audit',integrationAudit(),deepSystemAudit())}catch(e){console.error('LRX audit',e)}document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');document.getElementById('modal').onclick=e=>{if(e.target.id==='modal')close()};document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){e.preventDefault();go(b.dataset.page)}});const syncHash=()=>{const h=location.hash.slice(1);if(MODULES.some(m=>m[0]===h)){current=h;render()}};window.onpopstate=syncHash;window.onhashchange=syncHash;document.addEventListener('click',e=>{const a=e.target.closest('[data-action]');if(a){e.preventDefault();e.stopPropagation();try{action(a.dataset.action,a.dataset.id,a)}catch(err){console.error("LRX action",a.dataset.action,err);toast("No se pudo ejecutar la acción: "+(err?.message||err))}return;}const j=e.target.closest('[data-jump]');if(j){e.preventDefault();e.stopPropagation();go(j.dataset.jump);}});setInterval(()=>document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'}),1000);document.getElementById('clock').textContent=new Date().toLocaleString('es-US',{dateStyle:'medium',timeStyle:'short'});const u=currentUser();const pn=document.getElementById('profileName'),pr=document.getElementById('profileRole'),pa=document.getElementById('profileAvatar');if(pn)pn.textContent=u.name||'Administrador LRX';if(pr)pr.textContent=u.role||'Administrador';if(pa)pa.textContent=String(u.name||'LRX').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();const gs=document.getElementById('globalSearch');if(gs){gs.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=String(gs.value||'').trim().toLowerCase();if(!q)return;const hit=MODULES.find(m=>m.join(' ').toLowerCase().includes(q));if(hit){go(hit[0]);gs.value='';}else toast('No se encontró un módulo con ese término');});}const pq=document.getElementById('purchaseQ');if(pq){pq.oninput=e=>{state._purchaseQ=e.target.value;state._purchasePage=0;render();requestAnimationFrame(()=>{const x=document.getElementById('purchaseQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})}}const pf=document.getElementById('purchaseFilter');if(pf)pf.onchange=e=>{state._purchaseFilter=e.target.value;state._purchasePage=0;render()};const ps=document.getElementById('purchaseSize');if(ps)ps.onchange=e=>{state._purchaseSize=Number(e.target.value||25);state._purchasePage=0;render()};const dq=document.getElementById('digitalQ');if(dq)dq.addEventListener('input',e=>{state._digitalQ=e.target.value;render();requestAnimationFrame(()=>{const x=document.getElementById('digitalQ');x?.focus();x?.setSelectionRange(x.value.length,x.value.length)})});const dateChip=document.querySelector('.date-chip');if(dateChip){dateChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();dateRangeModal();};dateChip.setAttribute('data-action','date-range')}const langChip=document.querySelector('.language-chip');if(langChip){langChip.removeAttribute('data-action');langChip.onclick=(e)=>{e.preventDefault();e.stopPropagation();languageModal();};langChip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();languageModal()},{capture:true});}document.documentElement.lang=state.settings?.language==='en'?'en':'es';updateDateChip();updateLanguageChip();const vb=document.getElementById('voiceBtn');if(vb)vb.setAttribute('data-action','voice-action');const cb=document.getElementById('captureBtn');if(cb)cb.setAttribute('data-action','capture-documents');const cam=document.getElementById('cameraBtn');if(cam)cam.setAttribute('data-action','camera-capture');const nb=document.getElementById('notificationsBtn'),pb=document.getElementById('profileBtn'),badge=document.getElementById('notificationBadge');if(nb)nb.setAttribute('data-action','notifications');if(pb)pb.setAttribute('data-action','profile');if(badge){const n=lrxNotifications().length;badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-02-v236',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}init();
 })();
 
 
