@@ -1,0 +1,7 @@
+LRX v241 — Logo completo en impresión
+
+Actualización del encabezado de impresión para usar IMG_5294.jpeg tal como fue proporcionado, sin recorte y conservando su proporción. El tamaño del logo impreso es de 35 × 30 mm y el título permanece a su derecha.
+
+Se conservan las funciones de la versión v240: crear, modificar y eliminar utensilios de la biblioteca, recolorear iconos monocromáticos cargados y mantener la edición/eliminación al iniciar de nuevo.
+
+Archivos principales actualizados: app.js, sw.js y el nuevo LRX-LOGO-IMPRESION.jpeg. La app se entrega completa con index.html, master.json, purchase-engine.js, recursos de marca y assets/utensils.

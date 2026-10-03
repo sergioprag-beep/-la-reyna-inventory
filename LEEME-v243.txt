@@ -1,0 +1,7 @@
+LRX v243 — Logo completo y vista de impresión
+
+La vista previa del documento y la impresión usan el logo completo aprobado (LRX-LOGO-IMPRESION.jpeg), con proporción cuadrada segura y tamaño mayor. La impresión conserva los títulos de sección y encabezados de tabla con sus colores. La tabla de ingredientes usa encabezado semántico para evitar que Safari desplace o repita los títulos.
+
+Se mantienen las funciones de utensilios, recetas, inventario y costos.
+
+Para publicar: reemplaza todos los archivos de la raíz del repositorio con el contenido de esta carpeta; conserva assets/utensils.
