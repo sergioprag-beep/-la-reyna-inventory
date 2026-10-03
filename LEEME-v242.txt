@@ -1,0 +1,5 @@
+LRX v242 — Recuperación de estilos y paquete completo
+
+Corrige el ZIP v241 que omitió styles.css y no incluía el manifiesto ni la imagen hero-food.jpg. Se recuperó styles.css del respaldo v241 encontrado en la Papelera. Se conserva la actualización aprobada del logo de impresión y la administración completa de utensilios.
+
+Para publicar: reemplaza todos los archivos de la raíz del repositorio con el contenido de esta carpeta. Conserva la estructura assets/utensils. Deben quedar index.html, styles.css, app.js y sw.js directamente en la raíz.
