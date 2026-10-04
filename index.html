@@ -11,7 +11,7 @@
 <title>La Reyna Xpress — Sistema de Gestión</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./LRX-LOGO-PLANTILLAS.png">
-<link rel="stylesheet" href="./styles.css?v=2026-10-02-v243">
+<link rel="stylesheet" href="./styles.css">
 <style id="lrx-v176-purchase-css">.purchase-create-btn{width:100%;white-space:nowrap;min-height:40px}.purchase-create-btn.is-existing{opacity:1;border-color:#2e9b6f;background:#edf9f2;color:#16744d;cursor:default}.purchase-line .field label{font-weight:700}@media(max-width:760px){.purchase-line{grid-template-columns:1fr 1fr!important}.purchase-line .field:first-child{grid-column:1/-1}.purchase-line .purchase-create-btn{min-width:0}.purchase-line .bp-line-remove{align-self:end}.purchase-line label{font-size:11px}}</style><style id="lrx-v176-modal-fix">#modal.show{display:flex!important;pointer-events:auto!important;z-index:99999!important}#modal[hidden]{display:none!important;pointer-events:none!important}</style><style id="lrx-v176-product-cost-css">.product-cost-summary{margin-top:12px}.product-cost-summary b{font-weight:800}.product-cost-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:760px){.product-cost-grid{grid-template-columns:1fr 1fr}}</style><style id="lrx-v178-pager-css">.pager{margin:16px 0 24px}.pager-info{font-size:12px;color:#667085;margin-bottom:8px}.pager-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pager-actions .btn{min-width:38px}.pager-actions .btn:disabled{opacity:.45;cursor:not-allowed}.pager-actions .btn.primary{font-weight:800}.pager-ellipsis{display:inline-flex;align-items:center;justify-content:center;min-width:24px;padding:7px 2px;color:#667085}.pager-size-label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#667085}.pager-size-label select{padding:7px 8px;border:1px solid #d0d5dd;border-radius:8px;background:#fff}@media(max-width:760px){.pager-actions{gap:5px}.pager-actions .btn{padding:8px 10px;min-width:34px;font-size:12px}.pager-info{line-height:1.4}.pager-actions{max-width:100%;overflow-x:auto;padding-bottom:2px}}}</style>
 <style id="lrx-v191-responsive">
 html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100%;min-width:0;max-width:100%;overflow-x:hidden}
@@ -162,7 +162,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 
 
 
-<style id="lrx-v241-safe-horizontal-recipe-logo">@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
+<style id="lrx-v245-safe-horizontal-recipe-logo">@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
+<style id="lrx-recipe-photo-layout">.recipe-print-photos{margin-top:10px}.recipe-image-layout{display:grid;gap:12px}.recipe-main-photo{margin:0;border:1px solid #d5dce8;border-radius:8px;padding:7px;background:#fff}.recipe-main-photo img{display:block;width:100%;max-height:420px;object-fit:contain;object-position:center}.recipe-main-photo figcaption{padding:5px;color:#667085;font-size:12px}.recipe-process-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.recipe-process-gallery figure{margin:0;border:1px solid #d5dce8;border-radius:7px;padding:5px;break-inside:avoid}.recipe-process-gallery img{display:block;width:100%;height:145px;object-fit:contain}.recipe-process-gallery figcaption{padding:4px;color:#475467;font-size:11px}@media(max-width:700px){.recipe-process-gallery{grid-template-columns:1fr 1fr}}</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -205,8 +206,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./purchase-engine.js?v=2026-10-02-v243" defer></script>
-<script src="./app.js?v=2026-10-02-v243" defer></script>
+<script src="./purchase-engine.js?v=2026-10-03-v245" defer></script>
+<script src="./app.js?v=2026-10-03-v245" defer></script>
 
 <style id="lrx-v234-final">
 /* v234 final cascade: logo padded/proportional and technical utensil iconography */
@@ -226,7 +227,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 .utensil-card img{image-rendering:auto!important;}
 .recipe-utensil-item img{image-rendering:auto!important;}
 </style>
-<style id="lrx-v241-final-icon-and-logo-fix">.utensil-card img,.recipe-utensil-item img,.selected-ut-row img{filter:drop-shadow(0 0 .65px #0d3b78)!important}@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
+<style id="lrx-v245-final-icon-and-logo-fix">.utensil-card img,.recipe-utensil-item img,.selected-ut-row img{filter:drop-shadow(0 0 .65px #0d3b78)!important}@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
@@ -363,7 +364,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
  .recipe-print-page .utensil-board-card small{font-size:3.7pt!important}
 }
 </style>
-<style id="lrx-v241-integrated-visual-system">
+<style id="lrx-v245-integrated-visual-system">
 /* v241 — biblioteca unificada azul y encabezado compacto con margen de seguridad */
 @media screen{
  .recipe-doc-lockup{display:block!important;width:166px!important;height:48px!important;min-width:166px!important;min-height:48px!important;max-width:166px!important;max-height:48px!important;flex:0 0 166px!important;overflow:visible!important}
@@ -389,4 +390,4 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 @media screen and (max-width:760px){.recipe-doc-lockup{width:128px!important;height:40px!important;min-width:128px!important;min-height:40px!important;max-width:128px!important;max-height:40px!important;flex-basis:128px!important}}
 </style>
 
-<style id="lrx-v241-utensil-management">.utensil-card-select{display:contents;cursor:pointer}.ut-card-tools{grid-column:1/-1;display:flex;gap:5px;margin-top:3px}.ut-card-tools .btn{font-size:11px;padding:4px 7px;min-height:27px}.ut-card-tools .ut-delete{color:#a52836;border-color:#efc9cc;background:#fff}.utensil-card{padding-bottom:7px!important}@media(max-width:560px){.ut-card-tools .btn{flex:1;padding:4px 3px;font-size:10px}}</style>
+<style id="lrx-v245-utensil-management">.utensil-card-select{display:contents;cursor:pointer}.ut-card-tools{grid-column:1/-1;display:flex;gap:5px;margin-top:3px}.ut-card-tools .btn{font-size:11px;padding:4px 7px;min-height:27px}.ut-card-tools .ut-delete{color:#a52836;border-color:#efc9cc;background:#fff}.utensil-card{padding-bottom:7px!important}@media(max-width:560px){.ut-card-tools .btn{flex:1;padding:4px 3px;font-size:10px}}</style>

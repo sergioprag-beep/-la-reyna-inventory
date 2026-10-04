@@ -1,0 +1,6 @@
+LRX-v245 · Fotos de recetas e impresión de cocina
+
+Guarda una foto principal y hasta cuatro fotos de proceso por receta o pre-elaborado. Las optimiza para el almacenamiento del navegador y las conserva al editar registros, incluidos los maestros. La Ficha Técnica coloca la foto principal arriba a la derecha y muestra las fotos de montaje y proceso en una sección identificada. La Receta Estándar y el Escandallo también incluyen las fotos guardadas.
+
+INSTALACIÓN: descomprime este paquete y reemplaza TODO el contenido actual del repositorio con TODO el contenido de esta carpeta. Conserva la ruta assets/utensils/. Luego confirma el commit y haz push/sincroniza los cambios para publicarlos.
+Commit sugerido: Guarda fotos y mejora fichas de cocina
