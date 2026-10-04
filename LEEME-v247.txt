@@ -1,0 +1,3 @@
+LRX-v247 · Impresión legible para fichas de cocina
+
+La impresión conserva el logotipo vectorial en un tamaño visible y usa tipografía más legible. Las fichas pueden continuar en varias páginas al 100%; las secciones de fotos empiezan en página nueva y cada fotografía se mantiene completa, con hasta 12 fotos de proceso por receta o pre-elaborado.

@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v246';
+const APP_VERSION='v247';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -418,7 +418,7 @@ function recipeViewModal(r,type){
 }
 function recipePrintNormalizeTables(html){return html.replace(/(<table\b[^>]*>)([\s\S]*?)(<\/table>)/gi,(all,open,inside,close)=>{if(/<thead\b/i.test(inside)||/<tbody\b/i.test(inside))return all;const clean=inside.trim();const first=clean.match(/^<tr\b[^>]*>[\s\S]*?<\/tr>/i);if(!first)return `${open}<tbody>${clean}</tbody>${close}`;const cells=first[0].match(/<(?:th|td)\b/gi)||[];const header=cells.length>0&&cells.every(cell=>cell.toLowerCase()==='<th');if(!header)return `${open}<tbody>${clean}</tbody>${close}`;const rest=clean.slice(first[0].length);return `${open}<thead>${first[0]}</thead><tbody>${rest}</tbody>${close}`})}
 function recipeDocumentPrint(r,type,format,paper){
- const bodySource=format==='costing'?recipeCostingHtml(r,type):format==='technical'?recipeTechnicalHtml(r,type):recipeStandardHtml(r,type);const body=recipePrintNormalizeTables(bodySource).replaceAll('./LRX-LOGO-LOCKUP-BRANDSAFE.svg','./LRX-LOGO-IMPRESION.jpeg');
+ const bodySource=format==='costing'?recipeCostingHtml(r,type):format==='technical'?recipeTechnicalHtml(r,type):recipeStandardHtml(r,type);const body=recipePrintNormalizeTables(bodySource);
  const specs={letter:{label:'Carta',w:216,h:279},legal:{label:'Oficio',w:216,h:356},tabloid:{label:'Tabloide',w:279,h:432}};
  const ps=specs[paper]||specs.letter;
  const css=`<style id="lrxRecipeDocPrint">
@@ -428,25 +428,25 @@ function recipeDocumentPrint(r,type,format,paper){
  #lrxRecipePrint{display:block!important;position:static!important;background:#fff!important;margin:0!important;padding:0!important;width:${ps.w-10}mm!important;box-sizing:border-box!important}
  .recipe-print-page{width:${ps.w-10}mm!important;min-height:${ps.h-10}mm!important;overflow:visible!important;margin:0!important;padding:0!important;box-sizing:border-box!important;background:#fff!important;font-family:Arial,sans-serif}
  .recipe-print-scale{width:100%!important;box-sizing:border-box!important}
- .recipe-print-page .tech-sheet,.recipe-print-page .standard-book,.recipe-print-page .cost-sheet{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;box-sizing:border-box!important;overflow:visible!important}
- .recipe-print-page .recipe-doc-lockup{display:block!important;width:35mm!important;height:30mm!important;max-width:35mm!important;max-height:30mm!important;flex:0 0 35mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:35mm!important;height:30mm!important;max-width:35mm!important;max-height:30mm!important;flex-basis:35mm!important}
+ .recipe-print-page .tech-sheet,.recipe-print-page .standard-book,.recipe-print-page .cost-sheet{position:static!important;left:auto!important;top:auto!important;transform:none!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;box-sizing:border-box!important;overflow:visible!important}
+ .recipe-print-page .recipe-doc-lockup{display:block!important;width:48mm!important;height:28mm!important;max-width:48mm!important;max-height:28mm!important;flex:0 0 48mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:48mm!important;height:28mm!important;max-width:48mm!important;max-height:28mm!important;flex-basis:48mm!important}
  .recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo,.recipe-print-page .standard-title-row .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo,.recipe-print-page .cost-title-row .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;flex:0 0 auto!important;object-fit:contain!important;object-position:left center!important;margin:0!important;padding:0!important}
  .recipe-print-page .doc-head-logo{flex:0 0 auto!important}
  .recipe-print-page .compact-doc-head,.recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{display:flex!important;align-items:center!important;gap:3mm!important}
  .recipe-print-page .compact-doc-head .tech-head-main{display:flex!important;align-items:center!important;gap:3mm!important;padding:2mm!important;min-width:0!important}
  .recipe-print-page .tech-head{display:grid!important;grid-template-columns:minmax(0,1fr) 25mm!important;gap:2mm!important;margin-bottom:1.5mm!important}
- .recipe-print-page .tech-name{font-size:19pt!important;line-height:1.03!important}.recipe-print-page .tech-subtitle{font-size:8pt!important;line-height:1.1!important;margin-top:1.2mm!important}
+ .recipe-print-page .tech-name{font-size:20pt!important;line-height:1.08!important}.recipe-print-page .tech-subtitle{font-size:8.5pt!important;line-height:1.2!important;margin-top:1.5mm!important}
  .recipe-print-page .tech-code{padding:1.8mm!important}.recipe-print-page .tech-code b{font-size:8pt!important}.recipe-print-page .tech-code strong{font-size:13pt!important;margin-top:.7mm!important;padding:1.2mm!important}
  .recipe-print-page .tech-top-grid{display:grid!important;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr)!important;gap:1.5mm!important}
  .recipe-print-page .compact-tech-photo{height:31mm!important}.recipe-print-page .tech-main-photo img{max-height:29mm!important}
  .recipe-print-page .tech-section-title{font-size:9pt!important;padding:1.3mm 1.6mm!important;margin:0 0 1mm!important}
- .recipe-print-page .tech-table{table-layout:fixed!important;width:100%!important;font-size:8pt!important;line-height:1.1!important}
- .recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:1.15mm!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+ .recipe-print-page .tech-table{table-layout:fixed!important;width:100%!important;font-size:9.2pt!important;line-height:1.2!important}
+ .recipe-print-page .tech-table th,.recipe-print-page .tech-table td{padding:1.6mm!important;overflow-wrap:anywhere!important;word-break:break-word!important}
  .recipe-print-page .compact-tech-two{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:1.5mm!important;margin-top:1.2mm!important}
- .recipe-print-page .tech-text{font-size:8pt!important;line-height:1.2!important;padding:1.5mm!important}.recipe-print-page .compact-tech-block{margin-top:1.6mm!important}
+ .recipe-print-page .tech-text{font-size:9pt!important;line-height:1.3!important;padding:2mm!important}.recipe-print-page .compact-tech-block{margin-top:2mm!important}
  .recipe-print-page .recipe-utensils-block{margin-top:1.2mm!important;break-inside:avoid!important}.recipe-print-page .recipe-utensils-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:.7mm!important;padding:.7mm!important}.recipe-print-page .recipe-utensil-item{padding:.7mm!important;gap:.7mm!important}.recipe-print-page .recipe-utensil-item img{width:8mm!important;height:6mm!important;flex:0 0 8mm!important}.recipe-print-page .recipe-utensil-item b{font-size:4.7pt!important}.recipe-print-page .recipe-utensil-item small{font-size:4pt!important}
- .recipe-print-page .compact-process{margin-top:1.2mm!important}.recipe-print-page .compact-process-grid{gap:.7mm!important}.recipe-print-page .compact-process-grid img{height:11mm!important}.recipe-print-page .compact-process-grid figcaption{font-size:4pt!important;padding:.5mm!important}
- .recipe-print-page .tech-footer{font-size:4.3pt!important;margin-top:1mm!important;padding-top:.7mm!important}
+ .recipe-print-page .compact-process{margin-top:2mm!important;break-before:page!important;page-break-before:always!important}.recipe-print-page .compact-process-grid{gap:2mm!important}.recipe-print-page .compact-process-grid img{height:38mm!important}.recipe-print-page .compact-process-grid figcaption{font-size:8pt!important;padding:1mm!important}
+ .recipe-print-page .tech-footer{font-size:7pt!important;margin-top:2mm!important;padding-top:1.2mm!important}
  .recipe-print-page .standard-title-row,.recipe-print-page .cost-title-row{padding:0 0 1.5mm!important;border-bottom:1mm solid #0d3b78!important}
  .recipe-print-page .standard-title-row>div:nth-child(2),.recipe-print-page .cost-title-row>div:nth-child(2){min-width:0;flex:1}
  .recipe-print-page .standard-cover h1{font-size:21pt!important;margin:0!important}.recipe-print-page .standard-cover h2{font-size:16pt!important;margin:0!important}.recipe-print-page .standard-cover p{margin:1mm 0 0!important;font-size:8pt!important}
@@ -463,14 +463,14 @@ function recipeDocumentPrint(r,type,format,paper){
  .recipe-print-page .tech-table thead th{background:#e9eff8!important;background-color:#e9eff8!important;color:#173c70!important;font-weight:800!important;border-bottom:0.45mm solid #536987!important}
  .recipe-print-page .standard-book section h3{color:#fff!important}
  .recipe-print-page .standard-book,.recipe-print-page .cost-sheet,.recipe-print-page .tech-sheet{color:#172033!important}
- .recipe-print-page .recipe-print-photos{break-inside:auto!important}
- .recipe-print-page .recipe-image-layout{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:2mm!important}
- .recipe-print-page .recipe-main-photo{margin:0!important;border:0.35mm solid #8794a8!important;padding:1.5mm!important;break-inside:avoid!important}
- .recipe-print-page .recipe-main-photo img{display:block!important;width:100%!important;height:54mm!important;object-fit:contain!important;object-position:center!important}
+ .recipe-print-page .recipe-print-photos{break-before:page!important;page-break-before:always!important;break-inside:auto!important}
+ .recipe-print-page .recipe-image-layout{display:block!important;gap:2mm!important}
+ .recipe-print-page .recipe-main-photo{display:block!important;margin:0!important;border:0.35mm solid #8794a8!important;padding:1.5mm!important;break-inside:avoid!important;page-break-inside:avoid!important}
+ .recipe-print-page .recipe-main-photo img{display:block!important;width:100%!important;height:75mm!important;object-fit:contain!important;object-position:center!important}
  .recipe-print-page .recipe-main-photo figcaption,.recipe-print-page .recipe-process-gallery figcaption{font-size:7pt!important;padding:1mm!important}
- .recipe-print-page .recipe-process-gallery{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:1.5mm!important}
- .recipe-print-page .recipe-process-gallery figure{margin:0!important;border:0.3mm solid #8794a8!important;padding:1mm!important;break-inside:avoid!important;page-break-inside:avoid!important}
- .recipe-print-page .recipe-process-gallery img{display:block!important;width:100%!important;height:31mm!important;object-fit:contain!important;object-position:center!important}
+ .recipe-print-page .recipe-process-gallery{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:2mm!important;break-inside:auto!important}
+ .recipe-print-page .recipe-process-gallery figure{display:block!important;margin:0!important;border:0.3mm solid #8794a8!important;padding:1.5mm!important;break-inside:avoid!important;page-break-inside:avoid!important}
+ .recipe-print-page .recipe-process-gallery img{display:block!important;width:100%!important;height:38mm!important;object-fit:contain!important;object-position:center!important}
  .recipe-print-page img{max-width:100%!important;break-inside:avoid!important}
  @media screen{#lrxRecipePrint{position:fixed!important;inset:0!important;width:auto!important;height:auto!important;overflow:auto!important;padding:18px!important;z-index:2147483647!important}.recipe-print-page{width:min(1100px,calc(100vw - 36px))!important;min-height:calc(100vh - 36px)!important;height:auto!important;margin:auto!important}.recipe-print-scale{width:100%!important}}
  </style>`;

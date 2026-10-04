@@ -1,5 +1,5 @@
-const CACHE='lrx-v246';
-const VERSION='2026-10-03-v246';
+const CACHE='lrx-v247';
+const VERSION='2026-10-04-v247';
 const ASSETS=[
   './','./index.html','./styles.css',
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,
