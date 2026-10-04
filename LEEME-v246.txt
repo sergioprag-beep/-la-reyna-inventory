@@ -1,0 +1,3 @@
+LRX-v246 · Galería de proceso ampliada para fichas de cocina
+
+Las recetas y pre-elaborados admiten hasta 12 fotos de proceso. Las fotos se muestran en una cuadrícula adaptable: al aumentar la cantidad, se distribuyen en más columnas y filas; en impresión se organizan en tres columnas y cada imagen puede pasar a la página siguiente sin cortarse. La foto principal conserva su presentación destacada.
