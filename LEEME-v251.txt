@@ -1,0 +1,11 @@
+LRX-v251 · Fichas de cocina y pasos con foto
+
+Esta versión incorpora:
+- Logo completo de La Reyna Xpress, reducido y sin recorte en los encabezados de Receta Estándar, Escandallo y Ficha Técnica.
+- Editor de procedimiento con botón “Agregar paso”; cada paso admite descripción y una foto propia.
+- Edición, reemplazo y eliminación de pasos, con un máximo de 12 por ficha.
+- Optimización automática de cada foto al guardar para reducir el espacio utilizado.
+- Descripciones y fotos de proceso visibles en las fichas imprimibles.
+- Actualización de caché para que GitHub Pages cargue esta versión.
+
+Para publicar en GitHub Pages, reemplaza en la raíz del repositorio los archivos de la versión anterior por los archivos de este ZIP y confirma los cambios.
