@@ -207,8 +207,8 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="./purchase-engine.js?v=2026-10-04-v253" defer></script>
-<script src="./app.js?v=2026-10-04-v253" defer></script>
+<script src="./purchase-engine.js?v=2026-10-04-v252" defer></script>
+<script src="./app.js?v=2026-10-04-v252" defer></script>
 
 <style id="lrx-v234-final">
 /* v234 final cascade: logo padded/proportional and technical utensil iconography */
@@ -229,25 +229,6 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 .recipe-utensil-item img{image-rendering:auto!important;}
 </style>
 <style id="lrx-v245-final-icon-and-logo-fix">.utensil-card img,.recipe-utensil-item img,.selected-ut-row img{filter:drop-shadow(0 0 .65px #0d3b78)!important}@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
-<style id="lrx-v253-aligned-recipe-brand">
-/* Logo is a dedicated left slot; the template color starts after it. */
-.tech-head{grid-template-columns:27mm minmax(0,1fr) 25mm!important;gap:0!important;align-items:stretch!important}
-.recipe-doc-logo-cell{display:flex;align-items:center;justify-content:center;background:#fff;padding:2mm;min-width:0}
-.recipe-doc-logo-cell .recipe-doc-lockup{display:block!important;width:24mm!important;height:20mm!important;max-width:24mm!important;min-width:0!important;flex:none!important;overflow:hidden!important}
-.recipe-doc-logo-cell .recipe-doc-brand{display:block;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important;margin:0!important;padding:0!important}
-.tech-head-main{display:flex!important;align-items:center!important;padding:3mm!important;overflow:hidden!important}
-.tech-title-copy{min-width:0;width:100%}.tech-name{font-size:clamp(18px,2.5vw,30px)!important;line-height:1.08!important}.tech-subtitle{font-size:clamp(8px,1vw,12px)!important;line-height:1.2!important;overflow-wrap:anywhere}
-.tech-code{padding:2mm!important}.tech-code strong{font-size:clamp(17px,2vw,26px)!important;white-space:nowrap!important}
-.standard-title-row,.cost-title-row{display:grid!important;grid-template-columns:27mm minmax(0,1fr) 27mm!important;gap:0!important;align-items:stretch!important;border:0!important;padding:0!important;min-height:24mm!important}.standard-title-row{grid-template-columns:27mm minmax(0,1fr)!important}
-.standard-title-row .recipe-doc-lockup,.cost-title-row .recipe-doc-lockup{display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;width:27mm!important;height:24mm!important;max-width:none!important;min-width:0!important;flex:none!important;padding:1.5mm!important;overflow:hidden!important}
-.standard-title-row .recipe-doc-lockup img,.cost-title-row .recipe-doc-lockup img{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important;padding:0!important;margin:0!important}
-.standard-title-row>div:nth-child(2),.cost-title-row>div:nth-child(2){background:#c20b61;color:#fff;display:flex;flex-direction:column;justify-content:center;padding:3mm 4mm;min-width:0;overflow:hidden}
-.standard-title-row h1,.standard-title-row h2,.standard-title-row p,.cost-title-row h2,.cost-title-row p{color:#fff!important;overflow-wrap:anywhere!important}
-.standard-title-row h1{font-size:clamp(16px,2vw,23px)!important;line-height:1.1!important;margin:0 0 2px!important}.standard-title-row h2,.cost-title-row h2{font-size:clamp(13px,1.6vw,19px)!important;line-height:1.15!important;margin:0 0 2px!important}.standard-title-row p,.cost-title-row p{font-size:clamp(8px,.9vw,10px)!important;margin:0!important}
-.cost-title-row .cost-head-price{margin:0!important;min-width:0!important;background:#c20b61;color:#fff;display:flex;flex-direction:column;justify-content:center;padding:2mm!important;border-left:1px solid #ffffff80}
-@media(max-width:760px){.tech-head{grid-template-columns:21mm minmax(0,1fr) 21mm!important}.recipe-doc-logo-cell .recipe-doc-lockup{width:19mm!important;height:18mm!important}.tech-code b{font-size:9px!important}.tech-code strong{font-size:14px!important;padding:3px!important}.standard-title-row,.cost-title-row{grid-template-columns:21mm minmax(0,1fr) 21mm!important;min-height:19mm!important}.standard-title-row{grid-template-columns:21mm minmax(0,1fr)!important}.standard-title-row .recipe-doc-lockup,.cost-title-row .recipe-doc-lockup{width:21mm!important;height:19mm!important;padding:1mm!important}.standard-title-row h1{font-size:12px!important}.standard-title-row h2,.cost-title-row h2{font-size:11px!important}.standard-title-row p,.cost-title-row p{font-size:7px!important}.cost-title-row .cost-head-price{font-size:8px!important}}
-@media print{.recipe-print-page .recipe-doc-brand{filter:none!important}}
-</style>
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
