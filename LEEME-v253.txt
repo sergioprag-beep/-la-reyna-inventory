@@ -1,0 +1,13 @@
+LRX-v253 · Módulo de recetas, fichas y utensilios
+
+Incluye en un solo paquete:
+- Dashboard de recetas con métricas, búsqueda, tarjetas visuales y acceso a las tres fichas.
+- Receta estándar en magenta, escandallo de costos en azul y ficha técnica en verde.
+- Logo completo de La Reyna Xpress sobre fondo transparente; el área blanca del papel queda a la izquierda y la banda de cada ficha comienza después, alineada sin superposiciones.
+- Editor de recetas con foto principal visible y acciones separadas para elegir fotos o usar cámara.
+- Pasos de proceso con descripción y fotografía por paso; carga múltiple, edición, reemplazo y eliminación (hasta 12 pasos).
+- Optimización de fotografías al guardar para limitar el almacenamiento.
+- Catálogo visual con tablas de corte por color (rojo, azul, amarillo, verde, blanco, marrón, morado, naranja y negro) y una ilustración clara de pinzas. Los utensilios se pueden crear, editar, duplicar y eliminar; también imprimir/exportar.
+- Caché y referencias de scripts actualizadas para esta versión.
+
+Antes de publicar, copia el contenido completo de esta carpeta a la raíz del repositorio y confirma los archivos modificados.
