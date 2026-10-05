@@ -503,6 +503,21 @@ function recipeDocumentPrint(r,type,format,paper){
  .print-document .compact-tech-yield>div:first-child th{font-size:6.5pt!important}
  .print-document .cost-title-row>div:nth-child(2){background:#123e78!important}
  .print-document .cost-title-row .status{color:#123e78!important}
+ .print-document .recipe-main-photo{display:flex!important;flex-direction:column!important;align-items:center!important;padding:1.5mm!important}
+ .print-document .recipe-main-photo img{display:block!important;width:auto!important;max-width:58mm!important;height:auto!important;max-height:34mm!important;margin:0 auto!important;object-fit:contain!important}
+ .print-document .recipe-main-photo figcaption{font-size:6pt!important;padding:1mm!important}
+ .print-document .compact-tech-photo{min-height:31mm!important;max-height:35mm!important;height:35mm!important}
+ .print-document .compact-tech-photo img,.print-document .tech-main-photo img{width:auto!important;max-width:62mm!important;height:33mm!important;max-height:33mm!important;margin:0 auto!important;object-fit:contain!important}
+ .print-document .tech-main-photo{height:35mm!important;min-height:35mm!important;max-height:35mm!important}
+ .print-document .recipe-process-gallery{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:1.5mm!important}
+ .print-document .recipe-process-gallery figure{padding:1mm!important}
+ .print-document .recipe-process-gallery img{width:100%!important;height:22mm!important;max-height:22mm!important;object-fit:contain!important}
+ .print-document .recipe-process-gallery figcaption{font-size:5.5pt!important;line-height:1.1!important;padding:.5mm!important}
+ .print-document .recipe-utensils-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:1mm!important;padding:1mm!important}
+ .print-document .recipe-utensil-item{gap:1mm!important;padding:.7mm!important;min-width:0!important}
+ .print-document .recipe-utensil-item img{width:12mm!important;height:9mm!important;max-width:12mm!important;max-height:9mm!important;flex:0 0 12mm!important;padding:0!important;object-fit:contain!important}
+ .print-document .recipe-utensil-item b{font-size:5.5pt!important;line-height:1!important}
+ .print-document .recipe-utensil-item small{font-size:4.5pt!important;line-height:1!important}
  .print-document .cost-head-price{background:#123e78!important}
  .print-document .tech-footer{margin-top:3mm!important}
  @media screen{body{background:#e9eef5!important;padding:18px!important}.print-document{max-width:1100px!important;min-height:calc(100vh - 36px)!important;padding:20px!important;box-shadow:0 2px 16px #18274422}}

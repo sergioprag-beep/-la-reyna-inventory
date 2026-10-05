@@ -164,6 +164,21 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 
 <style id="lrx-v245-safe-horizontal-recipe-logo">@media print{.recipe-print-page .recipe-doc-lockup{display:block!important;width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex:0 0 52mm!important;overflow:visible!important}.recipe-print-page .standard-title-row .recipe-doc-lockup,.recipe-print-page .cost-title-row .recipe-doc-lockup{width:52mm!important;height:14mm!important;min-width:52mm!important;min-height:14mm!important;max-width:52mm!important;max-height:14mm!important;flex-basis:52mm!important}.recipe-print-page .recipe-doc-lockup img.recipe-doc-brand.doc-head-logo{display:block!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;padding:0!important;margin:0!important;object-fit:contain!important;object-position:left center!important;flex:0 0 auto!important}}</style>
 <style id="lrx-recipe-photo-layout">.recipe-print-photos{margin-top:10px}.recipe-image-layout{display:grid;gap:12px}.recipe-main-photo{margin:0;border:1px solid #d5dce8;border-radius:8px;padding:7px;background:#fff}.recipe-main-photo img{display:block;width:100%;max-height:420px;object-fit:contain;object-position:center}.recipe-main-photo figcaption{padding:5px;color:#667085;font-size:12px}.recipe-process-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px}.recipe-process-gallery figure{margin:0;border:1px solid #d5dce8;border-radius:7px;padding:5px;break-inside:avoid}.recipe-process-gallery img{display:block;width:100%;height:clamp(90px,12vw,145px);object-fit:contain}.recipe-process-gallery figcaption{padding:4px;color:#475467;font-size:11px}@media(max-width:700px){.recipe-process-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}</style>
+<style id="lrx-v260-compact-photos-utensils">
+.recipe-main-photo img,#lrx-recipe-photo-layout .recipe-main-photo img{width:auto!important;max-width:min(100%,280px)!important;height:auto!important;max-height:220px!important;margin:0 auto!important;object-fit:contain!important}
+.recipe-main-photo{display:flex;flex-direction:column;align-items:center}
+.recipe-process-gallery{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))!important;gap:6px!important}
+.recipe-process-gallery figure{padding:3px!important;min-width:0}
+.recipe-process-gallery img{height:82px!important;max-height:82px!important;object-fit:contain!important}
+.recipe-process-gallery figcaption{font-size:9px!important;line-height:1.15;padding:3px!important;overflow-wrap:anywhere}
+.recipe-utensils-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:4px!important;padding:4px!important}
+.recipe-utensil-item{gap:4px!important;padding:3px!important;min-width:0}
+.recipe-utensil-item img{width:26px!important;height:24px!important;flex:0 0 26px!important;padding:1px!important;object-fit:contain!important}
+.recipe-utensil-item b{font-size:9px!important;line-height:1.05}
+.recipe-utensil-item small{font-size:7px!important;line-height:1.05}
+@media(max-width:900px){.recipe-utensils-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media(max-width:600px){.recipe-utensils-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.recipe-process-gallery{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+</style>
 <style id="lrx-v250-recipe-steps">.recipe-process-step-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.recipe-process-step{border:1px solid #d5dce8;border-radius:8px;background:#fff;padding:10px;min-width:0}.recipe-process-step-title,.recipe-step-attach{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}.recipe-process-step-title b{color:#123b70}.recipe-step-caption{display:block;width:100%;resize:vertical;min-height:76px}.recipe-step-filename{font-size:11px;overflow-wrap:anywhere}.recipe-step-preview{display:block;max-width:100%;width:auto;height:120px;object-fit:contain;margin:8px auto 0;border:1px solid #e2e7ef;border-radius:5px;background:#f6f8fb}.recipe-process-no-photo{min-height:55px;display:grid;place-items:center;background:#f1f4f9;color:#69778d;font-size:10px;padding:6px}.recipe-process-gallery .recipe-process-no-photo{min-height:90px}@media print{.recipe-process-no-photo{min-height:20mm}.recipe-process-gallery .recipe-process-no-photo{min-height:24mm}}</style>
 </head>
 <body>
@@ -208,7 +223,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="./purchase-engine.js?v=2026-10-04-v253" defer></script>
-<script src="./app.js?v=2026-10-04-v259" defer></script>
+<script src="./app.js?v=2026-10-05-v260" defer></script>
 
 <style id="lrx-v234-final">
 /* v234 final cascade: logo padded/proportional and technical utensil iconography */
