@@ -509,6 +509,10 @@ function recipeDocumentPrint(r,type,format,paper){
  .print-document .compact-tech-photo{min-height:31mm!important;max-height:35mm!important;height:35mm!important}
  .print-document .compact-tech-photo img,.print-document .tech-main-photo img{width:auto!important;max-width:62mm!important;height:33mm!important;max-height:33mm!important;margin:0 auto!important;object-fit:contain!important}
  .print-document .tech-main-photo{height:35mm!important;min-height:35mm!important;max-height:35mm!important}
+ .print-document .tech-top-grid{align-items:start!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+ .print-document .tech-top-grid>div{height:auto!important;min-height:0!important;align-self:start!important}
+ .print-document .tech-top-grid>div:nth-child(2) .tech-main-photo,.print-document .tech-top-grid>div:nth-child(2) .compact-tech-photo{height:25mm!important;min-height:25mm!important;max-height:25mm!important;margin:0!important;padding:1mm!important;align-self:start!important}
+ .print-document .tech-top-grid>div:nth-child(2) .tech-main-photo img,.print-document .tech-top-grid>div:nth-child(2) .compact-tech-photo img{display:block!important;width:auto!important;max-width:42mm!important;height:22mm!important;max-height:22mm!important;margin:0 auto!important;object-fit:contain!important}
  .print-document .recipe-process-gallery{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:1.5mm!important}
  .print-document .recipe-process-gallery figure{padding:1mm!important}
  .print-document .recipe-process-gallery img{width:100%!important;height:22mm!important;max-height:22mm!important;object-fit:contain!important}
