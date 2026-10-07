@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v287';
+const APP_VERSION='v288';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -327,7 +327,7 @@ function catalog(id,title){
 }
 function catalogSource(){
  const isSup=current==='sup';
- const userProducts=Array.isArray(state.products)?state.products:[];
+ const userProducts=Array.isArray(state.products)?state.products.filter(p=>p?.active!==false):[];
  const source=isSup?effectiveMaster('products'):[...effectiveMaster('products'),...userProducts];
  const seen=new Set();
  return source.filter(p=>{const key=String(p.id||p.sku||p.name||'').toLowerCase();if(seen.has(key))return false;seen.add(key);return true});
@@ -2843,7 +2843,7 @@ function action(name,id,el){
   if(a==='product-preview-file'){const p=productByAny(id),f=p?.attachments?.[Number(el?.dataset?.index||0)];if(f)filePreviewModal(f,{title:'Producto · '+p.name,source:'Productos'});return}
   if(a==='product-download-file'){const p=productByAny(id),f=p?.attachments?.[Number(el?.dataset?.index||0)];if(f)fileDownload(f,'PRODUCT_FILE_DOWNLOAD','Descargado desde '+p.name);return}
   if(a==='product-history')return productDetailModal(id);
-  if(a==='new-ingredient')return ingredientModal();if(a==='edit-ingredient')return ingredientModal(id);if(a==='save-ingredient')return saveIngredient(id);if(a==='delete-ingredient')return deleteIngredient(id);
+  if(a==='new-ingredient')return ingredientModal();if(a==='edit-ingredient')return ingredientModal(id);if(a==='save-ingredient')return saveIngredient(id);if(a==='delete-ingredient')return deleteIngredient(id);if(a==='ingredient-substitute')return substituteAndDeleteIngredient(id);
   if(a==='new-category')return categoryModal();if(a==='edit-category')return categoryModal(id);if(a==='save-category')return saveCategory(id);if(a==='delete-category')return deleteCategory(id);if(a==='duplicate-category')return duplicateCategory(id);
   if(a==='new-unit')return unitModal();if(a==='edit-unit')return unitModal(id);if(a==='save-unit')return saveUnit(id);if(a==='delete-unit')return deleteUnit(id);if(a==='duplicate-unit')return duplicateUnit(id);if(a==='new-conversion')return conversionModal();if(a==='save-conversion')return saveConversion();if(a==='delete-conversion')return deleteConversion(id);
   if(a==='view-supplier')return supplierDetailModal(id);if(a==='new-supplier')return supplierModal();if(a==='edit-supplier')return supplierModal(id);if(a==='save-supplier')return saveSupplier(id);if(a==='delete-supplier')return deleteSupplier(id);
@@ -3328,9 +3328,47 @@ async function saveSupplier(id=''){
 
 function deleteSupplier(id){const s=supplierRecordById(id);if(!s)return toast('No se encontró el proveedor.');if(!confirm(`¿Retirar “${s.name}” del catálogo? Las compras e historial existentes se conservarán.`))return;const snapshot=JSON.stringify(state);state.suppliers=(state.suppliers||[]).filter(x=>String(x.id)!==String(id));const mid=s.masterId||((master.suppliers||[]).some((x,i)=>String(typeof x==='string'?'SUPP-'+String(i+1).padStart(3,'0'):x.id)===String(id))?id:'');if(mid){state.masterHidden.suppliers=Array.isArray(state.masterHidden.suppliers)?state.masterHidden.suppliers:[];if(!state.masterHidden.suppliers.includes(String(mid)))state.masterHidden.suppliers.push(String(mid))}audit('SUPPLIER_DELETE',`${s.name} · catálogo local/maestro retirado; referencias conservadas`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Proveedor retirado del catálogo; historial conservado')}
 
+function ingredientItemMatchesProduct(item,product){
+ const ids=new Set([product?.id,product?.masterId,product?.duplicateOf].filter(Boolean).map(String)),names=new Set([product?.name].filter(Boolean).map(normMaster));
+ return ['productId','ingredientId','ref','itemId'].some(k=>item?.[k]!=null&&ids.has(String(item[k])))||['product','ingredient','name'].some(k=>item?.[k]&&names.has(normMaster(item[k])));
+}
+function ingredientRecipeReferences(product){
+ const recipes=new Map();
+ for(const [type,rows] of [['Receta',state.recipes||[]],['Pre-elaborado',state.preps||[]],['Receta de bar',state.barRecipes||[]],['Pre-elaborado de bar',state.barPreps||[]],['Receta',effectiveMaster('recipes')],['Pre-elaborado',effectiveMaster('preps')]])for(const r of rows){if(!Array.isArray(r?.items)||!r.items.some(i=>ingredientItemMatchesProduct(i,product)))continue;const key=String(r.id||r.name);if(!recipes.has(key))recipes.set(key,{id:key,name:r.name||'Sin nombre',type,master:(master.recipes||[]).some(x=>String(x.id)===String(r.id))})}
+ return [...recipes.values()];
+}
+function ingredientSubstituteModal(id){
+ const p=productByAny(id);if(!p)return toast('No se encontró el ingrediente.');
+ const refs=ingredientRecipeReferences(p),choices=catalogSource().filter(x=>String(x.id)!==String(p.id));
+ if(!refs.length)return deleteIngredient(id);
+ if(!choices.length)return toast('Primero crea otro ingrediente o producto para poder sustituirlo en las recetas.');
+ modal(`<h3>Ingrediente usado en recetas</h3><p><b>${esc(p.name||p.id)}</b> está vinculado a estas recetas:</p><ul>${refs.map(r=>`<li>${esc(r.name)} <span class="muted">(${esc(r.type)})</span></li>`).join('')}</ul><p class="muted">Elige el reemplazo. Se actualizarán las recetas y se retirará este ingrediente del catálogo; compras e inventario históricos se conservarán.</p><div class="field"><label>Sustituir por *</label><select id="ingredientReplacement"><option value="">— Seleccionar ingrediente —</option>${choices.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} · ${esc(x.standardUnit||x.unit||'unidad')}</option>`).join('')}</select></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn danger" data-action="ingredient-substitute" data-id="${esc(id)}">Sustituir y eliminar</button></div>`);
+}
+function substituteAndDeleteIngredient(id){
+ const p=productByAny(id),replacement=productByAny(document.getElementById('ingredientReplacement')?.value||'');if(!p)return toast('No se encontró el ingrediente.');if(!replacement||String(replacement.id)===String(p.id))return toast('Selecciona otro ingrediente como reemplazo.');
+ const refs=ingredientRecipeReferences(p);if(!refs.length)return toast('Ya no hay recetas vinculadas; vuelve a eliminar el ingrediente.');
+ const snapshot=JSON.stringify(state),replaceItem=item=>ingredientItemMatchesProduct(item,p)?{...item,product:replacement.name,ingredient:replacement.name,name:replacement.name,productId:replacement.id,ingredientId:replacement.id,ref:replacement.id}:item;
+ try{
+  for(const key of ['recipes','preps','barRecipes','barPreps'])state[key]=(state[key]||[]).map(r=>Array.isArray(r.items)?{...r,items:r.items.map(replaceItem)}:r);
+  state.masterOverrides=state.masterOverrides||{};state.masterOverrides.recipes=state.masterOverrides.recipes||{};
+  for(const base of master.recipes||[]){if(!Array.isArray(base.items)||!base.items.some(i=>ingredientItemMatchesProduct(i,p)))continue;const currentRecipe={...base,...(state.masterOverrides.recipes[base.id]||{})};state.masterOverrides.recipes[base.id]={...currentRecipe,items:currentRecipe.items.map(replaceItem),masterId:base.id,source:'EDITADO DESDE MAESTRO',updatedAt:now()}}
+  retireIngredientProduct(p);audit('INGREDIENT_SUBSTITUTION',`${p.name||p.id} → ${replacement.name} · ${refs.map(r=>r.name).join(', ')}`);if(!save()){restoreStateSnapshot(snapshot);return}close();render();toast(`Ingrediente sustituido por ${replacement.name} en ${refs.length} receta(s) y retirado del catálogo.`)
+ }catch(e){restoreStateSnapshot(snapshot);toast('No se pudo sustituir el ingrediente; se conservaron los datos anteriores.')}
+}
+function retireIngredientProduct(p){
+ state.masterHidden=state.masterHidden||{};state.masterHidden.products=Array.isArray(state.masterHidden.products)?state.masterHidden.products:[];
+ const isMaster=(master.products||[]).some(x=>String(x.id)===String(p.id)||String(x.id)===String(p.masterId||''));
+ if(isMaster){const mid=String(p.masterId||p.id);if(!state.masterHidden.products.includes(mid))state.masterHidden.products.push(mid)}
+ const local=(state.products||[]).find(x=>String(x.id)===String(p.id));if(local)local.active=false;
+}
+function deleteIngredient(id){
+ const p=productByAny(id);if(!p)return toast('No se encontró el ingrediente.');const refs=ingredientRecipeReferences(p);if(refs.length)return ingredientSubstituteModal(id);
+ if(!confirm(`¿Eliminar “${p.name||p.id}” del catálogo?${p.source==='MASTER'?' El registro maestro se ocultará localmente.':''} Los movimientos e historiales existentes se conservarán.`))return;
+ const snapshot=JSON.stringify(state);retireIngredientProduct(p);audit('INGREDIENT_DELETE',`${p.name||p.id} · retirado del catálogo`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Ingrediente retirado del catálogo; sus movimientos históricos se conservaron.')
+}
 function ingredientsCatalog(){
  const products=catalogSource(),q=normMaster(state._ingredientsQ||''),rows=products.filter(p=>!q||normMaster(JSON.stringify(p)).includes(q)),size=Math.max(1,Number(state._ingredientsSize||25)),pages=Math.max(1,Math.ceil(rows.length/size));state._ingredientsPage=LRXPagination.normalize(state._ingredientsPage||0,pages);const start=state._ingredientsPage*size,visible=rows.slice(start,start+size);
- return head('Ingredientes','Insumos y materias primas del catálogo maestro. Edita o retira el producto desde aquí; los registros vinculados quedan protegidos.','<button class="btn primary" data-action="new-product">＋ Nuevo ingrediente / producto</button> <button class="btn" data-action="ingredients-print">Imprimir / PDF</button> <button class="btn" data-action="ingredients-export">Excel + CSV</button>')+'<div class="toolbar"><input id="ingredientsQ" class="input search" value="'+esc(state._ingredientsQ||'')+'" placeholder="Buscar nombre, categoría, unidad o código"><label class="pager-size-label">Por página <select id="ingredientsSize">'+[25,50,100,250].map(n=>'<option value="'+n+'" '+(n===size?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><div class="catalog-results">'+(visible.map(p=>'<article class="catalog-card"><div class="catalog-main"><div class="catalog-title"><span class="catalog-id">'+esc(p.code||p.id)+'</span><h3>'+esc(p.name)+'</h3></div><div class="catalog-grid"><div><small>Categoría</small><b>'+esc(p.category||'—')+'</b></div><div><small>Unidad</small><b>'+esc(p.standardUnit||p.unit||'—')+'</b></div><div><small>Costo</small><b>'+money(p.finalCost??p.cost??0)+'</b></div><div><small>Proveedor</small><b>'+esc(p.supplier||'—')+'</b></div><div><small>Origen</small><b>'+esc(p.source||'MAESTRO')+'</b></div></div></div><div class="catalog-actions"><button class="btn" data-action="edit-product" data-id="'+esc(p.id)+'">Editar</button><button class="btn" data-action="duplicate-product" data-id="'+esc(p.id)+'">Duplicar</button><button class="btn danger" data-action="delete-product" data-id="'+esc(p.id)+'">Retirar</button></div></article>').join('')||'<div class="card empty">No hay ingredientes.</div>')+'</div><div class="pager">'+pagerMarkup('ingredients-page',state._ingredientsPage,pages,rows.length,rows.length?start+1:0,Math.min(start+size,rows.length))+'</div>'
+ return head('Ingredientes','Insumos y materias primas vinculados a recetas. Puedes crear, editar, duplicar y retirar ingredientes; si uno se usa en recetas, podrás sustituirlo antes de retirarlo.','<button class="btn primary" data-action="new-product">＋ Nuevo ingrediente / producto</button> <button class="btn" data-action="ingredients-print">Imprimir / PDF</button> <button class="btn" data-action="ingredients-export">Excel + CSV</button>')+'<div class="toolbar"><input id="ingredientsQ" class="input search" value="'+esc(state._ingredientsQ||'')+'" placeholder="Buscar nombre, categoría, unidad o código"><label class="pager-size-label">Por página <select id="ingredientsSize">'+[25,50,100,250].map(n=>'<option value="'+n+'" '+(n===size?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><div class="catalog-results">'+(visible.map(p=>'<article class="catalog-card"><div class="catalog-main"><div class="catalog-title"><span class="catalog-id">'+esc(p.code||p.id)+'</span><h3>'+esc(p.name)+'</h3></div><div class="catalog-grid"><div><small>Categoría</small><b>'+esc(p.category||'—')+'</b></div><div><small>Unidad</small><b>'+esc(p.standardUnit||p.unit||'—')+'</b></div><div><small>Costo</small><b>'+money(p.finalCost??p.cost??0)+'</b></div><div><small>Proveedor</small><b>'+esc(p.supplier||'—')+'</b></div><div><small>Origen</small><b>'+esc(p.source||'MAESTRO')+'</b></div></div></div><div class="catalog-actions"><button class="btn" data-action="edit-product" data-id="'+esc(p.id)+'">Editar</button><button class="btn" data-action="duplicate-product" data-id="'+esc(p.id)+'">Duplicar</button><button class="btn danger" data-action="delete-ingredient" data-id="'+esc(p.id)+'">Eliminar</button></div></article>').join('')||'<div class="card empty">No hay ingredientes.</div>')+'</div><div class="pager">'+pagerMarkup('ingredients-page',state._ingredientsPage,pages,rows.length,rows.length?start+1:0,Math.min(start+size,rows.length))+'</div>'
 }
 
 
