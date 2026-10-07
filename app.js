@@ -3324,6 +3324,6 @@ function duplicateUnit(id){
 const _lrxCatalogRowsBeforeV282=catalogRows;
 function catalogRows(){
  const html=_lrxCatalogRowsBeforeV282();
- if(current!=='prod')return html;
+ if(current!=='productos')return html;
  return html.replace(/(<button class="btn" data-action="edit-product" data-id="([^"]+)">Editar<\/button>)(<button class="btn" data-action="product-history")/g,'$1<button class="btn" data-action="duplicate-product" data-id="$2">Duplicar</button>$3');
 }
