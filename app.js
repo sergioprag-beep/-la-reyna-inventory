@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v292';
+const APP_VERSION='v293';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -3339,8 +3339,13 @@ function ingredientItemMatchesProduct(item,product){
 }
 function ingredientCatalogProduct(id){
  const key=String(id??'').trim();if(!key)return null;
- const rows=[...(state.products||[]),...(master.products||[])];
- return rows.find(p=>[p.id,p.masterId,p.code,p.sku,p.barcode,p.upc].some(v=>v!=null&&String(v)===key))||null;
+ // Ingredients are rendered from catalogSource(), which includes effective
+ // master overrides as well as local products. Resolve against that same view
+ // so every card action can find the exact record represented by its data-id.
+ let rows=[...(state.products||[]),...(master.products||[])];
+ try{rows=[...rows,...(catalogSource()||[])];}catch(e){}
+ const matches=p=>[p?.id,p?.masterId,p?.duplicateOf,p?.code,p?.sku,p?.barcode,p?.upc,p?.itemCode,...(Array.isArray(p?.alternateCodes)?p.alternateCodes:[])].some(v=>v!=null&&String(v).trim()===key);
+ return rows.find(matches)||rows.find(p=>normMaster(p?.id)===normMaster(key))||null;
 }
 function ingredientRecipeReferences(product){
  const recipes=new Map();
@@ -3421,4 +3426,4 @@ function duplicateUnit(id){
 }
 
 // Keep the active service worker URL in sync with the cache-busted app release.
-if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-07-v292',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
+if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-07-v293',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
