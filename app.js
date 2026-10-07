@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v291';
+const APP_VERSION='v292';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -3337,20 +3337,25 @@ function ingredientItemMatchesProduct(item,product){
  const ids=new Set([product?.id,product?.masterId,product?.duplicateOf].filter(Boolean).map(String)),names=new Set([product?.name].filter(Boolean).map(normMaster));
  return ['productId','ingredientId','ref','itemId'].some(k=>item?.[k]!=null&&ids.has(String(item[k])))||['product','ingredient','name'].some(k=>item?.[k]&&names.has(normMaster(item[k])));
 }
+function ingredientCatalogProduct(id){
+ const key=String(id??'').trim();if(!key)return null;
+ const rows=[...(state.products||[]),...(master.products||[])];
+ return rows.find(p=>[p.id,p.masterId,p.code,p.sku,p.barcode,p.upc].some(v=>v!=null&&String(v)===key))||null;
+}
 function ingredientRecipeReferences(product){
  const recipes=new Map();
  for(const [type,rows] of [['Receta',state.recipes||[]],['Pre-elaborado',state.preps||[]],['Receta de bar',state.barRecipes||[]],['Pre-elaborado de bar',state.barPreps||[]],['Receta',effectiveMaster('recipes')],['Pre-elaborado',effectiveMaster('preps')]])for(const r of rows){if(!Array.isArray(r?.items)||!r.items.some(i=>ingredientItemMatchesProduct(i,product)))continue;const key=String(r.id||r.name);if(!recipes.has(key))recipes.set(key,{id:key,name:r.name||'Sin nombre',type,master:(master.recipes||[]).some(x=>String(x.id)===String(r.id))})}
  return [...recipes.values()];
 }
 function ingredientSubstituteModal(id){
- const p=productByAny(id);if(!p)return toast('No se encontró el ingrediente.');
+ const p=ingredientCatalogProduct(id);if(!p)return toast('No se encontró el ingrediente.');
  const refs=ingredientRecipeReferences(p),choices=catalogSource().filter(x=>String(x.id)!==String(p.id));
  if(!refs.length)return deleteIngredient(id);
  if(!choices.length)return toast('Primero crea otro ingrediente o producto para poder sustituirlo en las recetas.');
  modal(`<h3>Ingrediente usado en recetas</h3><p><b>${esc(p.name||p.id)}</b> está vinculado a estas recetas:</p><ul>${refs.map(r=>`<li>${esc(r.name)} <span class="muted">(${esc(r.type)})</span></li>`).join('')}</ul><p class="muted">Elige el reemplazo. Se actualizarán las recetas y se retirará este ingrediente del catálogo; compras e inventario históricos se conservarán.</p><div class="field"><label>Sustituir por *</label><select id="ingredientReplacement"><option value="">— Seleccionar ingrediente —</option>${choices.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} · ${esc(x.standardUnit||x.unit||'unidad')}</option>`).join('')}</select></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn danger" data-action="ingredient-substitute" data-id="${esc(id)}">Sustituir y eliminar</button></div>`);
 }
 function substituteAndDeleteIngredient(id){
- const p=productByAny(id),replacement=productByAny(document.getElementById('ingredientReplacement')?.value||'');if(!p)return toast('No se encontró el ingrediente.');if(!replacement||String(replacement.id)===String(p.id))return toast('Selecciona otro ingrediente como reemplazo.');
+ const p=ingredientCatalogProduct(id),replacement=ingredientCatalogProduct(document.getElementById('ingredientReplacement')?.value||'');if(!p)return toast('No se encontró el ingrediente.');if(!replacement||String(replacement.id)===String(p.id))return toast('Selecciona otro ingrediente como reemplazo.');
  const refs=ingredientRecipeReferences(p);if(!refs.length)return toast('Ya no hay recetas vinculadas; vuelve a eliminar el ingrediente.');
  const snapshot=JSON.stringify(state),replaceItem=item=>ingredientItemMatchesProduct(item,p)?{...item,product:replacement.name,ingredient:replacement.name,name:replacement.name,productId:replacement.id,ingredientId:replacement.id,ref:replacement.id}:item;
  try{
@@ -3367,7 +3372,7 @@ function retireIngredientProduct(p){
  const local=(state.products||[]).find(x=>String(x.id)===String(p.id));if(local)local.active=false;
 }
 function deleteIngredient(id){
- const p=productByAny(id);if(!p)return toast('No se encontró el ingrediente.');const refs=ingredientRecipeReferences(p);if(refs.length)return ingredientSubstituteModal(id);
+ const p=ingredientCatalogProduct(id);if(!p)return toast('No se encontró el ingrediente.');const refs=ingredientRecipeReferences(p);if(refs.length)return ingredientSubstituteModal(id);
  if(!confirm(`¿Eliminar “${p.name||p.id}” del catálogo?${p.source==='MASTER'?' El registro maestro se ocultará localmente.':''} Los movimientos e historiales existentes se conservarán.`))return;
  const snapshot=JSON.stringify(state);retireIngredientProduct(p);audit('INGREDIENT_DELETE',`${p.name||p.id} · retirado del catálogo`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Ingrediente retirado del catálogo; sus movimientos históricos se conservaron.')
 }
@@ -3416,4 +3421,4 @@ function duplicateUnit(id){
 }
 
 // Keep the active service worker URL in sync with the cache-busted app release.
-if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-07-v291',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
+if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-07-v292',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
