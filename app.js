@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v289';
+const APP_VERSION='v290';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -3411,3 +3411,6 @@ function duplicateUnit(id){
  const base=(state.masterUnits||[]).find(x=>String(x.id)===String(id));if(!base)return toast('No se encontró la unidad para duplicar.');const used=new Set((state.masterUnits||[]).map(x=>normMaster(x.symbol)));let symbol=String(base.symbol||'unit')+'-2',n=2;while(used.has(normMaster(symbol)))symbol=String(base.symbol||'unit')+'-'+(++n);
  const copy={...base,id:'UNIT-'+Date.now(),name:`${base.name} (copia)`,symbol,source:'LOCAL',createdAt:now(),updatedAt:now()},snapshot=JSON.stringify(state);state.masterUnits=[...(state.masterUnits||[]),copy];audit('UNIT_DUPLICATE',`${base.name} → ${symbol}`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast(`Unidad duplicada como ${symbol}.`)
 }
+
+// Keep the active service worker URL in sync with the cache-busted app release.
+if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-07-v290',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
