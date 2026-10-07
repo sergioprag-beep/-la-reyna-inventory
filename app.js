@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v288';
+const APP_VERSION='v289';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -3370,6 +3370,8 @@ function ingredientsCatalog(){
  const products=catalogSource(),q=normMaster(state._ingredientsQ||''),rows=products.filter(p=>!q||normMaster(JSON.stringify(p)).includes(q)),size=Math.max(1,Number(state._ingredientsSize||25)),pages=Math.max(1,Math.ceil(rows.length/size));state._ingredientsPage=LRXPagination.normalize(state._ingredientsPage||0,pages);const start=state._ingredientsPage*size,visible=rows.slice(start,start+size);
  return head('Ingredientes','Insumos y materias primas vinculados a recetas. Puedes crear, editar, duplicar y retirar ingredientes; si uno se usa en recetas, podrás sustituirlo antes de retirarlo.','<button class="btn primary" data-action="new-product">＋ Nuevo ingrediente / producto</button> <button class="btn" data-action="ingredients-print">Imprimir / PDF</button> <button class="btn" data-action="ingredients-export">Excel + CSV</button>')+'<div class="toolbar"><input id="ingredientsQ" class="input search" value="'+esc(state._ingredientsQ||'')+'" placeholder="Buscar nombre, categoría, unidad o código"><label class="pager-size-label">Por página <select id="ingredientsSize">'+[25,50,100,250].map(n=>'<option value="'+n+'" '+(n===size?'selected':'')+'>'+n+'</option>').join('')+'</select></label></div><div class="catalog-results">'+(visible.map(p=>'<article class="catalog-card"><div class="catalog-main"><div class="catalog-title"><span class="catalog-id">'+esc(p.code||p.id)+'</span><h3>'+esc(p.name)+'</h3></div><div class="catalog-grid"><div><small>Categoría</small><b>'+esc(p.category||'—')+'</b></div><div><small>Unidad</small><b>'+esc(p.standardUnit||p.unit||'—')+'</b></div><div><small>Costo</small><b>'+money(p.finalCost??p.cost??0)+'</b></div><div><small>Proveedor</small><b>'+esc(p.supplier||'—')+'</b></div><div><small>Origen</small><b>'+esc(p.source||'MAESTRO')+'</b></div></div></div><div class="catalog-actions"><button class="btn" data-action="edit-product" data-id="'+esc(p.id)+'">Editar</button><button class="btn" data-action="duplicate-product" data-id="'+esc(p.id)+'">Duplicar</button><button class="btn danger" data-action="delete-ingredient" data-id="'+esc(p.id)+'">Eliminar</button></div></article>').join('')||'<div class="card empty">No hay ingredientes.</div>')+'</div><div class="pager">'+pagerMarkup('ingredients-page',state._ingredientsPage,pages,rows.length,rows.length?start+1:0,Math.min(start+size,rows.length))+'</div>'
 }
+// Bind explicitly: this file contains legacy renderers with the same function name.
+V.ingredientes=ingredientsCatalog;
 
 
 /* v280 — master catalog CRUD consistency */
