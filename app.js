@@ -3319,11 +3319,3 @@ function duplicateUnit(id){
  const base=(state.masterUnits||[]).find(x=>String(x.id)===String(id));if(!base)return toast('No se encontró la unidad para duplicar.');const used=new Set((state.masterUnits||[]).map(x=>normMaster(x.symbol)));let symbol=String(base.symbol||'unit')+'-2',n=2;while(used.has(normMaster(symbol)))symbol=String(base.symbol||'unit')+'-'+(++n);
  const copy={...base,id:'UNIT-'+Date.now(),name:`${base.name} (copia)`,symbol,source:'LOCAL',createdAt:now(),updatedAt:now()},snapshot=JSON.stringify(state);state.masterUnits=[...(state.masterUnits||[]),copy];audit('UNIT_DUPLICATE',`${base.name} → ${symbol}`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast(`Unidad duplicada como ${symbol}.`)
 }
-
-/* v282 — make duplicate action visible in the Products card renderer. */
-const _lrxCatalogRowsBeforeV282=catalogRows;
-function catalogRows(){
- const html=_lrxCatalogRowsBeforeV282();
- if(current!=='productos')return html;
- return html.replace(/(<button class="btn" data-action="edit-product" data-id="([^"]+)">Editar<\/button>)(<button class="btn" data-action="product-history")/g,'$1<button class="btn" data-action="duplicate-product" data-id="$2">Duplicar</button>$3');
-}
