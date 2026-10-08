@@ -6,14 +6,15 @@ La app guarda primero cada cambio en el dispositivo y después lo sincroniza con
 
 1. Reactiva el proyecto desde su panel si aparece como pausado.
 2. Abre **SQL Editor**, pega y ejecuta `supabase/lrx-app-state.sql`.
-3. En **Authentication → Providers / Sign In**, desactiva el registro público. Crea una cuenta de correo y contraseña para ti y una para cada socio desde **Authentication → Users**. No compartas contraseñas entre socios.
-4. Publica estos cambios en GitHub Pages.
+3. En **Authentication → Providers / Sign In**, desactiva el registro público. Invita a cada socio desde **Authentication → Users → Add user → Send invitation**. Al abrir la invitación en la app, podrá crear su propia contraseña. No compartan contraseñas.
+4. En **Authentication → URL Configuration**, establece como **Site URL** `https://sergioprag-beep.github.io/-la-reyna-inventory/` y agrega esa misma dirección a **Redirect URLs**.
+5. Publica estos cambios en GitHub Pages.
 
 La clave `sb_publishable_…` incluida en la app está diseñada para estar en el navegador. La seguridad depende de iniciar sesión y de las políticas RLS del SQL. Nunca pongas una clave `service_role` en la app.
 
 ## Conectar los dispositivos
 
-En cada dispositivo abre la app publicada, toca **Solo en este dispositivo**, e inicia sesión con una cuenta autorizada. En el primer dispositivo que tenga los registros correctos, elige subir esos datos a la nube. En los demás, elige cargar los datos de Supabase. La app conserva una copia local antes de reemplazar datos.
+Primero, en el dispositivo que tiene los registros correctos, abre la app publicada, toca **Solo en este dispositivo**, inicia sesión y confirma subir esos datos a la nube. Luego, en cada otro dispositivo, inicia sesión con la cuenta invitada y carga la copia de Supabase. La app conserva una copia local antes de reemplazar datos.
 
 La sincronización se ejecuta al guardar y revisa cambios de otros dispositivos cada 12 segundos. Si dos dispositivos editan al mismo tiempo, la app avisa y permite elegir qué copia conservar.
 
