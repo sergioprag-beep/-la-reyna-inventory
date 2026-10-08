@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v300';
+const APP_VERSION='v301';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -306,7 +306,8 @@ function inteligenciaAdministrativa(){
  const signals=[];
  if(salesNet>0&&foodCost>target)signals.push(['warning','Food Cost sobre objetivo',`${foodCost.toFixed(1)}% frente a ${target.toFixed(1)}%; diferencia aproximada ${money(cogs-salesNet*target/100)} en el período.`,'foodcost']);
  if(topExpenses.length)signals.push(['warning','Mayor gasto operativo',`${topExpenses[0][0]}: ${money(topExpenses[0][1])} (${expenseTotal?((topExpenses[0][1]/expenseTotal)*100).toFixed(1):0}% de los gastos DRE). Revisa factura, consumo y alternativas.`,'dre']);
- if(expenseChange>0)signals.push(['warning','Gastos mayores que el período anterior',`Aumentaron ${money(expenseChange)} frente a ${priorFrom}–${priorTo}. Compara categorías y movimientos en DRE.`,'dre']);
+ if(priorExpenses>0&&expenseChange>0)signals.push(['warning','Gastos mayores que el período anterior',`Aumentaron ${money(expenseChange)} frente a ${fmt(priorFrom)}–${fmt(priorTo)}. Compara categorías y movimientos en DRE.`,'dre']);
+ else if(expenseTotal>0&&priorExpenses===0)signals.push(['ok','Sin base comparable',`Hay gastos en el período actual, pero no en el período anterior (${fmt(priorFrom)}–${fmt(priorTo)}). Aún no se puede calcular si subieron o bajaron.`,'dre']);
  if(priceAlerts.length)signals.push(['warning','Aumentos de precio registrados',`${priceAlerts.length} aumento(s) sobre el umbral; el mayor es ${esc(priceAlerts[0].product||'producto')} (${Number(priceAlerts[0].increasePct||0).toFixed(1)}%). Cotiza proveedores alternos.`,'proveedores-comparacion']);
  if(low.length)signals.push(['danger','Riesgo de agotado',`${low.length} producto(s) en mínimo; ajusta reposición a consumo para evitar compra urgente o exceso.`,'inventario']);
  if(payables>0)signals.push(['warning','Cuentas por pagar',`${money(payables)} pendientes o parciales. Revisa vencimientos y términos.`,'compras']);
@@ -3455,7 +3456,7 @@ function duplicateUnit(id){
 }
 
 // Keep the active service worker URL in sync with the cache-busted app release.
-if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-08-v300',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
+if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-08-v301',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
 
 // The DRE workbook places row labels in column B while legacy templates may use column A.
 const _lrxPreviewDreImport=previewDreImport;
