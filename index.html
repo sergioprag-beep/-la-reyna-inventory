@@ -280,7 +280,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="./purchase-engine.js?v=2026-10-06-v276" defer></script>
 <script src="./supabase-sync.js?v=2026-10-08-v2" defer></script>
-<script src="./app.js?v=2026-10-09-v327" defer></script>
+<script src="./app.js?v=2026-10-09-v328" defer></script>
 <script src="./catalog-controls.js?v=2026-10-08-v307" defer></script>
 
 <style id="lrx-v234-final">
@@ -321,6 +321,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 @media(max-width:760px){.tech-head{grid-template-columns:21mm minmax(0,1fr) 21mm!important}.recipe-doc-logo-cell .recipe-doc-lockup{width:19mm!important;height:18mm!important}.tech-code b{font-size:9px!important}.tech-code strong{font-size:14px!important;padding:3px!important}.standard-title-row,.cost-title-row{grid-template-columns:21mm minmax(0,1fr) 21mm!important;min-height:19mm!important}.standard-title-row{grid-template-columns:21mm minmax(0,1fr)!important}.standard-title-row .recipe-doc-lockup,.cost-title-row .recipe-doc-lockup{width:21mm!important;height:19mm!important;padding:1mm!important}.standard-title-row h1{font-size:12px!important}.standard-title-row h2,.cost-title-row h2{font-size:11px!important}.standard-title-row p,.cost-title-row p{font-size:7px!important}.cost-title-row .cost-head-price{font-size:8px!important}}
 @media print{.recipe-print-page .recipe-doc-brand{filter:none!important}}
 </style>
+
 </body>
 </html>
 <style id="lrx-v227-recipe-fix">
@@ -493,3 +494,23 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 
 <style id="lrx-v245-utensil-management">.utensil-card-select{display:contents;cursor:pointer}.ut-card-tools{grid-column:1/-1;display:flex;gap:5px;margin-top:3px}.ut-card-tools .btn{font-size:11px;padding:4px 7px;min-height:27px}.ut-card-tools .ut-delete{color:#a52836;border-color:#efc9cc;background:#fff}.utensil-card{padding-bottom:7px!important}@media(max-width:560px){.ut-card-tools .btn{flex:1;padding:4px 3px;font-size:10px}}</style>
 <style id="lrx-v295-category-crud-layout">.grid:has(#categoriesQ){grid-template-columns:minmax(0,1fr)!important}.grid:has(#categoriesQ)>.card:first-child{min-width:0}.grid:has(#categoriesQ)>.card:first-child .tablewrap{overflow-x:auto}.grid:has(#categoriesQ)>.card:first-child table{min-width:720px}.grid:has(#categoriesQ)>.card:first-child td:last-child{white-space:nowrap}.grid:has(#categoriesQ)>.card:first-child td:last-child .btn{margin:2px 3px 2px 0}</style>
+<style id="lrx-v328-mobile-compact-tables">
+@media(max-width:820px){
+  #content{overflow-x:hidden!important}
+  #content .module-page,#content .module-page *{min-width:0}
+  #content .module-page .tablewrap,#content .tablewrap{width:100%!important;max-width:100%!important;overflow:visible!important}
+  #content .module-page table,#content table{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;border-collapse:separate!important;border-spacing:0!important}
+  #content .module-page table thead,#content table thead{display:none!important}
+  #content .module-page table tbody,#content table tbody{display:grid!important;gap:7px;width:100%!important}
+  #content .module-page table tr,#content table tr{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;width:100%!important;margin:0 0 7px!important;padding:4px!important;border:1px solid var(--line,#dfe4ec)!important;border-radius:10px!important;background:#fff!important}
+  #content .module-page table td,#content table td{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;gap:3px!important;width:auto!important;min-width:0!important;max-width:100%!important;padding:6px!important;border:0!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:11px!important;line-height:1.25}
+  #content .module-page table td::before,#content table td::before{content:attr(data-label);display:block!important;min-height:1em;color:var(--muted,#667085);font-size:9px;font-weight:800;line-height:1.15;text-transform:uppercase;letter-spacing:.025em}
+  #content .module-page table td:last-child:has(button),#content table td:last-child:has(button){grid-column:1/-1;flex-direction:row!important;flex-wrap:wrap;align-items:center;gap:5px!important;border-top:1px solid #eef1f5!important;margin-top:3px;padding-top:8px!important}
+  #content .module-page table td:last-child:has(button) .btn,#content table td:last-child:has(button) .btn{flex:1 1 auto;min-width:72px;min-height:34px;padding:6px!important;font-size:10px!important;white-space:normal}
+  #content .module-page table td[colspan],#content table td[colspan]{display:block!important;grid-column:1/-1;text-align:center!important}
+  #content .module-page table td[colspan]::before,#content table td[colspan]::before{display:none!important}
+  #content .module-page .tablewrap table,#content .module-page .grid:has(#categoriesQ)>.card:first-child table,#content .menu-table-card table{width:100%!important;min-width:0!important;max-width:100%!important}
+  #content .module-page .grid:has(#categoriesQ)>.card:first-child .tablewrap,#content .menu-table-card .tablewrap{overflow:visible!important}
+  #content .module-page .grid:has(#categoriesQ)>.card:first-child td:last-child{white-space:normal!important}
+}
+</style>
