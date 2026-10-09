@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v312';
+const APP_VERSION='v313';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -1224,12 +1224,13 @@ function inventoryMasterRows(){
 }
 
 function barMasterCatalog(){
- const isBar=(r)=>{const t=String(r?.department||r?.category||r?.area||'').toLowerCase();const k=String(r?.kind||r?.type||'').toLowerCase();return t.includes('bar')||k.includes('bar')||k.includes('bebida')||k.includes('drink')};
+ const isBar=(r)=>{const t=String(r?.department||r?.category||r?.area||'').toLowerCase(),k=String(r?.kind||r?.type||'').toLowerCase(),n=String(r?.name||'').toLowerCase(),components=(r?.items||[]).map(x=>String(x?.category||'').toLowerCase());return t.includes('bar')||t.includes('bebida')||t.includes('alcohol')||k.includes('bar')||k.includes('bebida')||k.includes('drink')||n.includes('margarita')||n.includes('cocktail')||n.includes('jarritos')||n.includes('topo chico')||components.some(x=>x==='alcohol'||x==='bebidas'||x==='bebidassoft')};
  const masterFinal=effectiveMaster('recipes').filter(isBar);
  const masterPrep=effectiveMaster('preps').filter(isBar);
  const local=[...(state.barRecipes||[]),...(state.barPreps||[])];
  const names=new Set(local.map(r=>String(r.name||'').trim().toLowerCase()));
- const masterRows=[...masterFinal.map(r=>({...r,kind:'RECETA BAR',source:'MASTER'})),...masterPrep.map(r=>({...r,kind:'PRE-ELABORADO BAR',source:'MASTER'}))].filter(r=>!names.has(String(r.name||'').trim().toLowerCase()));
+ const withoutSuggestedPrice=r=>({...r,items:(r.items||[]).filter(x=>!String(x?.product||x?.ingredient||x?.name||'').trim().toLowerCase().includes('precio sugerido'))});
+ const masterRows=[...masterFinal.map(r=>({...withoutSuggestedPrice(r),kind:'RECETA BAR',source:'MASTER'})),...masterPrep.map(r=>({...withoutSuggestedPrice(r),kind:'PRE-ELABORADO BAR',source:'MASTER'}))].filter(r=>!names.has(String(r.name||'').trim().toLowerCase()));
  return [...local,...masterRows];
 }
 function cloneMasterBarRecord(id){const base=barMasterCatalog().find(x=>String(x.id)===String(id)&&x.source==='MASTER');if(!base)return null;const isPrep=String(base.kind||'').toUpperCase().includes('PRE')||String(base.type||'').toLowerCase()==='pre',key=isPrep?'barPreps':'barRecipes',snapshot=JSON.stringify(state),clone=JSON.parse(JSON.stringify({...base,id:'BAR-'+Date.now(),masterId:base.id,source:'EDITADO DESDE MAESTRO',kind:isPrep?'PRE-ELABORADO':'RECETA',createdAt:now()}));state[key]=Array.isArray(state[key])?state[key]:[];state[key].unshift(clone);audit('BAR_MAESTRO_COPIADO',`${base.id} · ${base.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return null}return clone}
