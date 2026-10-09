@@ -190,6 +190,15 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 #nav>button:not(.active) .nav-icon,#nav .nav-section>summary .nav-section-icon,#nav .nav-children>button:not(.active) .nav-icon{color:#b8c9df!important}
 #nav>button:not(.active):hover,#nav .nav-section>summary:hover,#nav .nav-children>button:not(.active):hover{background:rgba(255,255,255,.1)!important;color:#fff!important}
 </style>
+<style id="lrx-v314-bar-ingredient-layout">
+#modalBox:has(#barIngredientRows){width:min(1000px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-x:hidden;overflow-y:auto;box-sizing:border-box}
+#modalBox:has(#barIngredientRows) #barIngredientRows{display:grid;gap:10px;min-width:0;max-width:100%}
+.bar-ingredient-row{position:relative;display:grid;grid-template-columns:minmax(180px,2fr) minmax(90px,.75fr) minmax(100px,.85fr) minmax(145px,1.1fr) 40px;gap:12px;align-items:end;margin:0;padding:14px;border:1px solid #dce4ef;border-radius:14px;background:linear-gradient(135deg,#fff 0%,#f8fafd 100%);box-shadow:0 2px 8px rgba(16,47,96,.045);min-width:0;max-width:100%;box-sizing:border-box}
+.bar-ingredient-row>*{min-width:0;max-width:100%;box-sizing:border-box}.bar-ing-field label{display:block;margin-bottom:5px;font-size:12px;font-weight:750;color:#53647c}.bar-ing-field input,.bar-ing-field select{display:block;width:100%;min-width:0;max-width:100%;height:40px;padding:8px 10px;border:1px solid #cfd8e5;border-radius:9px;background:#fff;box-sizing:border-box}.bar-ing-field input:focus,.bar-ing-field select:focus{outline:2px solid rgba(35,89,160,.16);border-color:#4f7fbd}.bar-ing-cost input[readonly]{background:#edf3fa;color:#43536a;font-weight:700}.bar-ing-cost .bi-line{display:block;margin-top:5px;font-size:12px;line-height:1.35;font-weight:700;color:#66778f;overflow-wrap:anywhere}.bar-ingredient-row .bi-remove{width:40px;height:40px;min-width:40px;padding:0;border-radius:10px;font-size:20px;line-height:1}
+#modalBox:has(#barIngredientRows) .recipe-total{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px;padding:12px 14px;border:1px solid #dce4ef;border-radius:12px;background:#f4f7fb;color:#34445d;line-height:1.4}
+#modalBox:has(#barIngredientRows) .recipe-total strong{color:#123e78;font-size:17px}#modalBox:has(#barIngredientRows) .rowhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:760px){#modalBox:has(#barIngredientRows){width:calc(100vw - 12px);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);padding:14px}.bar-ingredient-row{grid-template-columns:minmax(0,1fr) minmax(95px,.65fr);gap:10px;padding:12px;padding-right:48px}.bar-ing-name,.bar-ing-cost{grid-column:1/-1}.bar-ingredient-row .bi-remove{position:absolute;right:10px;top:10px}.bar-ing-field label{font-size:11px}}
+</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -234,7 +243,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="./purchase-engine.js?v=2026-10-06-v276" defer></script>
 <script src="./supabase-sync.js?v=2026-10-08-v2" defer></script>
-<script src="./app.js?v=2026-10-08-v313" defer></script>
+<script src="./app.js?v=2026-10-08-v314" defer></script>
 <script src="./catalog-controls.js?v=2026-10-08-v307" defer></script>
 
 <style id="lrx-v234-final">
