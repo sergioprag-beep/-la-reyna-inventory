@@ -199,6 +199,40 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 #modalBox:has(#barIngredientRows) .recipe-total strong{color:#123e78;font-size:17px}#modalBox:has(#barIngredientRows) .rowhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 @media(max-width:760px){#modalBox:has(#barIngredientRows){width:calc(100vw - 12px);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);padding:14px}.bar-ingredient-row{grid-template-columns:minmax(0,1fr) minmax(95px,.65fr);gap:10px;padding:12px;padding-right:48px}.bar-ing-name,.bar-ing-cost{grid-column:1/-1}.bar-ingredient-row .bi-remove{position:absolute;right:10px;top:10px}.bar-ing-field label{font-size:11px}}
 </style>
+<style id="lrx-v327-mobile-responsive">
+/* Keep global controls reachable on phones and let module actions fit their labels. */
+@media(max-width:820px){
+  .topbar{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-rows:auto auto;gap:7px;padding:8px 10px!important;overflow:visible!important;align-items:center}
+  #menuBtn{grid-column:1;grid-row:1;width:42px;height:42px;padding:0}
+  .global-search{display:none!important}.topbar-spacer{display:none!important}
+  .date-chip{display:flex!important;grid-column:2;grid-row:1;min-width:0;max-width:100%;align-items:center;justify-content:center;gap:4px;padding:8px 7px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:clamp(9px,2.7vw,12px);white-space:nowrap;overflow:hidden}
+  .date-chip b{overflow:hidden;text-overflow:ellipsis;min-width:0}.date-chip span{flex:0 0 auto}
+  .language-chip{display:inline-flex!important;grid-column:3;grid-row:1;align-items:center;gap:3px;padding:8px 7px;border:1px solid var(--line);border-radius:9px;background:#fff;white-space:nowrap}
+  .sync-status{display:inline-flex!important;grid-column:1;grid-row:2;justify-self:start;align-items:center;min-width:0;max-width:42px;padding:5px 7px!important;font-size:10px!important;overflow:hidden}
+  .sync-status b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top-icon{display:inline-flex!important;grid-row:2;align-items:center;justify-content:center;width:38px;height:38px;padding:4px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:18px}
+  #voiceBtn{grid-column:2}#captureBtn{grid-column:3}#cameraBtn{grid-column:4}#notificationsBtn{display:none!important}
+  .profile-button{display:flex!important;grid-column:4;grid-row:1;justify-self:end;width:42px;height:42px;align-items:center;justify-content:center;padding:3px;border:0;border-radius:12px;background:#123e78!important;color:#fff!important}
+  .profile-avatar{display:grid!important;width:34px;height:34px;place-items:center;border-radius:50%;background:#c92d6f!important;color:#fff!important;font-weight:900}
+  .profile-copy,.profile-chevron{display:none!important}
+  .module-head{display:block!important}.module-head .actions{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,104px),1fr));align-items:stretch;width:100%;gap:7px}
+  .module-head .actions>*{width:100%;min-width:0;max-width:100%;min-height:48px;padding:8px 6px;white-space:normal;overflow-wrap:anywhere;word-break:normal;text-align:center;line-height:1.2;font-size:clamp(11px,3vw,14px)}
+  .module-page,.module-page *,.content,.card,.grid{min-width:0}
+  .module-page{overflow-wrap:anywhere}.module-page img,.module-page canvas{max-width:100%;height:auto}
+  .tablewrap{width:100%;max-width:100%;overflow-x:auto!important;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  .tablewrap table{width:max-content;min-width:720px;max-width:none}
+  .toolbar,.actions{min-width:0;max-width:100%;flex-wrap:wrap}
+  .toolbar>*{min-width:0;max-width:100%}
+}
+@media(max-width:420px){
+  .topbar{gap:5px;padding-inline:8px!important}
+  .date-chip{font-size:9px;padding-inline:5px}
+  .language-chip{font-size:11px;padding-inline:5px}
+  .top-icon{width:34px;height:36px}
+  .module-head .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .module-head .actions>*{font-size:11px}
+}
+</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -243,7 +277,7 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="./purchase-engine.js?v=2026-10-06-v276" defer></script>
 <script src="./supabase-sync.js?v=2026-10-08-v2" defer></script>
-<script src="./app.js?v=2026-10-09-v326" defer></script>
+<script src="./app.js?v=2026-10-09-v327" defer></script>
 <script src="./catalog-controls.js?v=2026-10-08-v307" defer></script>
 
 <style id="lrx-v234-final">
