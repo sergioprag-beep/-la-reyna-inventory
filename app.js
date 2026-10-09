@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v322';
+const APP_VERSION='v323';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -287,7 +287,7 @@ function inteligenciaAdministrativa(){
  const inPeriod=x=>{const d=String(x?.date||x?.createdAt||x?.invoiceDate||'').slice(0,10);return d>=from&&d<=to};
  const invValue=(state.inventory||[]).reduce((n,x)=>n+Number(x.qty||0)*Number(x.unitCost||0),0);
  const low=(state.inventory||[]).filter(x=>Number(x.minQty||0)>0&&Number(x.qty||0)<=Number(x.minQty||0));
- const salesRows=(state.sales||[]).filter(inPeriod).map(saleDetail),salesNet=salesRows.reduce((n,x)=>n+Number(x.net||0),0),cogs=salesRows.reduce((n,x)=>n+Number(x.cost||0),0);
+ const salesRows=(state.sales||[]).filter(inPeriod).map(s=>saleDetail(s)),salesNet=salesRows.reduce((n,x)=>n+Number(x.net||0),0),cogs=salesRows.reduce((n,x)=>n+Number(x.cost||0),0);
  const manual=(state.dreRecords||[]).filter(inPeriod),expenses=manual.filter(x=>x.type==='expense'),income=manual.filter(x=>x.type==='income');
  const expenseTotal=expenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=income.reduce((n,x)=>n+Number(x.amount||0),0),foodCost=salesNet>0?cogs/salesNet*100:0,target=Number(state.settings?.targetFoodCost||30);
  const recipeFoodCostRows=allRecipes().map(r=>{const d=recipeCostDetail(r),yieldQty=Number(r.yieldQty||r.yieldValue||1),unitCost=yieldQty?d.cost/yieldQty:d.cost,price=Number(r.salePrice||r.price||0);return {name:r.name,foodCost:price>0&&d.complete?unitCost/price*100:null}}).filter(r=>r.foodCost!=null&&Number.isFinite(r.foodCost)),recipeFoodCost=recipeFoodCostRows.length?recipeFoodCostRows.reduce((n,r)=>n+r.foodCost,0)/recipeFoodCostRows.length:null;
@@ -1494,7 +1494,7 @@ function saleDetail(s,recipes=allRecipes()){
  // Use the cost captured when a POS sale deducted stock; don't rewrite historical
  // profitability every time a recipe or ingredient cost changes later.
  if(s.cost!==undefined&&s.cost!==null&&Number.isFinite(Number(s.cost)))cost=Number(s.cost);
- return {...s,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};
+ return {...s,gross,discountAmt,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};
 }
 function salesReport(){const rows=unifiedSaleRows();const byChannel={};rows.forEach(r=>{const k=r.channel||'Sin canal';byChannel[k]=(byChannel[k]||0)+Number(r.net||0)});modal(`<h3>Reporte POS</h3><div class="grid"><div class="card kpi"><small>Ventas</small><strong>${rows.length}</strong></div><div class="card kpi"><small>Venta neta</small><strong>${money(rows.reduce((a,r)=>a+r.net,0))}</strong></div><div class="card kpi"><small>COGS</small><strong>${money(rows.reduce((a,r)=>a+r.cost,0))}</strong></div><div class="card kpi"><small>Utilidad</small><strong>${money(rows.reduce((a,r)=>a+r.profit,0))}</strong></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Canal</th><th>Ventas netas</th></tr></thead><tbody>${Object.entries(byChannel).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">Sin datos</td></tr>'}</tbody></table></div><div class="actions"><button class="btn" data-action="close">Cerrar</button></div>`)}
 function saleViewModal(id){const s=(state.sales||[]).find(x=>String(x.id)===String(id));if(!s)return toast('Venta no encontrada');const d=saleDetail(s);modal(`<h3>Venta ${esc(s.id)}</h3><p>Cliente: ${esc(s.customerName||'—')} · Canal: ${esc(s.channel||'—')} · Estado: ${esc(s.status||'')}</p><div class="tablewrap"><table><thead><tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Modificadores</th><th>Total</th></tr></thead><tbody>${(s.items||[]).map(x=>`<tr><td>${esc(x.product)}</td><td>${x.qty}</td><td>${money(x.price)}</td><td>${esc((x.modifiers||[]).join(', ')||'—')}</td><td>${money(x.price*x.qty)}</td></tr>`).join('')}</tbody></table></div><div class="resultbox" style="margin-top:12px">Neto <b>${money(d.net)}</b> · Costo <b>${money(d.cost)}</b> · Utilidad <b>${money(d.profit)}</b> · Food Cost <b>${d.foodCost.toFixed(1)}%</b></div><div class="actions"><button class="btn" data-action="sale-print-one" data-id="${esc(id)}">Imprimir</button><button class="btn" data-action="close">Cerrar</button></div>`)}
