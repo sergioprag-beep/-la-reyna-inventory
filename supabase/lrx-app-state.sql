@@ -20,3 +20,34 @@ create policy "Authenticated LRX users can create shared state"
 drop policy if exists "Authenticated LRX users can update shared state" on public.lrx_app_state;
 create policy "Authenticated LRX users can update shared state"
   on public.lrx_app_state for update to authenticated using (true) with check (id = 'main');
+
+-- Private file storage for the Recursos library. Documents require an authenticated
+-- LRX session; the app applies its role-based download controls before requesting them.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'lrx-resources',
+  'lrx-resources',
+  false,
+  20971520,
+  array[
+    'application/pdf',
+    'text/plain',
+    'image/jpeg',
+    'image/png',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Authenticated LRX users can upload resource documents" on storage.objects;
+create policy "Authenticated LRX users can upload resource documents"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'lrx-resources');
+
+drop policy if exists "Authenticated LRX users can read resource documents" on storage.objects;
+create policy "Authenticated LRX users can read resource documents"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'lrx-resources');
