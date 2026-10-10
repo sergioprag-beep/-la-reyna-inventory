@@ -3721,7 +3721,7 @@ function duplicateUnit(id){
 }
 
 // Keep the active service worker URL in sync with the cache-busted app release.
-if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-10-v352',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
+if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-10-v353',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);
 
 // The DRE workbook places row labels in column B while legacy templates may use column A.
 const _lrxPreviewDreImport=previewDreImport;
