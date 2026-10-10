@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v333';
+const APP_VERSION='v334';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -218,7 +218,7 @@ function icon(id){const paths={
  gerente:'<path d="M4 19h16M6 16V9M10 16V5M14 16v-3M18 16V7"/>',
  calculadora:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h2"/>',
  convertidor:'<path d="M5 7h14M15 3l4 4-4 4M19 17H5M9 13l-4 4 4 4"/>',
- notas:'<path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>,
+ notas:'<path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  contactos:'<path d="M4 5h16v14H4z"/><circle cx="9" cy="10" r="2"/><path d="M6 16c.4-1.7 1.4-2.5 3-2.5s2.6.8 3 2.5M14 9h3M14 12h3M14 15h3"/>',
  empleados:'<path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3 20a5 5 0 0 1 10 0M16 11a2.5 2.5 0 1 0 0-5M15 15a4 4 0 0 1 5 4"/>',
  dieta:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5M8 17h8"/>',
