@@ -483,13 +483,37 @@ function recipeTemplatePicker(format){
  modal(`<h3>Elige una receta</h3><p class="muted">Abriremos la plantilla seleccionada con los datos de la receta.</p><div class="toolbar"><input class="input" id="recipeTemplateSearch" placeholder="Buscar receta..."></div><div class="recipe-template-picker-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;max-height:55vh;overflow:auto">${unique.map(r=>`<button type="button" class="btn recipe-template-choice" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px;text-align:left" data-action="recipe-template-open" data-id="${esc(r.id||'')}" data-type="final" data-format="${esc(format)}"><b>${esc(r.name||'Receta sin nombre')}</b><small>${esc(r.category||r.type||'')}</small></button>`).join('')||'<div class="empty">No hay recetas disponibles.</div>'}</div><p id="recipeTemplateNoMatches" class="empty" hidden>No hay recetas que coincidan con la búsqueda.</p><div class="actions"><button type="button" class="btn" data-action="close">Cerrar</button></div>`);
  const search=document.getElementById('recipeTemplateSearch');search?.addEventListener('input',()=>{const q=search.value.trim().toLocaleLowerCase();let visible=0;document.querySelectorAll('.recipe-template-choice').forEach(b=>{const match=b.textContent.toLocaleLowerCase().includes(q);b.style.setProperty('display',match?'flex':'none','important');if(match)visible++});const empty=document.getElementById('recipeTemplateNoMatches');if(empty)empty.style.setProperty('display',visible?'none':'block','important')});
 }
+function labelRecipeTableCells(){
+ document.querySelectorAll('.recipe-view-wrap .tech-table').forEach(table=>{
+  const rows=[...table.querySelectorAll('tr')];
+  const headerRow=rows.find(row=>{const cells=[...row.children];return cells.length&&cells.every(cell=>cell.tagName==='TH')});
+  const headers=headerRow?[...headerRow.children].map(cell=>cell.textContent.trim()):[];
+  rows.forEach(row=>{
+   const cells=[...row.children];
+   if(!cells.length)return;
+   if(cells.some(cell=>cell.tagName==='TH')&&cells.some(cell=>cell.tagName==='TD')){
+    const label=cells.find(cell=>cell.tagName==='TH')?.textContent.trim();
+    const value=cells.find(cell=>cell.tagName==='TD');
+    if(label&&value&&!value.hasAttribute('colspan'))value.dataset.label=label;
+    return;
+   }
+   if(cells.some(cell=>cell.tagName!=='TD'))return;
+   cells.forEach((cell,index)=>{
+    if(cell.hasAttribute('colspan')||cell.dataset.label)return;
+    const label=headers[index]||'';
+    if(label)cell.dataset.label=label;
+   });
+  });
+ });
+}
 function recipeViewModal(r,type,initialFormat='standard'){
  const source=r?.source||((r?.masterId)?'Editado desde MASTER':'Registro local');
  const pt=r?.productType||(type==='prep'?'Pre-elaborado':'Producto Final');
  const rid=esc(r?.id||'');
  modal(`<div class="recipe-view-wrap"><div class="recipe-view-head"><div><span class="status">${esc(pt)} · ${r?.masterId?'MASTER / EDITADO':'REGISTRO'}</span><h2>${esc(r?.name||'Receta')}</h2><p>${esc(source)}</p></div><div class="recipe-doc-tabs"><button class="btn primary" data-action="recipe-format" data-id="${rid}" data-type="${type}" data-format="standard">🍳 Receta Estándar</button><button class="btn" data-action="recipe-format" data-id="${rid}" data-type="${type}" data-format="costing">💰 Escandallo</button><button class="btn" data-action="recipe-format" data-id="${rid}" data-type="${type}" data-format="technical">📄 Ficha Técnica</button></div></div><div class="recipe-doc-actions"><button class="btn" data-action="edit-recipe" data-id="${rid}" data-type="${type}">Editar</button><button class="btn" data-action="duplicate-recipe" data-id="${rid}" data-type="${type}">Duplicar</button><button class="btn" data-action="recipe-print-doc" data-id="${rid}" data-type="${type}" data-format="standard" data-paper="letter">PDF / Carta</button><button class="btn" data-action="recipe-print-doc" data-id="${rid}" data-type="${type}" data-format="standard" data-paper="legal">PDF / Oficio</button><button class="btn" data-action="recipe-print-doc" data-id="${rid}" data-type="${type}" data-format="standard" data-paper="tabloid">PDF / Tabloide</button></div><div id="recipeFormatBody">${recipeStandardHtml(r,type)}</div><div class="actions"><button class="btn" data-action="close">Cerrar</button></div></div>`);
+ labelRecipeTableCells();
  const tabs=[...document.querySelectorAll('.recipe-doc-tabs [data-action="recipe-format"]')];const printBtns=[...document.querySelectorAll('.recipe-doc-actions [data-action="recipe-print-doc"]')];
- const setFormat=(format)=>{tabs.forEach(b=>b.classList.toggle('primary',b.dataset.format===format));printBtns.forEach(b=>b.dataset.format=format);const body=document.getElementById('recipeFormatBody');if(body)body.innerHTML=format==='standard'?recipeStandardHtml(r,type):format==='costing'?recipeCostingHtml(r,type):recipeTechnicalHtml(r,type)};
+ const setFormat=(format)=>{tabs.forEach(b=>b.classList.toggle('primary',b.dataset.format===format));printBtns.forEach(b=>b.dataset.format=format);const body=document.getElementById('recipeFormatBody');if(body){body.innerHTML=format==='standard'?recipeStandardHtml(r,type):format==='costing'?recipeCostingHtml(r,type):recipeTechnicalHtml(r,type);labelRecipeTableCells()}};
  tabs.forEach(b=>b.addEventListener('click',()=>setFormat(b.dataset.format)));
  setFormat(initialFormat);
 }
