@@ -188,7 +188,7 @@ function group(id){
 function icon(id){const paths={
  dashboard:'<path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z"/>',
  nas:'<path d="M4 6h16v12H4z"/><path d="M7 10h10M7 14h6"/>' ,
- inteligencia:'<path d="M4 19h16"/><path d="M7 16V9M12 16V5M17 16v-4"/><path d="m6 7 4-3 4 2 4-3"/>,
+ inteligencia:'<path d="M4 19h16"/><path d="M7 16V9M12 16V5M17 16v-4"/><path d="m6 7 4-3 4 2 4-3"/>',
  'documentos-admin':'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/>',
  sup:'<path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  dre:'<path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/>',
