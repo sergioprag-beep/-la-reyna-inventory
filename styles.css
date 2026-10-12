@@ -91,6 +91,19 @@ html,body{overflow-x:hidden}.tablewrap{overflow-x:auto;max-width:100%}.tablewrap
 .inventory-alerts-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid var(--line);background:#fff}
 @media(max-width:700px){.modal.inventory-alerts-overlay{align-items:center;padding:12px}.modalbox.inventory-alerts-modalbox{width:100%;max-height:88vh;max-height:88dvh;border-radius:14px}.inventory-alerts-header{position:relative;z-index:1;padding:13px 14px}.inventory-alerts-header h3{font-size:18px}.inventory-alerts-header .btn{min-height:42px}.inventory-alerts-list{padding:0 10px}.inventory-alerts-list table{min-width:0}.inventory-alerts-list table thead{display:none}.inventory-alerts-list table,.inventory-alerts-list tbody,.inventory-alerts-list tr,.inventory-alerts-list td{display:block;width:100%}.inventory-alerts-list tr{padding:8px 10px;margin:8px 0;border:1px solid var(--line);border-radius:11px;background:#fff}.inventory-alerts-list td{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:5px 2px;border:0;text-align:right;font-size:13px}.inventory-alerts-list td:first-child{font-size:15px;font-weight:800;text-align:left}.inventory-alerts-list td::before{content:attr(data-label);font-size:10px;font-weight:800;color:var(--muted);text-align:left}.inventory-alerts-list td:first-child::before{content:none}.inventory-alerts-list td:has(.empty){display:block;text-align:center}.inventory-alerts-footer{padding:10px 14px}.inventory-alerts-footer .muted{max-width:58%;line-height:1.35}.inventory-alerts-footer .btn{min-height:44px;white-space:nowrap}}
 
+/* Keep alert rows inside narrow phone dialogs; the shared table styles can otherwise force intrinsic width. */
+.modalbox.inventory-alerts-modalbox,.inventory-alerts-dialog,.inventory-alerts-list{min-width:0;max-width:100%}
+.inventory-alerts-dialog,.inventory-alerts-list{width:100%}
+@media(max-width:700px){
+  .modalbox.inventory-alerts-modalbox{width:calc(100vw - 24px)}
+  .inventory-alerts-list{box-sizing:border-box;overflow-x:hidden!important}
+  .inventory-alerts-list table{display:block;width:100%;min-width:0;max-width:100%;table-layout:fixed}
+  .inventory-alerts-list tbody,.inventory-alerts-list tr{width:100%;min-width:0;max-width:100%}
+  #modalBox .inventory-alerts-list td{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);align-items:start;gap:8px;width:100%;min-width:0;max-width:100%;text-align:right;overflow-wrap:anywhere}
+  #modalBox .inventory-alerts-list td::before{display:block;min-width:0;overflow-wrap:anywhere}
+  #modalBox .inventory-alerts-list td:first-child{display:block;text-align:left}
+}
+
 /* LRX v045 — mobile-first integrated data layer */
 .inventory-cards{display:grid;gap:10px}.inventory-card{margin:0}.pill{display:inline-flex;align-items:center;min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:800;color:var(--muted)}
 @media(max-width:700px){.content{padding:18px 14px 100px}.head h2{font-size:30px}.head p{font-size:16px}.toolbar{display:grid;grid-template-columns:1fr;gap:8px}.toolbar .search{max-width:none}.catalog-tools{grid-template-columns:1fr 90px}.catalog-tools .input{width:100%}.catalog-grid{grid-template-columns:1fr 1fr}.catalog-actions{display:grid;grid-template-columns:1fr 1fr}.catalog-actions .btn{width:100%;min-height:44px}.grid{grid-template-columns:1fr!important}.kpi strong{font-size:25px}.pill{justify-content:center;width:100%}}
