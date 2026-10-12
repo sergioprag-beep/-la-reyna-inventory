@@ -94,9 +94,17 @@ html,body{overflow-x:hidden}.tablewrap{overflow-x:auto;max-width:100%}.tablewrap
 /* Keep alert rows inside narrow phone dialogs; the shared table styles can otherwise force intrinsic width. */
 .modalbox.inventory-alerts-modalbox,.inventory-alerts-dialog,.inventory-alerts-list{min-width:0;max-width:100%}
 .inventory-alerts-dialog,.inventory-alerts-list{width:100%}
+.inventory-alert-card{min-width:0;width:100%;margin:8px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow-wrap:anywhere}
+.inventory-alert-card h4{margin:0 0 10px;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.inventory-alert-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0}
+.inventory-alert-card dl>div{min-width:0;padding:8px;border-radius:8px;background:#f7f8fa}
+.inventory-alert-card dt{color:var(--muted);font-size:11px;font-weight:800}
+.inventory-alert-card dd{margin:3px 0 0;font-size:13px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
 @media(max-width:700px){
   .modalbox.inventory-alerts-modalbox{width:calc(100vw - 24px)}
   .inventory-alerts-list{box-sizing:border-box;overflow-x:hidden!important}
+  .inventory-alert-card{box-sizing:border-box;padding:11px}
+  .inventory-alert-card dl{grid-template-columns:repeat(2,minmax(0,1fr))}
   .inventory-alerts-list table{display:block;width:100%;min-width:0;max-width:100%;table-layout:fixed}
   .inventory-alerts-list tbody,.inventory-alerts-list tr{width:100%;min-width:0;max-width:100%}
   #modalBox .inventory-alerts-list td{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);align-items:start;gap:8px;width:100%;min-width:0;max-width:100%;text-align:right;overflow-wrap:anywhere}
