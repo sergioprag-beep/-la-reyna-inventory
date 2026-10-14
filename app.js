@@ -3183,15 +3183,20 @@ function deleteNote(id){const n=(state.notes||[]).find(x=>String(x.id)===String(
 function pinNote(id){const n=(state.notes||[]).find(x=>String(x.id)===String(id));if(!n)return;const snapshot=JSON.stringify(state);n.pinned=!n.pinned;audit(n.pinned?'NOTA_FIJADA':'NOTA_DESFIJADA',n.title||id);if(!save()){restoreStateSnapshot(snapshot);return}render()}
 function noteModal(id=''){const n=(state.notes||[]).find(x=>String(x.id)===String(id));modal(`<h3>${n?'Editar':'Nueva'} nota</h3><div class="formgrid"><div class="field full"><label>Título</label><input id="noteTitle" value="${esc(n?.title||'')}"></div><div class="field"><label>Categoría</label><input id="noteCategory" value="${esc(n?.category||'General')}"></div><div class="field full"><label>Contenido</label><textarea id="noteBody" rows="6">${esc(n?.body||'')}</textarea></div><div class="field full"><label>Etiquetas</label><input id="noteTags" value="${esc(n?.tags||'')}"></div></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn primary" id="saveNote">Guardar</button></div>`);document.getElementById('saveNote').onclick=()=>{const snapshot=JSON.stringify(state),obj={id:n?.id||'NOTE-'+Date.now(),title:document.getElementById('noteTitle').value.trim()||'Sin título',category:document.getElementById('noteCategory').value.trim()||'General',body:document.getElementById('noteBody').value,tags:document.getElementById('noteTags').value,pinned:n?.pinned||false,createdAt:n?.createdAt||now(),updatedAt:now()};state.notes=Array.isArray(state.notes)?state.notes:[];state.notes=n?state.notes.map(x=>x.id===n.id?obj:x):[obj,...state.notes];audit(n?'NOTA_EDITADA':'NOTA_CREADA',obj.title);if(!save()){restoreStateSnapshot(snapshot);return}close();render();toast('Nota guardada')}}
 function deleteRecipe(id,type='final'){
- let key=type==='prep'?'preps':'recipes';
- let arr=state[key]||[];
- let r=arr.find(x=>String(x.id)===String(id));
- if(!r){const otherKey=key==='preps'?'recipes':'preps',other=(state[otherKey]||[]).find(x=>String(x.id)===String(id));if(other){key=otherKey;arr=state[key];r=other}}
- const masterRow=!r?(master.recipes||[]).find(x=>String(x.id)===String(id)):null;if(!r&&!masterRow)return toast('No se encontró este registro; actualiza la lista e inténtalo de nuevo.');
+ const recipeId=String(id??'').trim();
+ if(!recipeId)return toast('No se puede eliminar: el registro no tiene un identificador válido. Actualiza la lista e inténtalo de nuevo.');
+ const preferredKey=type==='prep'?'preps':'recipes';
+ const matches=['recipes','preps'].flatMap(key=>(state[key]||[]).filter(x=>String(x.id)===recipeId).map(record=>({key,record})));
+ if(matches.length>1)return toast('No se puede eliminar: hay varios registros propios con este identificador. Actualiza la lista y revisa los datos.');
+ const match=matches[0],key=match?.key||preferredKey,r=match?.record;
+ const masterRow=(master.recipes||[]).find(x=>String(x.id)===recipeId)||null;
+ if(r&&masterRow)return toast('No se puede eliminar: este identificador pertenece al catálogo Maestro.');
+ if(!r&&!masterRow)return toast('No se encontró este registro; actualiza la lista e inténtalo de nuevo.');
  if(!confirm(masterRow?`¿Ocultar “${masterRow.name||'esta ficha'}” de tus listados? El catálogo maestro se conservará.`:'¿Eliminar este registro?'))return;const snapshot=JSON.stringify(state);
- if(!r){const mk='recipes';state.masterHidden[mk]=Array.isArray(state.masterHidden[mk])?state.masterHidden[mk]:[];if(!state.masterHidden[mk].some(x=>String(x)===String(id)))state.masterHidden[mk].push(String(id));audit('RECETA_MAESTRA_OCULTA',`${id} · ${masterRow.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();return toast('Ficha maestra ocultada de tus listados; el catálogo base se conserva.')}
- if((state.production||[]).some(x=>String(x.recipeId||'')===String(id))||(state.sales||[]).some(x=>String(x.recipeId||'')===String(id)))return toast('No se puede eliminar: el registro está vinculado a producción o ventas');
- state[key]=arr.filter(x=>String(x.id)!==String(id));audit('RECETA_ELIMINADA',`${id} · ${r.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Registro eliminado')
+ if(!r){const mk='recipes';state.masterHidden[mk]=Array.isArray(state.masterHidden[mk])?state.masterHidden[mk]:[];if(!state.masterHidden[mk].some(x=>String(x)===recipeId))state.masterHidden[mk].push(recipeId);audit('RECETA_MAESTRA_OCULTA',`${recipeId} · ${masterRow.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();return toast('Ficha maestra ocultada de tus listados; el catálogo base se conserva.')}
+ const arr=state[key]||[];
+ if((state.production||[]).some(x=>String(x.recipeId||'')===recipeId)||(state.sales||[]).some(x=>String(x.recipeId||'')===recipeId))return toast('No se puede eliminar: el registro está vinculado a producción o ventas');
+ state[key]=arr.filter(x=>String(x.id)!==recipeId);audit('RECETA_ELIMINADA',`${recipeId} · ${r.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Registro eliminado')
 }
 
 function deleteSale(id){const s=(state.sales||[]).find(x=>String(x.id)===String(id));if(!s)return;if(!confirm('¿Eliminar esta venta? Se revertirá el inventario descontado.'))return;const snapshot=JSON.stringify(state);if(s.inventoryDeducted)reverseSaleInventory(s);state.sales=(state.sales||[]).filter(x=>String(x.id)!==String(id));audit('VENTA_ELIMINADA',String(id));if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Venta eliminada y movimiento de inventario revertido')}
