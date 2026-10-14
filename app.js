@@ -58,7 +58,7 @@ function hydrateLegacyRecipeStores(){
  const legacyFinal=readLegacyArray('lrx_finalrecipes_v3'), legacyPrep=readLegacyArray('lrx_preparations_v2');
  const legacyIngredients=readLegacyArray('lrx_ingredients_v1'), legacyProducts=readLegacyArray('lrx_products');
  const allLegacy=[...legacyFinal.map(x=>({...x,type:x.type||'final'})),...legacyPrep.map(x=>({...x,type:'pre'}))];
- if(!allLegacy.length)return;
+ if(!allLegacy.length){ensureOwnRecipeIds();return;}
  const byId=new Map((master.recipes||[]).map(x=>[String(x.id),x]));
  const byName=new Map((master.recipes||[]).map(x=>[normMaster(x.name),x]));
  const enrich=(base,legacy)=>{
@@ -82,6 +82,22 @@ function hydrateLegacyRecipeStores(){
  const currentLegacy=[...(state.recipes||[]),...(state.preps||[])];
  for(const r of currentLegacy){const target=byId.get(String(r.id))||byName.get(normMaster(r.name));if(target&&Array.isArray(r.items)&&r.items.length){Object.assign(target,enrich(target,r));}}
  state._recipeLegacyRecovered={at:now(),count:recovered.length,total:allLegacy.length,sourceKeys:['lrx_finalrecipes_v3','lrx_preparations_v2','lrx_ingredients_v1','lrx_products']};
+ ensureOwnRecipeIds();
+}
+
+function ensureOwnRecipeIds(){
+ let changed=false;
+ for(const [key,prefix] of [['recipes','R'],['preps','P']]){
+  const records=Array.isArray(state[key])?state[key]:[];
+  const used=new Set(records.map(record=>String(record?.id||'').trim()).filter(Boolean));
+  for(const record of records){
+   if(!record||typeof record!=='object'||String(record.id||'').trim())continue;
+   let id;
+   do{id=`USR-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`}while(used.has(id));
+   record.id=id;used.add(id);changed=true;
+  }
+ }
+ if(changed)save();
 }
 
 state.profitDistributions=Array.isArray(state.profitDistributions)?state.profitDistributions:[];state.masterOverrides=state.masterOverrides&&typeof state.masterOverrides==='object'?state.masterOverrides:{};
