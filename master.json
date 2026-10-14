@@ -12929,7 +12929,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0333",
+          "name": "BIRRIA BEEF / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.6,
+          "price": 0.6,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-050",
@@ -17693,7 +17703,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0362",
+          "name": "MIX PARA MARGARITA",
+          "unit": "fl oz",
+          "unitCost": 0.259259259259259,
+          "price": 35.0,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-105",
@@ -17762,7 +17782,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0364",
+          "name": "MIX DE STRAWBERY",
+          "unit": "fl oz",
+          "unitCost": 0.116969696969697,
+          "price": 3.86,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-107",
@@ -18245,7 +18275,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0346",
+          "name": "ADEREZO PASTOR",
+          "unit": "fl oz",
+          "unitCost": 0.5956875,
+          "price": 95.31,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-115",
@@ -18284,7 +18324,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0358",
+          "name": "PASTOR / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-116",
@@ -18863,14 +18913,1419 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0380",
+          "name": "SUMO PARA LIMONADA (32 OZ DE CONCENTRADO DE LIMON)",
+          "unit": "litro",
+          "unitCost": 2.9,
+          "price": 11.6,
+          "source": "Banco de Datos"
+        }
+      ]
+    },
+    {
+      "id": "PREP-SUP-0329",
+      "code": "SUP-0329",
+      "name": "PICO DE GALLO / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0329",
+          "name": "PICO DE GALLO / SIDE",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0329"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.22,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0330",
+      "code": "SUP-0330",
+      "name": "GUACAMOLE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0330",
+          "name": "GUACAMOLE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.51,
+          "price": 0.51,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0330"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.51,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0331",
+      "code": "SUP-0331",
+      "name": "RAJAS POBLANAS / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0331",
+          "name": "RAJAS POBLANAS / SIDE",
+          "unit": "oz",
+          "unitCost": 0.12,
+          "price": 0.12,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0331"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.12,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0332",
+      "code": "SUP-0332",
+      "name": "COCHINITA PIBIL / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0332",
+          "name": "COCHINITA PIBIL / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.38,
+          "price": 0.38,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0332"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.38,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0334",
+      "code": "SUP-0334",
+      "name": "SALSA WET / BURRITO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0334",
+          "name": "SALSA WET / BURRITO",
+          "unit": "oz",
+          "unitCost": 0.6,
+          "price": 0.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0334"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.6,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0335",
+      "code": "SUP-0335",
+      "name": "MEXICAN RICE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0335",
+          "name": "MEXICAN RICE",
+          "unit": "oz",
+          "unitCost": 0.06,
+          "price": 0.06,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0335"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.06,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0336",
+      "code": "SUP-0336",
+      "name": "MEXICAN REFRIED BLACK BEANS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0336",
+          "name": "MEXICAN REFRIED BLACK BEANS",
+          "unit": "oz",
+          "unitCost": 0.02,
+          "price": 0.02,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0336"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.02,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0337",
+      "code": "SUP-0337",
+      "name": "CHICKEN TINGA / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0337",
+          "name": "CHICKEN TINGA / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.19,
+          "price": 0.19,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0337"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.19,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0338",
+      "code": "SUP-0338",
+      "name": "ONION CUBE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0338",
+          "name": "ONION CUBE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.07,
+          "price": 0.07,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0338"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.07,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0339",
+      "code": "SUP-0339",
+      "name": "CILANTRO SHERED / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0339",
+          "name": "CILANTRO SHERED / SIDE",
+          "unit": "oz",
+          "unitCost": 0.05,
+          "price": 0.05,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0339"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.05,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0340",
+      "code": "SUP-0340",
+      "name": "PINEAPLE CUBE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0340",
+          "name": "PINEAPLE CUBE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.08,
+          "price": 0.08,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0340"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.08,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0341",
+      "code": "SUP-0341",
+      "name": "LA REYNA SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0341",
+          "name": "LA REYNA SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.16,
+          "price": 0.16,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0341"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.16,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0342",
+      "code": "SUP-0342",
+      "name": "GREEN SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0342",
+          "name": "GREEN SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.13,
+          "price": 0.13,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0342"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.13,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0343",
+      "code": "SUP-0343",
+      "name": "SALSA CHIPOTLE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0343",
+          "name": "SALSA CHIPOTLE",
+          "unit": "oz",
+          "unitCost": 0.17,
+          "price": 0.17,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0343"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.17,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0344",
+      "code": "SUP-0344",
+      "name": "RED SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0344",
+          "name": "RED SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.1,
+          "price": 0.1,
+          "source": "Banco de Datos"
+        },
+        {
+          "id": "SUP-0348",
+          "name": "RED SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.1,
+          "price": 0.1,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0344",
+        "SUP-0348"
+      ],
+      "sourceRecordCount": 2,
+      "items": [],
+      "cost": 0.1,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0345",
+      "code": "SUP-0345",
+      "name": "RED SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0345",
+          "name": "RED SAUCE / SIDE",
+          "unit": "unidad",
+          "unitCost": 0.810810810810811,
+          "price": 30.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0345"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.810810810810811,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0347",
+      "code": "SUP-0347",
+      "name": "MOLE POBLANO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0347",
+          "name": "MOLE POBLANO",
+          "unit": "oz",
+          "unitCost": 0.16,
+          "price": 0.16,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0347"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.16,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0349",
+      "code": "SUP-0349",
+      "name": "SHREDDED CHICKEN",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0349",
+          "name": "SHREDDED CHICKEN",
+          "unit": "oz",
+          "unitCost": 0.17,
+          "price": 0.17,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0349"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.17,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0350",
+      "code": "SUP-0350",
+      "name": "MEXICAN CARNITAS SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0350",
+          "name": "MEXICAN CARNITAS SIDE",
+          "unit": "oz",
+          "unitCost": 0.28,
+          "price": 0.28,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0350"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.28,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0351",
+      "code": "SUP-0351",
+      "name": "SALSA MORITA SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0351",
+          "name": "SALSA MORITA SIDE",
+          "unit": "oz",
+          "unitCost": 0.07,
+          "price": 0.07,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0351"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.07,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0352",
+      "code": "SUP-0352",
+      "name": "SALSA JALAPEÑO SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0352",
+          "name": "SALSA JALAPEÑO SIDE",
+          "unit": "oz",
+          "unitCost": 0.08,
+          "price": 0.08,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0352"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.08,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0353",
+      "code": "SUP-0353",
+      "name": "SALSA CHUNKY SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0353",
+          "name": "SALSA CHUNKY SIDE",
+          "unit": "oz",
+          "unitCost": 0.13,
+          "price": 0.13,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0353"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.13,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0354",
+      "code": "SUP-0354",
+      "name": "PASTOR SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0354",
+          "name": "PASTOR SIDE",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0354"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.22,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0355",
+      "code": "SUP-0355",
+      "name": "MEXICAN CHIROZO PORK GROUND",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0355",
+          "name": "MEXICAN CHIROZO PORK GROUND",
+          "unit": "oz",
+          "unitCost": 0.25,
+          "price": 0.25,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0355"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.25,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0356",
+      "code": "SUP-0356",
+      "name": "AVOCADO SAUCE SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0356",
+          "name": "AVOCADO SAUCE SIDE",
+          "unit": "oz",
+          "unitCost": 0.18,
+          "price": 0.18,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0356"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.18,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0357",
+      "code": "SUP-0357",
+      "name": "CARNITAS MEXICANAS / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0357",
+          "name": "CARNITAS MEXICANAS / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.25,
+          "price": 0.25,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0357"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.25,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0359",
+      "code": "SUP-0359",
+      "name": "SIDE BANDERA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0359",
+          "name": "SIDE BANDERA",
+          "unit": "unidad",
+          "unitCost": 1.44,
+          "price": 1.44,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0359"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 1.44,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0360",
+      "code": "SUP-0360",
+      "name": "CHARROS BEANS / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0360",
+          "name": "CHARROS BEANS / SIDE",
+          "unit": "oz",
+          "unitCost": 0.14,
+          "price": 0.14,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0360"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.14,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0361",
+      "code": "SUP-0361",
+      "name": "BASE PARA SOPA AZTECA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0361",
+          "name": "BASE PARA SOPA AZTECA",
+          "unit": "fl oz",
+          "unitCost": 0.06,
+          "price": 0.06,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0361"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.06,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0363",
+      "code": "SUP-0363",
+      "name": "MIX DE TAMARINDO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0363",
+          "name": "MIX DE TAMARINDO",
+          "unit": "fl oz",
+          "unitCost": 0.373737373737374,
+          "price": 37.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0363"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.373737373737374,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0365",
+      "code": "SUP-0365",
+      "name": "DULCE DE CAJETA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0365",
+          "name": "DULCE DE CAJETA",
+          "unit": "oz",
+          "unitCost": 0.163636363636364,
+          "price": 18.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0365"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.163636363636364,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0366",
+      "code": "SUP-0366",
+      "name": "MIX MEXICAN SANGRIA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0366",
+          "name": "MIX MEXICAN SANGRIA",
+          "unit": "litro",
+          "unitCost": 2.5825,
+          "price": 10.33,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0366"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 2.5825,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0367",
+      "code": "SUP-0367",
+      "name": "MIX MICHELADA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0367",
+          "name": "MIX MICHELADA",
+          "unit": "oz",
+          "unitCost": 0.47875,
+          "price": 11.49,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0367"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.47875,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0368",
+      "code": "SUP-0368",
+      "name": "JUGO DE LIMON / 750 ml",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0368",
+          "name": "JUGO DE LIMON / 750 ml",
+          "unit": "fl oz",
+          "unitCost": 0.2848,
+          "price": 7.12,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0368"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.2848,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0369",
+      "code": "SUP-0369",
+      "name": "CONCENTRADO DE HORCHATA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0369",
+          "name": "CONCENTRADO DE HORCHATA",
+          "unit": "litro",
+          "unitCost": 6.37428571428571,
+          "price": 22.31,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0369"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 6.37428571428571,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0370",
+      "code": "SUP-0370",
+      "name": "MIX PARA HORCHATA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0370",
+          "name": "MIX PARA HORCHATA",
+          "unit": "litro",
+          "unitCost": 3.08,
+          "price": 12.32,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0370"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 3.08,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0371",
+      "code": "SUP-0371",
+      "name": "AGUA DE CANELA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0371",
+          "name": "AGUA DE CANELA",
+          "unit": "litro",
+          "unitCost": 2.124,
+          "price": 10.62,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0371"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 2.124,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0372",
+      "code": "SUP-0372",
+      "name": "SIDE BANDERA PARA FAJITAS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0372",
+          "name": "SIDE BANDERA PARA FAJITAS",
+          "unit": "unidad",
+          "unitCost": 1.77,
+          "price": 1.77,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0372"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 1.77,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0373",
+      "code": "SUP-0373",
+      "name": "MEXICAN FLAN DE CAJETA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0373",
+          "name": "MEXICAN FLAN DE CAJETA",
+          "unit": "unidad",
+          "unitCost": 0.71125,
+          "price": 11.38,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0373"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.71125,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0374",
+      "code": "SUP-0374",
+      "name": "Salsa Wet / 3 QUESOS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0374",
+          "name": "Salsa Wet / 3 QUESOS",
+          "unit": "oz",
+          "unitCost": 0.118333333333333,
+          "price": 10.65,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0374"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.118333333333333,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0375",
+      "code": "SUP-0375",
+      "name": "QUESO CHEDDAR SAUCE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0375",
+          "name": "QUESO CHEDDAR SAUCE",
+          "unit": "oz",
+          "unitCost": 0.104145077720207,
+          "price": 20.1,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0375"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.104145077720207,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0376",
+      "code": "SUP-0376",
+      "name": "MEXICAN PICADILLO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0376",
+          "name": "MEXICAN PICADILLO",
+          "unit": "oz",
+          "unitCost": 0.5,
+          "price": 40.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0376"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.5,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
     }
   ],
   "meta": {
     "version": "2026",
     "productCount": 381,
-    "finalRecipeCount": 119,
-    "prepCount": 3,
+    "finalRecipeCount": 115,
+    "prepCount": 49,
     "recipeSource": "S.U.P-.XPRESS 2026.xlsm",
     "recipeSourceSheets": 122,
     "recipeRecoveredAt": "2026-10-02"
@@ -18976,7 +20431,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0333",
+          "name": "BIRRIA BEEF / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.6,
+          "price": 0.6,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-104",
@@ -19042,7 +20507,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0362",
+          "name": "MIX PARA MARGARITA",
+          "unit": "fl oz",
+          "unitCost": 0.259259259259259,
+          "price": 35.0,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-106",
@@ -19072,7 +20547,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0364",
+          "name": "MIX DE STRAWBERY",
+          "unit": "fl oz",
+          "unitCost": 0.116969696969697,
+          "price": 3.86,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-113",
@@ -19267,7 +20752,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0346",
+          "name": "ADEREZO PASTOR",
+          "unit": "fl oz",
+          "unitCost": 0.5956875,
+          "price": 95.31,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-115",
@@ -19306,7 +20801,17 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0358",
+          "name": "PASTOR / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ]
     },
     {
       "id": "R-122",
@@ -19336,7 +20841,1412 @@
       "marginPct": 0,
       "productType": "Pre-elaborado",
       "area": "Producción",
-      "updatedAt": "2026-10-02T00:00:00.000Z"
+      "updatedAt": "2026-10-02T00:00:00.000Z",
+      "bankProducts": [
+        {
+          "id": "SUP-0380",
+          "name": "SUMO PARA LIMONADA (32 OZ DE CONCENTRADO DE LIMON)",
+          "unit": "litro",
+          "unitCost": 2.9,
+          "price": 11.6,
+          "source": "Banco de Datos"
+        }
+      ]
+    },
+    {
+      "id": "PREP-SUP-0329",
+      "code": "SUP-0329",
+      "name": "PICO DE GALLO / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0329",
+          "name": "PICO DE GALLO / SIDE",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0329"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.22,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0330",
+      "code": "SUP-0330",
+      "name": "GUACAMOLE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0330",
+          "name": "GUACAMOLE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.51,
+          "price": 0.51,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0330"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.51,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0331",
+      "code": "SUP-0331",
+      "name": "RAJAS POBLANAS / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0331",
+          "name": "RAJAS POBLANAS / SIDE",
+          "unit": "oz",
+          "unitCost": 0.12,
+          "price": 0.12,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0331"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.12,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0332",
+      "code": "SUP-0332",
+      "name": "COCHINITA PIBIL / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0332",
+          "name": "COCHINITA PIBIL / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.38,
+          "price": 0.38,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0332"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.38,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0334",
+      "code": "SUP-0334",
+      "name": "SALSA WET / BURRITO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0334",
+          "name": "SALSA WET / BURRITO",
+          "unit": "oz",
+          "unitCost": 0.6,
+          "price": 0.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0334"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.6,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0335",
+      "code": "SUP-0335",
+      "name": "MEXICAN RICE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0335",
+          "name": "MEXICAN RICE",
+          "unit": "oz",
+          "unitCost": 0.06,
+          "price": 0.06,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0335"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.06,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0336",
+      "code": "SUP-0336",
+      "name": "MEXICAN REFRIED BLACK BEANS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0336",
+          "name": "MEXICAN REFRIED BLACK BEANS",
+          "unit": "oz",
+          "unitCost": 0.02,
+          "price": 0.02,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0336"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.02,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0337",
+      "code": "SUP-0337",
+      "name": "CHICKEN TINGA / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0337",
+          "name": "CHICKEN TINGA / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.19,
+          "price": 0.19,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0337"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.19,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0338",
+      "code": "SUP-0338",
+      "name": "ONION CUBE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0338",
+          "name": "ONION CUBE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.07,
+          "price": 0.07,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0338"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.07,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0339",
+      "code": "SUP-0339",
+      "name": "CILANTRO SHERED / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0339",
+          "name": "CILANTRO SHERED / SIDE",
+          "unit": "oz",
+          "unitCost": 0.05,
+          "price": 0.05,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0339"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.05,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0340",
+      "code": "SUP-0340",
+      "name": "PINEAPLE CUBE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0340",
+          "name": "PINEAPLE CUBE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.08,
+          "price": 0.08,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0340"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.08,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0341",
+      "code": "SUP-0341",
+      "name": "LA REYNA SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0341",
+          "name": "LA REYNA SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.16,
+          "price": 0.16,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0341"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.16,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0342",
+      "code": "SUP-0342",
+      "name": "GREEN SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0342",
+          "name": "GREEN SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.13,
+          "price": 0.13,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0342"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.13,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0343",
+      "code": "SUP-0343",
+      "name": "SALSA CHIPOTLE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0343",
+          "name": "SALSA CHIPOTLE",
+          "unit": "oz",
+          "unitCost": 0.17,
+          "price": 0.17,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0343"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.17,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0344",
+      "code": "SUP-0344",
+      "name": "RED SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0344",
+          "name": "RED SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.1,
+          "price": 0.1,
+          "source": "Banco de Datos"
+        },
+        {
+          "id": "SUP-0348",
+          "name": "RED SAUCE / SIDE",
+          "unit": "oz",
+          "unitCost": 0.1,
+          "price": 0.1,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0344",
+        "SUP-0348"
+      ],
+      "sourceRecordCount": 2,
+      "items": [],
+      "cost": 0.1,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0345",
+      "code": "SUP-0345",
+      "name": "RED SAUCE / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0345",
+          "name": "RED SAUCE / SIDE",
+          "unit": "unidad",
+          "unitCost": 0.810810810810811,
+          "price": 30.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0345"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.810810810810811,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0347",
+      "code": "SUP-0347",
+      "name": "MOLE POBLANO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0347",
+          "name": "MOLE POBLANO",
+          "unit": "oz",
+          "unitCost": 0.16,
+          "price": 0.16,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0347"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.16,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0349",
+      "code": "SUP-0349",
+      "name": "SHREDDED CHICKEN",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0349",
+          "name": "SHREDDED CHICKEN",
+          "unit": "oz",
+          "unitCost": 0.17,
+          "price": 0.17,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0349"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.17,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0350",
+      "code": "SUP-0350",
+      "name": "MEXICAN CARNITAS SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0350",
+          "name": "MEXICAN CARNITAS SIDE",
+          "unit": "oz",
+          "unitCost": 0.28,
+          "price": 0.28,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0350"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.28,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0351",
+      "code": "SUP-0351",
+      "name": "SALSA MORITA SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0351",
+          "name": "SALSA MORITA SIDE",
+          "unit": "oz",
+          "unitCost": 0.07,
+          "price": 0.07,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0351"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.07,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0352",
+      "code": "SUP-0352",
+      "name": "SALSA JALAPEÑO SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0352",
+          "name": "SALSA JALAPEÑO SIDE",
+          "unit": "oz",
+          "unitCost": 0.08,
+          "price": 0.08,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0352"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.08,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0353",
+      "code": "SUP-0353",
+      "name": "SALSA CHUNKY SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0353",
+          "name": "SALSA CHUNKY SIDE",
+          "unit": "oz",
+          "unitCost": 0.13,
+          "price": 0.13,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0353"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.13,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0354",
+      "code": "SUP-0354",
+      "name": "PASTOR SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0354",
+          "name": "PASTOR SIDE",
+          "unit": "oz",
+          "unitCost": 0.22,
+          "price": 0.22,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0354"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.22,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0355",
+      "code": "SUP-0355",
+      "name": "MEXICAN CHIROZO PORK GROUND",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0355",
+          "name": "MEXICAN CHIROZO PORK GROUND",
+          "unit": "oz",
+          "unitCost": 0.25,
+          "price": 0.25,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0355"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.25,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0356",
+      "code": "SUP-0356",
+      "name": "AVOCADO SAUCE SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0356",
+          "name": "AVOCADO SAUCE SIDE",
+          "unit": "oz",
+          "unitCost": 0.18,
+          "price": 0.18,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0356"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.18,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0357",
+      "code": "SUP-0357",
+      "name": "CARNITAS MEXICANAS / PROTEINA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0357",
+          "name": "CARNITAS MEXICANAS / PROTEINA",
+          "unit": "oz",
+          "unitCost": 0.25,
+          "price": 0.25,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0357"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.25,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0359",
+      "code": "SUP-0359",
+      "name": "SIDE BANDERA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0359",
+          "name": "SIDE BANDERA",
+          "unit": "unidad",
+          "unitCost": 1.44,
+          "price": 1.44,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0359"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 1.44,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0360",
+      "code": "SUP-0360",
+      "name": "CHARROS BEANS / SIDE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0360",
+          "name": "CHARROS BEANS / SIDE",
+          "unit": "oz",
+          "unitCost": 0.14,
+          "price": 0.14,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0360"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.14,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0361",
+      "code": "SUP-0361",
+      "name": "BASE PARA SOPA AZTECA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0361",
+          "name": "BASE PARA SOPA AZTECA",
+          "unit": "fl oz",
+          "unitCost": 0.06,
+          "price": 0.06,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0361"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.06,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0363",
+      "code": "SUP-0363",
+      "name": "MIX DE TAMARINDO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0363",
+          "name": "MIX DE TAMARINDO",
+          "unit": "fl oz",
+          "unitCost": 0.373737373737374,
+          "price": 37.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0363"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.373737373737374,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0365",
+      "code": "SUP-0365",
+      "name": "DULCE DE CAJETA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0365",
+          "name": "DULCE DE CAJETA",
+          "unit": "oz",
+          "unitCost": 0.163636363636364,
+          "price": 18.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0365"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.163636363636364,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0366",
+      "code": "SUP-0366",
+      "name": "MIX MEXICAN SANGRIA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0366",
+          "name": "MIX MEXICAN SANGRIA",
+          "unit": "litro",
+          "unitCost": 2.5825,
+          "price": 10.33,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0366"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 2.5825,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0367",
+      "code": "SUP-0367",
+      "name": "MIX MICHELADA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0367",
+          "name": "MIX MICHELADA",
+          "unit": "oz",
+          "unitCost": 0.47875,
+          "price": 11.49,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0367"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.47875,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0368",
+      "code": "SUP-0368",
+      "name": "JUGO DE LIMON / 750 ml",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0368",
+          "name": "JUGO DE LIMON / 750 ml",
+          "unit": "fl oz",
+          "unitCost": 0.2848,
+          "price": 7.12,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0368"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.2848,
+      "yieldQty": 1,
+      "yieldUnit": "fl oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0369",
+      "code": "SUP-0369",
+      "name": "CONCENTRADO DE HORCHATA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0369",
+          "name": "CONCENTRADO DE HORCHATA",
+          "unit": "litro",
+          "unitCost": 6.37428571428571,
+          "price": 22.31,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0369"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 6.37428571428571,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0370",
+      "code": "SUP-0370",
+      "name": "MIX PARA HORCHATA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0370",
+          "name": "MIX PARA HORCHATA",
+          "unit": "litro",
+          "unitCost": 3.08,
+          "price": 12.32,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0370"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 3.08,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0371",
+      "code": "SUP-0371",
+      "name": "AGUA DE CANELA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0371",
+          "name": "AGUA DE CANELA",
+          "unit": "litro",
+          "unitCost": 2.124,
+          "price": 10.62,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0371"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 2.124,
+      "yieldQty": 1,
+      "yieldUnit": "litro",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0372",
+      "code": "SUP-0372",
+      "name": "SIDE BANDERA PARA FAJITAS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0372",
+          "name": "SIDE BANDERA PARA FAJITAS",
+          "unit": "unidad",
+          "unitCost": 1.77,
+          "price": 1.77,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0372"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 1.77,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0373",
+      "code": "SUP-0373",
+      "name": "MEXICAN FLAN DE CAJETA",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0373",
+          "name": "MEXICAN FLAN DE CAJETA",
+          "unit": "unidad",
+          "unitCost": 0.71125,
+          "price": 11.38,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0373"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.71125,
+      "yieldQty": 1,
+      "yieldUnit": "unidad",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0374",
+      "code": "SUP-0374",
+      "name": "Salsa Wet / 3 QUESOS",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0374",
+          "name": "Salsa Wet / 3 QUESOS",
+          "unit": "oz",
+          "unitCost": 0.118333333333333,
+          "price": 10.65,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0374"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.118333333333333,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0375",
+      "code": "SUP-0375",
+      "name": "QUESO CHEDDAR SAUCE",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0375",
+          "name": "QUESO CHEDDAR SAUCE",
+          "unit": "oz",
+          "unitCost": 0.104145077720207,
+          "price": 20.1,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0375"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.104145077720207,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
+    },
+    {
+      "id": "PREP-SUP-0376",
+      "code": "SUP-0376",
+      "name": "MEXICAN PICADILLO",
+      "type": "Pre-elaborado",
+      "source": "SUP 2026",
+      "masterSource": "S.U.P-.XPRESS 2026.xlsm · Banco de Datos",
+      "bankProducts": [
+        {
+          "id": "SUP-0376",
+          "name": "MEXICAN PICADILLO",
+          "unit": "oz",
+          "unitCost": 0.5,
+          "price": 40.0,
+          "source": "Banco de Datos"
+        }
+      ],
+      "bankProductIds": [
+        "SUP-0376"
+      ],
+      "sourceRecordCount": 1,
+      "items": [],
+      "cost": 0.5,
+      "yieldQty": 1,
+      "yieldUnit": "oz",
+      "salePrice": 0,
+      "price": 0,
+      "category": "Preelaborados",
+      "productType": "Pre-elaborado",
+      "area": "Producción",
+      "method": "Registro de costo unitario del Banco de Datos. El archivo fuente no incluye una fórmula de preparación para este artículo.",
+      "updatedAt": "2026-10-14T00:00:00.000Z"
     }
   ],
   "finalRecipes": [
