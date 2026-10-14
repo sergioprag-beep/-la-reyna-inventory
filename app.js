@@ -3179,12 +3179,16 @@ function noteModal(id=''){const n=(state.notes||[]).find(x=>String(x.id)===Strin
 function deleteRecipe(id,type='final'){
  const recipeId=String(id??'').trim();
  if(!recipeId)return toast('No se puede eliminar: el registro no tiene un identificador válido. Actualiza la lista e inténtalo de nuevo.');
- const key=type==='prep'?'preps':'recipes';
- const arr=state[key]||[];
- const r=arr.find(x=>String(x.id)===recipeId);
- const masterRow=!r?(master.recipes||[]).find(x=>String(x.id)===recipeId):null;if(!r&&!masterRow)return toast('No se encontró este registro; actualiza la lista e inténtalo de nuevo.');
+ const preferredKey=type==='prep'?'preps':'recipes';
+ const matches=['recipes','preps'].flatMap(key=>(state[key]||[]).filter(x=>String(x.id)===recipeId).map(record=>({key,record})));
+ if(matches.length>1)return toast('No se puede eliminar: hay varios registros propios con este identificador. Actualiza la lista y revisa los datos.');
+ const match=matches[0],key=match?.key||preferredKey,r=match?.record;
+ const masterRow=(master.recipes||[]).find(x=>String(x.id)===recipeId)||null;
+ if(r&&masterRow)return toast('No se puede eliminar: este identificador pertenece al catálogo Maestro.');
+ if(!r&&!masterRow)return toast('No se encontró este registro; actualiza la lista e inténtalo de nuevo.');
  if(!confirm(masterRow?`¿Ocultar “${masterRow.name||'esta ficha'}” de tus listados? El catálogo maestro se conservará.`:'¿Eliminar este registro?'))return;const snapshot=JSON.stringify(state);
  if(!r){const mk='recipes';state.masterHidden[mk]=Array.isArray(state.masterHidden[mk])?state.masterHidden[mk]:[];if(!state.masterHidden[mk].some(x=>String(x)===recipeId))state.masterHidden[mk].push(recipeId);audit('RECETA_MAESTRA_OCULTA',`${recipeId} · ${masterRow.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();return toast('Ficha maestra ocultada de tus listados; el catálogo base se conserva.')}
+ const arr=state[key]||[];
  if((state.production||[]).some(x=>String(x.recipeId||'')===recipeId)||(state.sales||[]).some(x=>String(x.recipeId||'')===recipeId))return toast('No se puede eliminar: el registro está vinculado a producción o ventas');
  state[key]=arr.filter(x=>String(x.id)!==recipeId);audit('RECETA_ELIMINADA',`${recipeId} · ${r.name||''}`);if(!save()){restoreStateSnapshot(snapshot);return}render();toast('Registro eliminado')
 }
