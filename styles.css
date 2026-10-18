@@ -336,3 +336,27 @@ main{margin-left:210px;width:calc(100% - 210px);background:var(--lrx-bg)}
  body.lrx-event-print #modalBox .eq-accept span{font-size:8px!important;padding-top:4px!important}
 }
 .module-quick-nav{margin:8px 0 12px;border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden}.module-quick-nav>summary{padding:10px 13px;cursor:pointer;color:#123b70;font-weight:800;list-style:none}.module-quick-nav>summary::-webkit-details-marker{display:none}.module-quick-nav>summary::after{content:'＋';float:right;color:var(--pink)}.module-quick-nav[open]>summary::after{content:'−'}.module-quick-nav-links{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px;max-height:190px;overflow:auto}.module-quick-link{font-size:12px!important;padding:7px 9px!important}.module-count-cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px;margin:8px 0 14px}.module-count-link{display:flex;flex-direction:column;align-items:flex-start;gap:5px;color:inherit;text-decoration:none;transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}.module-count-link:hover,.module-count-link:focus-visible{transform:translateY(-2px);border-color:#28589a;box-shadow:0 5px 16px rgba(18,59,112,.12);outline:none}.module-count-link>span{font-size:11px;color:var(--muted);font-weight:700}
+
+
+/* Product catalog cards: keep codes, names and type labels separated on phones. */
+@media(max-width:600px){
+ #content .module-page[data-module="productos"] .catalog-main>div:first-child,
+ #content .module-page[data-module="sup"] .catalog-main>div:first-child{align-items:flex-start!important;min-width:0}
+ #content .module-page[data-module="productos"] .catalog-title,
+ #content .module-page[data-module="sup"] .catalog-title{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;flex:1;min-width:0}
+ #content .module-page[data-module="productos"] .catalog-title .catalog-id,
+ #content .module-page[data-module="sup"] .catalog-title .catalog-id{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+ #content .module-page[data-module="productos"] .catalog-title h3,
+ #content .module-page[data-module="sup"] .catalog-title h3{min-width:0;overflow-wrap:anywhere;word-break:normal;line-height:1.25}
+ #content .module-page[data-module="productos"] .catalog-title>small,
+ #content .module-page[data-module="sup"] .catalog-title>small{min-width:0;overflow-wrap:anywhere;text-align:left}
+ #content .module-page[data-module="productos"] .catalog-actions,
+ #content .module-page[data-module="sup"] .catalog-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #content .module-page[data-module="productos"] .catalog-actions .btn,
+ #content .module-page[data-module="sup"] .catalog-actions .btn{width:100%;min-width:0;padding-inline:8px;white-space:normal}
+ .production-flow-pager{display:grid;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+ .production-flow-pager>label{display:flex;align-items:center;gap:8px;font-weight:700}
+ .production-flow-pager select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+ .production-flow-pager .pager-actions{display:grid;grid-template-columns:1fr auto 1fr}
+ .production-flow-pager .pager-actions .btn:last-child{justify-self:end}
+}
