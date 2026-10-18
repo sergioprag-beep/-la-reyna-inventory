@@ -1,13 +1,13 @@
 # Migración de LRX a Cloudflare sin costo
 
-Esta preparación mantiene la aplicación estática y usa D1 para la copia compartida y los archivos, junto con Cloudflare Access para protegerla. No requiere activar R2 ni una suscripción de almacenamiento. GitHub Pages no puede ejecutar las funciones de `functions/`, por eso **no se debe publicar este cambio en GitHub Pages antes de preparar Cloudflare Pages y verificarlo**.
+Esta preparación mantiene la aplicación estática y usa D1 para la copia compartida y los archivos, junto con una contraseña de acceso de LRX protegida por una cookie de sesión segura. No requiere activar R2, Cloudflare Access ni una suscripción de almacenamiento. GitHub Pages no puede ejecutar las funciones de `functions/`, por eso **no se debe publicar este cambio en GitHub Pages antes de preparar Cloudflare Pages y verificarlo**.
 
 ## Componentes preparados
 
 - Cloudflare Pages sirve una compilación pequeña desde `dist/`; no publica las carpetas antiguas, archivos ZIP ni copias históricas del repositorio.
-- Cloudflare Access protege la aplicación y sus API. La lista de correos autorizados se configura en Access.
+- La pantalla de acceso solicita una contraseña compartida. El backend firma una cookie `HttpOnly`, `Secure` y `SameSite=Strict`, con vencimiento a las 12 horas.
 - D1 conserva la revisión, los datos de LRX y los documentos privados. Los datos y archivos se dividen en fragmentos menores de 2 MB para ajustarse al límite de fila de D1.
-- Las rutas `/api/state` y `/api/resources/*` solo responden después de verificar el JWT de Cloudflare Access.
+- Las rutas `/api/state` y `/api/resources/*` solo responden después de verificar la cookie de sesión. Sin secreto configurado, las funciones fallan cerradas.
 - En el primer inicio, LRX descarga una copia local antes de ofrecer la carga de los datos actuales.
 
 ## Configuración pendiente en la cuenta Cloudflare
@@ -16,11 +16,9 @@ Esta preparación mantiene la aplicación estática y usa D1 para la copia compa
 2. La base D1 `lrx-meta` ya está creada en la cuenta Cloudflare de esta sesión; su ID está enlazado en `wrangler.jsonc`.
 3. Ya están creadas en D1 las tablas de estado y archivos definidas en `cloudflare/migrations/0001_lrx_state.sql`.
 4. En Pages, enlazar la base existente como `LRX_META`.
-5. En Pages, configurar estas variables de entorno de producción:
-   - `LRX_ACCESS_TEAM_DOMAIN`: dominio del equipo Access, sin `https://` (por ejemplo, `mi-equipo.cloudflareaccess.com`).
-   - `LRX_ACCESS_AUD`: Audience Tag de la aplicación Access.
-6. Configurar Cloudflare Access para proteger la dirección de Pages de producción, permitir solo los correos de LRX y mantener desactivados los despliegues de vista previa públicos.
-7. Confirmar que el acceso protegido funciona y que `/api/state` requiere una sesión autorizada.
+5. En Pages, guardar `LRX_APP_PASSWORD` como variable secreta de producción y vista previa. Usa una frase aleatoria larga; no la guardes en el repositorio ni la compartas en el chat.
+6. Configurar el acceso a la vista previa de Pages según la política de privacidad del negocio. La contraseña de LRX protege la aplicación y sus API; las páginas estáticas de vista previa siguen siendo públicamente descargables.
+7. Confirmar que una contraseña incorrecta no inicia sesión y que `/api/state` responde 401 sin una cookie válida.
 8. En GitHub Pages, abrir **Configuración → Descargar archivo de respaldo** y guardar el JSON. El almacenamiento del navegador está separado por sitio; la nueva dirección de Pages no puede leer automáticamente los datos locales de `github.io`.
 9. Publicar el build. En Cloudflare Pages, entrar con Access, abrir **Configuración → Restaurar respaldo** y seleccionar el JSON descargado. Revisar los registros antes de aceptar la carga inicial a Cloudflare.
 
