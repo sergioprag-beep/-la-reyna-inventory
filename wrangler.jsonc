@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lrx-app",
+  "compatibility_date": "2026-10-16",
+  "pages_build_output_dir": "dist",
+  "d1_databases": [
+    {
+      "binding": "LRX_META",
+      "database_name": "lrx-meta",
+      "database_id": "60a4f3bc-f753-4603-9aeb-138d58b7b9b0",
+      "migrations_dir": "cloudflare/migrations"
+    }
+  ]
+}
