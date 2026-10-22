@@ -360,3 +360,22 @@ main{margin-left:210px;width:calc(100% - 210px);background:var(--lrx-bg)}
  .production-flow-pager .pager-actions{display:grid;grid-template-columns:1fr auto 1fr}
  .production-flow-pager .pager-actions .btn:last-child{justify-self:end}
 }
+@media print{
+ #lrxPrintOverlay .lrx-print-document .event-quote-doc{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important;font-size:9.5px!important;line-height:1.25!important}
+ #lrxPrintOverlay .lrx-print-document .eq-header{display:flex!important;flex-direction:row!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;padding-bottom:9px!important}
+ #lrxPrintOverlay .lrx-print-document .eq-brand{display:block!important;flex:0 0 36%!important;width:auto!important;min-width:0!important}
+ #lrxPrintOverlay .lrx-print-document .eq-brand img{display:block!important;width:145px!important;max-width:100%!important;height:auto!important;max-height:none!important;object-fit:contain!important;object-position:left top!important}
+ #lrxPrintOverlay .lrx-print-document .eq-title{flex:1!important;min-width:0!important;text-align:right!important}
+ #lrxPrintOverlay .lrx-print-document .eq-title h1{font-size:19px!important;margin:0 0 4px!important}
+ #lrxPrintOverlay .lrx-print-document .eq-title>b{font-size:10px!important;margin-bottom:3px!important}
+ #lrxPrintOverlay .lrx-print-document .eq-title>span{font-size:9px!important;margin-top:1px!important}
+ #lrxPrintOverlay .lrx-print-document .eq-parties{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;padding:9px 0!important}
+ #lrxPrintOverlay .lrx-print-document .eq-event{display:grid!important;grid-template-columns:1.35fr .85fr .65fr 1fr!important;gap:8px!important;padding:8px!important;margin-bottom:9px!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items{display:table!important;width:100%!important;min-width:0!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items thead{display:table-header-group!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items tbody{display:table-row-group!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items tr{display:table-row!important;break-inside:avoid!important;page-break-inside:avoid!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items th,#lrxPrintOverlay .lrx-print-document .eq-items td{display:table-cell!important}
+ #lrxPrintOverlay .lrx-print-document .eq-items td:before{display:none!important;content:none!important}
+ #lrxPrintOverlay .lrx-print-document .eq-header,#lrxPrintOverlay .lrx-print-document .eq-parties,#lrxPrintOverlay .lrx-print-document .eq-event,#lrxPrintOverlay .lrx-print-document .eq-items thead,#lrxPrintOverlay .lrx-print-document .eq-totals{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
