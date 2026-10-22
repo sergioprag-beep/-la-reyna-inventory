@@ -160,7 +160,25 @@ function spreadsheetSafeValue(v){const value=exportValue(v);return typeof v==='s
 function csvEscape(v){return JSON.stringify(spreadsheetSafeValue(v))}
 function exportRows(rows,name){if(!Array.isArray(rows)||!rows.length)return toast('No hay datos para exportar');const safe=rows.filter(r=>r&&typeof r==='object').map(({password,externalPassword,...row})=>row);if(!safe.length)return toast('No hay datos válidos para exportar');const headers=[...new Set(safe.flatMap(r=>Object.keys(r)))];const csv='\ufeff'+[headers.map(csvEscape).join(','),...safe.map(r=>headers.map(h=>csvEscape(r[h])).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${name}_${new Date().toISOString().slice(0,10)}.csv`;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
 function exportRowsCSV(rows,name){return exportRows(rows,name)}
-function exportExcel(rows,name){if(!Array.isArray(rows)||!rows.length)return toast('No hay datos para exportar');const safeRows=rows.filter(r=>r&&typeof r==='object').map(({password,externalPassword,...row})=>row);if(!safeRows.length)return toast('No hay datos válidos para exportar');const headers=[...new Set(safeRows.flatMap(r=>Object.keys(r)))];const escX=v=>esc(spreadsheetSafeValue(v));const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>LRX</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><thead><tr>${headers.map(h=>`<th>${escX(h)}</th>`).join('')}</tr></thead><tbody>${safeRows.map(r=>`<tr>${headers.map(h=>`<td>${escX(r[h])}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${name}_${new Date().toISOString().slice(0,10)}.xls`;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
+function exportExcel(rows,name){
+ if(!Array.isArray(rows)||!rows.length)return toast('No hay datos para exportar');
+ const safeRows=rows.filter(r=>r&&typeof r==='object').map(({password,externalPassword,...row})=>row);
+ if(!safeRows.length)return toast('No hay datos válidos para exportar');
+ const headers=[...new Set(safeRows.flatMap(r=>Object.keys(r)))],stamp=new Date().toISOString().slice(0,10);
+ const download=(blob,filename)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)};
+ if(window.XLSX?.utils?.aoa_to_sheet&&typeof window.XLSX.write==='function'){
+  const matrix=[headers.map(h=>spreadsheetSafeValue(h)),...safeRows.map(row=>headers.map(h=>spreadsheetSafeValue(row[h])))];
+  const sheet=window.XLSX.utils.aoa_to_sheet(matrix),book=window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(book,sheet,'LRX');
+  const data=window.XLSX.write(book,{bookType:'xlsx',type:'array'});
+  download(new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${name}_${stamp}.xlsx`);
+  toast('Archivo Excel .xlsx listo.');return;
+ }
+ const escX=v=>esc(spreadsheetSafeValue(v));
+ const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>LRX</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><thead><tr>${headers.map(h=>`<th>${escX(h)}</th>`).join('')}</tr></thead><tbody>${safeRows.map(row=>`<tr>${headers.map(h=>`<td>${escX(row[h])}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
+ download(new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}),`${name}_${stamp}.xls`);
+ toast('Se descargó Excel compatible (.xls); el lector .xlsx no se cargó.');
+}
 function printHtml(title,body){
  const host=document.body, appShell=document.getElementById('app')||document.getElementById('root')||document.body;
  const previous=document.getElementById('lrxPrintOverlay'); if(previous) previous.remove();
