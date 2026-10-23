@@ -1,10 +1,10 @@
-/* LRX Purchase Engine v193
+/* LRX Purchase Engine v194
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
 (function(global){
  'use strict';
- const ENGINE_VERSION='v193';
+ const ENGINE_VERSION='v194';
  const unitAliases={
   cs:'caja',case:'caja',cases:'caja',caja:'caja',cajas:'caja',carton:'caja',cartons:'caja',
   ea:'unidad',each:'unidad',unit:'unidad',units:'unidad',unidad:'unidad',unidades:'unidad',pc:'unidad',pcs:'unidad',piece:'unidad',pieces:'unidad',pieza:'unidad',piezas:'unidad',
@@ -14,7 +14,7 @@
   kg:'kg',kgs:'kg',kilo:'kg',kilos:'kg',kilogram:'kg',kilograms:'kg',
   g:'g',gr:'g',gram:'g',grams:'g',gramo:'g',gramos:'g',
   gal:'gal',gallon:'gal',gallons:'gal',galon:'gal',galones:'gal',
-  l:'L',lt:'L',lts:'L',liter:'L',liters:'L',litro:'L',litros:'L',
+  l:'L',lt:'L',lts:'L',liter:'L',liters:'L',litro:'L',litros:'L','fl oz':'fl oz','fluid ounce':'fl oz','fluid ounces':'fl oz',
   ml:'mL',milliliter:'mL',milliliters:'mL',mililitro:'mL',mililitros:'mL'
  };
  const STOP=/^(subtotal|sub total|tax|sales tax|impuesto|iva|grand total|invoice total|total due|amount due|balance due|shipping|freight|discount|payment|terms|thank|product category|number of pieces|misc|received by|signature|please cut|pay this amount)/i;
@@ -48,7 +48,46 @@
   let s=String(line||'').replace(/\s+/g,' ').trim();
   if(!s||HEADER.test(s)||STOP.test(s))return null;
   const numsIn=(str)=>[...String(str||'').matchAll(/(?:\$|€|£)?\s*\d[\d,]*(?:\.\d{1,4})?/g)].map(m=>({raw:m[0],value:num(m[0]),index:m.index,end:m.index+m[0].length}));
-  let m=s.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z0-9][A-Za-z0-9._\/-]{2,})\s+(.+)$/i);
+  const amount=/\$?\s*\d[\d,]*(?:\.\d{1,4})?/;
+ const unit='(?:fluid\\s+ounces?|fl\\s*oz|case|cases|cs|ea|each|unit|units|lb|lbs|oz|kg|g|gal|l|lt|ml|caja|cajas|unidad(?:es)?|pieza(?:s)?|pack|pk|ct|dozen|dz)';
+  // Code + quantity + description + amounts is another common column order.
+  let m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(\\d+(?:[.,]\\d+)?)\\s+(.+?)\\s+('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
+    const [,code,qtyText,desc,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog,code);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-qty-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
+    }
+  }
+  // Most supplier invoices put item code and description first, then quantity,
+  // unit, unit price and extended amount. Keep this separate from the legacy
+  // quantity-first formats so product names containing numbers stay intact.
+  m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
+    const [,code,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog,code);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
+    }
+  }
+  // Description-first invoices commonly omit an item code but still include
+  // quantity, optional unit, unit price and line total.
+  m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m){
+    const [,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'description-first',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''};
+    }
+  }
+  // Some invoice formats provide only quantity and extended amount. Preserve
+  // that usable line and derive unit cost instead of dropping the whole row.
+  m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')$','i'));
+  if(m){
+    const [,desc,qtyText,unitText,totalText]=m,qty=num(qtyText),lineTotal=num(totalText);
+    if(qty>0&&/[A-Za-z]/.test(desc)&&lineTotal>=0){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:lineTotal/qty,lineTotal,source:'extended-only',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
+  }
+  m=s.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z0-9][A-Za-z0-9._\/-]{2,})\s+(.+)$/i);
   if(m){
     const qty=num(m[1]),code=m[2],rest=m[3],ns=numsIn(rest);
     if(ns.length>=2){
@@ -121,7 +160,7 @@
   let date='';const dm=compact.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})\b/);if(dm)date=`${dm[3]}-${String(dm[1]).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;else{const iso=compact.match(/\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/);if(iso)date=`${iso[1]}-${String(iso[2]).padStart(2,'0')}-${String(iso[3]).padStart(2,'0')}`;else{const ord=compact.match(/\b(\d{1,2})(?:st|nd|rd|th)\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(20\d{2})\b/i);if(ord){const months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};const key=ord[2].slice(0,3).toLowerCase();date=`${ord[3]}-${String(months[key]).padStart(2,'0')}-${String(ord[1]).padStart(2,'0')}`}}}
   const labeled=(rx)=>{for(let i=0;i<lines.length;i++){const m=lines[i].match(rx);if(m)return num(m[1]);if(rx.test(lines[i])){const n=lines[i+1]?.match(/^\$?\s*([0-9][0-9,.]*)\s*$/);if(n)return num(n[1])}}return 0};
   let subtotal=labeled(/(?:^|\s)(?:subtotal|sub\s*total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
-  let tax=labeled(/(?:^|\s)(?:sales\s*tax|tax\s+amount|taxes|impuesto|impuestos|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
+  let tax=labeled(/(?:^|\s)(?:sales\s*tax|tax(?:\s+amount)?|taxes|impuesto(?:s)?|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
   const totals=[];for(const l of lines){const m=l.match(/(?:invoice\s+total|grand\s+total|total\s+due|amount\s+due|balance\s+due|total\s+factura|^total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)/i);if(m)totals.push(num(m[1]))}
   let total=totals.length?totals[totals.length-1]:0;if(!total&&subtotal)total=subtotal+tax;
   return {supplier,invoice,date,subtotal,tax,total,lines:[]};
