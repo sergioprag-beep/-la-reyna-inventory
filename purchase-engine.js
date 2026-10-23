@@ -1,10 +1,10 @@
-/* LRX Purchase Engine v194
+/* LRX Purchase Engine v195
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
 (function(global){
  'use strict';
- const ENGINE_VERSION='v194';
+ const ENGINE_VERSION='v195';
  const unitAliases={
   cs:'caja',case:'caja',cases:'caja',caja:'caja',cajas:'caja',carton:'caja',cartons:'caja',
   ea:'unidad',each:'unidad',unit:'unidad',units:'unidad',unidad:'unidad',unidades:'unidad',pc:'unidad',pcs:'unidad',piece:'unidad',pieces:'unidad',pieza:'unidad',piezas:'unidad',
@@ -44,6 +44,16 @@
  function moneyTokens(s){
   return (String(s||'').match(/(?:\$|€|£)?\s*\d[\d,]*(?:\.\d{1,4})?/g)||[]).map(x=>num(x));
  }
+ function credibleDescription(value){
+  const s=String(value||'').trim();
+  // OCR often joins columns into a plausible-looking but unusable name (for example,
+  // "ESA PEE == 954"). Keep parsing provider-neutral, but don't turn those artifacts
+  // into inventory products or purchase lines.
+  if(!s||/[=<>|{}\\]/.test(s))return false;
+  const letters=(s.match(/[\p{L}]/gu)||[]).length;
+  const words=s.match(/[\p{L}]{2,}/gu)||[];
+  return letters>=3&&(words.length>=2||words.some(w=>w.length>=4));
+ }
  function parseCandidateLine(line,catalog){
   let s=String(line||'').replace(/\s+/g,' ').trim();
   if(!s||HEADER.test(s)||STOP.test(s))return null;
@@ -54,7 +64,7 @@
   let m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(\\d+(?:[.,]\\d+)?)\\s+(.+?)\\s+('+amount.source+')\\s+('+amount.source+')$','i'));
   if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
     const [,code,qtyText,desc,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
-    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
       const mt=matchProduct(desc,catalog,code);
       return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-qty-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
     }
@@ -65,7 +75,7 @@
   m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
   if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
     const [,code,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
-    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
       const mt=matchProduct(desc,catalog,code);
       return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
     }
@@ -75,7 +85,7 @@
   m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
   if(m){
     const [,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
-    if(qty>0&&desc&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
       const mt=matchProduct(desc,catalog);
       return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'description-first',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''};
     }
@@ -85,7 +95,7 @@
   m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')$','i'));
   if(m){
     const [,desc,qtyText,unitText,totalText]=m,qty=num(qtyText),lineTotal=num(totalText);
-    if(qty>0&&/[A-Za-z]/.test(desc)&&lineTotal>=0){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:lineTotal/qty,lineTotal,source:'extended-only',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
+    if(qty>0&&credibleDescription(desc)&&lineTotal>=0){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:lineTotal/qty,lineTotal,source:'extended-only',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
   }
   m=s.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z0-9][A-Za-z0-9._\/-]{2,})\s+(.+)$/i);
   if(m){
@@ -93,7 +103,7 @@
     if(ns.length>=2){
       const a=ns[ns.length-2],b=ns[ns.length-1];
       const desc=(rest.slice(0,a.index).trim()+' '+rest.slice(b.end).trim()).replace(/\s+/g,' ').trim();
-      if(qty>0&&desc&&a.value>=0&&b.value>=0){
+      if(qty>0&&credibleDescription(desc)&&a.value>=0&&b.value>=0){
         const arithmetic=a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03);
         if(arithmetic){const mt=matchProduct(desc,catalog,code);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')}}
       }
@@ -104,7 +114,7 @@
     const qty=num(m[1]),rest=m[2],ns=numsIn(rest);
     if(ns.length>=2){
       const a=ns[ns.length-2],b=ns[ns.length-1],desc=(rest.slice(0,a.index).trim()+' '+rest.slice(b.end).trim()).replace(/\s+/g,' ').trim();
-      if(qty>0&&desc&&a.value>=0&&b.value>=0&&(a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03))){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
+      if(qty>0&&credibleDescription(desc)&&a.value>=0&&b.value>=0&&(a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03))){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
     }
   }
   return null;
