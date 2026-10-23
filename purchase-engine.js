@@ -1,10 +1,10 @@
-/* LRX Purchase Engine v192
+/* LRX Purchase Engine v193
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
 (function(global){
  'use strict';
- const ENGINE_VERSION='v192';
+ const ENGINE_VERSION='v193';
  const unitAliases={
   cs:'caja',case:'caja',cases:'caja',caja:'caja',cajas:'caja',carton:'caja',cartons:'caja',
   ea:'unidad',each:'unidad',unit:'unidad',units:'unidad',unidad:'unidad',unidades:'unidad',pc:'unidad',pcs:'unidad',piece:'unidad',pieces:'unidad',pieza:'unidad',piezas:'unidad',
@@ -147,7 +147,27 @@
  }
  async function ensureTesseract(){if(global.Tesseract)return global.Tesseract;const el=document.querySelector('script[data-lrx-ocr]');if(el){await new Promise((res,rej)=>{if(global.Tesseract)return res();el.addEventListener('load',res,{once:true});el.addEventListener('error',rej,{once:true})});if(global.Tesseract)return global.Tesseract}return await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.async=true;s.dataset.lrxOcr='1';s.onload=()=>global.Tesseract?resolve(global.Tesseract):reject(new Error('OCR no disponible'));s.onerror=()=>reject(new Error('No se pudo cargar OCR'));document.head.appendChild(s)})}
  function tsvLayout(tsv){const by=new Map();for(const raw of String(tsv||'').split(/\r?\n/)){const a=raw.split('\t');if(a.length<12||a[0]!=='5')continue;const text=(a[11]||'').trim(),conf=Number(a[10]);if(!text||(!Number.isNaN(conf)&&conf<20))continue;const key=[a[1],a[2],a[3],a[4],a[5]].join(':');let arr=by.get(key);if(!arr){arr=[];by.set(key,arr)}arr.push({x:Number(a[6]||0),y:Number(a[7]||0),text})}const items=[...by.values()].flat();return items.length?[{items}]:[]}
- async function ocrImage(file){const T=await ensureTesseract();const r=await T.recognize(file,'spa+eng');return {text:String(r?.data?.text||'').trim(),layout:tsvLayout(r?.data?.tsv||'')}}
+ async function preprocessedInvoiceImage(file){
+  let source,bitmap=null,url='';
+  try{if(typeof createImageBitmap==='function')bitmap=await createImageBitmap(file)}catch(e){}
+  if(bitmap)source=bitmap;else{url=URL.createObjectURL(file);source=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('No se pudo preparar la imagen'));image.src=url})}
+  try{
+   const width=Number(source.width||source.naturalWidth||0),height=Number(source.height||source.naturalHeight||0);if(!width||!height)return file;
+   const scale=Math.min(2,2400/Math.max(width,height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return file;ctx.drawImage(source,0,0,canvas.width,canvas.height);
+   const frame=ctx.getImageData(0,0,canvas.width,canvas.height),data=frame.data;
+   for(let i=0;i<data.length;i+=4){const gray=.299*data[i]+.587*data[i+1]+.114*data[i+2],contrast=Math.max(0,Math.min(255,(gray-128)*1.28+128));data[i]=data[i+1]=data[i+2]=contrast}
+   ctx.putImageData(frame,0,0);return canvas;
+  }catch(e){return file}finally{bitmap?.close?.();if(url)URL.revokeObjectURL(url)}
+ }
+ async function ocrImage(file){
+  const T=await ensureTesseract(),recognize=async image=>T.recognize(image,'spa+eng',{tessedit_pageseg_mode:6,preserve_interword_spaces:'1'});
+  let original=null,processed=null;try{original=await recognize(file)}catch(e){}
+  const image=await preprocessedInvoiceImage(file);if(image!==file){try{processed=await recognize(image)}catch(e){}}
+  const results=[original,processed].filter(Boolean);if(!results.length)throw new Error('No se pudo reconocer el texto de la imagen');
+  const best=results.sort((a,b)=>Number(b?.data?.confidence||0)-Number(a?.data?.confidence||0)||String(b?.data?.text||'').trim().length-String(a?.data?.text||'').trim().length)[0];
+  return {text:String(best?.data?.text||'').trim(),layout:tsvLayout(best?.data?.tsv||''),confidence:Number(best?.data?.confidence||0)};
+ }
  async function pdfTextWith(pdfjs,file){
   if(!pdfjs)return null;
   if(pdfjs.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
