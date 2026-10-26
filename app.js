@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v451';
+const APP_VERSION='v452';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -4055,7 +4055,7 @@ async function saveProduct(id=''){
   const oldCost=Number(p.cost||p.standardUnitCost||0);
   Object.assign(p,{code,sku:code,barcode,upc:barcode,alternateCodes:String(g('prdAltCodes')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),name,type:g('prdType')?.value||'Ingrediente',brand:g('prdBrand')?.value.trim()||'',category:g('prdCategory')?.value.trim()||'Sin categoría',supplier:g('prdSupplier')?.value||'',purchaseUnit:g('prdPurchaseUnit')?.value.trim()||'unidad',packQty,packUnit,packPrice,purchasePrice:packPrice,unit:standardUnit,standardUnit,preMermaUnitCost:c,standardUnitCost:c,cost:c,finalCost:effective,usableCost:effective,wastePct:waste,yieldFactor:1-waste/100,minQty,maxQty,notes:g('prdNotes')?.value.trim()||'',updatedAt:now()});
   state.productSuppliers=(state.productSuppliers||[]).filter(x=>String(x.productId)!==String(p.id));
-  if(p.supplier){const sp=masterSuppliers().find(x=>normMaster(x.name)===normMaster(p.supplier));state.productSuppliers.push({id:'PS-'+Date.now(),productId:p.id,supplierId:sp?.id||'',supplierName:p.supplier,unit:p.standardUnit,unitCost:unitCost,updatedAt:now()})}
+  if(p.supplier){const sp=masterSuppliers().find(x=>normMaster(x.name)===normMaster(p.supplier));state.productSuppliers.push({id:'PS-'+Date.now(),productId:p.id,supplierId:sp?.id||'',supplierName:p.supplier,unit:p.standardUnit,unitCost:c,updatedAt:now()})}
   if(!Array.isArray(state.purchasePriceHistory))state.purchasePriceHistory=[];
   if(!Array.isArray(state.purchasePriceHistory))state.purchasePriceHistory=[];if(oldCost>0&&Math.abs(effective-oldCost)>0.000001)state.purchasePriceHistory.push({id:'PPH-'+Date.now(),date:now(),productId:p.id,product:p.name,supplier:p.supplier,unit:p.standardUnit,unitCost:effective,previousCost:oldCost,increasePct:(effective-oldCost)/oldCost*100,source:'MASTER_DATA'});
   audit('PRODUCT_EDIT',`${name} · ${p.id}`);try{reconcileInventoryFromPurchases()}catch(e){console.warn('LRX purchase reconciliation after product save',e)}
