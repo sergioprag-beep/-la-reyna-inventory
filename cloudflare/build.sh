@@ -12,7 +12,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 needle = "function updateLanguageChip(){"
-bridge = "window.extendLRXEnglishDictionary=(extra)=>{Object.assign(UI_EN,extra||{});applyEnglishUI()};\\nfunction updateLanguageChip(){"
+bridge = "window.extendLRXEnglishDictionary=(extra)=>{Object.assign(UI_EN,extra||{});applyEnglishUI()};function updateLanguageChip(){"
 if "window.extendLRXEnglishDictionary" not in s:
     if needle not in s:
         raise SystemExit("Could not find language UI insertion point")
