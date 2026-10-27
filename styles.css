@@ -379,3 +379,4 @@ main{margin-left:210px;width:calc(100% - 210px);background:var(--lrx-bg)}
  #lrxPrintOverlay .lrx-print-document .eq-items td:before{display:none!important;content:none!important}
  #lrxPrintOverlay .lrx-print-document .eq-header,#lrxPrintOverlay .lrx-print-document .eq-parties,#lrxPrintOverlay .lrx-print-document .eq-event,#lrxPrintOverlay .lrx-print-document .eq-items thead,#lrxPrintOverlay .lrx-print-document .eq-totals{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
+.approved-kpi-card{appearance:none;width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}.approved-kpi-card:hover{transform:translateY(-2px);border-color:#aab9cf;box-shadow:0 5px 14px rgba(16,24,40,.12)}.approved-kpi-card:focus-visible{outline:3px solid #244b93;outline-offset:2px}
