@@ -17,5 +17,6 @@ if "window.extendLRXEnglishDictionary" not in s:
     if needle not in s:
         raise SystemExit("Could not find language UI insertion point")
     s = s.replace(needle, bridge, 1)
+    s = s.replace("const _lrxPreviewDreImport=previewDreImport;\npreviewDreImport=async function(file){", "const _lrxPreviewDreImport=typeof previewDreImport==='function'?previewDreImport:null;\nif(_lrxPreviewDreImport)previewDreImport=async function(file){")
     p.write_text(s)
 PY
