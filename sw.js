@@ -1,7 +1,7 @@
-const CACHE='lrx-v541';
-const VERSION='2026-11-02-v541';
+const CACHE='lrx-v542';
+const VERSION='2026-11-02-v542';
 const ASSETS=[
-  './','./index.html','./styles.css?v=2026-11-02-v541',
+  './','./index.html','./styles.css?v=2026-11-02-v542',
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,`./ui-translation-extra.js?v=${VERSION}`,
   './manifest.webmanifest','./hero-food.jpg','./hero-bar.jpg','./LRX-LOGO-PLANTILLAS.png',
   './LRX-LOGO-LOCKUP-BRANDSAFE.svg','./LRX-LOGO-IMPRESION.jpeg','./LRX-LOGO-IMPRESION-TRANSPARENTE.png',
