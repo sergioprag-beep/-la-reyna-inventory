@@ -1087,5 +1087,46 @@ html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden}.app{width:100
  },true);
 })();
 </script>
+<script id="lrx-pwa-auto-update">
+(()=> {
+ if(!("serviceWorker" in navigator))return;
+ let controlled=!!navigator.serviceWorker.controller,pending=false,lastCheck=0;
+ const modalOpen=()=>!!document.querySelector("#modal.show");
+ const apply=()=>{
+  if(!pending||document.visibilityState!=="visible")return;
+  if(modalOpen()){showBanner();return}
+  pending=false;window.location.reload();
+ };
+ const showBanner=()=>{
+  let banner=document.getElementById("lrxUpdateBanner");
+  if(!banner){
+   banner=document.createElement("div");banner.id="lrxUpdateBanner";
+   banner.setAttribute("role","status");
+   banner.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:2147483647;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:#143e78;color:#fff;box-shadow:0 8px 28px #17203355;font:600 14px/1.35 Arial,sans-serif";
+   const en=document.documentElement.lang==="en";
+   banner.innerHTML='<span>'+(en?'An update is ready. It will apply after you finish this screen.':'Hay una actualización lista. Se aplicará al terminar esta pantalla.')+'</span><div style="display:flex;gap:8px;flex:none"><button type="button" data-update-now style="border:0;border-radius:8px;padding:9px 12px;background:#c20b61;color:#fff;font-weight:700">'+(en?'Update now':'Actualizar')+'</button><button type="button" data-update-later style="border:1px solid #ffffff88;border-radius:8px;padding:9px 12px;background:transparent;color:#fff;font-weight:700">'+(en?'Later':'Luego')+'</button></div>';
+   document.body.appendChild(banner);
+   banner.querySelector("[data-update-now]").addEventListener("click",()=>{pending=false;window.location.reload()});
+   banner.querySelector("[data-update-later]").addEventListener("click",()=>banner.remove());
+  }
+ };
+ const check=()=>{
+  if(!navigator.onLine||Date.now()-lastCheck<60000)return;
+  lastCheck=Date.now();
+  navigator.serviceWorker.ready.then(reg=>reg.update()).catch(()=>{});
+ };
+ navigator.serviceWorker.addEventListener("controllerchange",()=>{
+  const wasControlled=controlled;controlled=!!navigator.serviceWorker.controller;
+  if(wasControlled&&controlled){pending=true;apply()}
+ });
+ window.addEventListener("pageshow",check);
+ window.addEventListener("focus",check);
+ window.addEventListener("online",check);
+ document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){check();apply()}});
+ const modal=document.getElementById("modal");
+ if(modal)new MutationObserver(()=>apply()).observe(modal,{attributes:true,attributeFilter:["class","hidden"]});
+ window.addEventListener("load",check,{once:true});
+})();
+</script>
 </body>
 </html>
