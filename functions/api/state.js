@@ -18,11 +18,35 @@ function splitText(text) {
 
 async function readSnapshot(env, snapshotId) {
   const rows = await env.LRX_META.prepare(
-    'SELECT chunk_data FROM lrx_state_chunks WHERE snapshot_id = ? ORDER BY chunk_index'
+    'SELECT chunk_index, chunk_data FROM lrx_state_chunks WHERE snapshot_id = ? ORDER BY chunk_index'
   ).bind(snapshotId).all();
   if (!rows.results?.length) return null;
-  try { return JSON.parse(rows.results.map(row => row.chunk_data).join('')); }
-  catch { return null; }
+  if (rows.results.some((row, index) => Number(row.chunk_index) !== index || typeof row.chunk_data !== 'string')) return null;
+  return rows.results;
+}
+
+function streamSnapshot(chunks, meta) {
+  const encoder = new TextEncoder();
+  let index = 0;
+  const suffix = `,"revision":${Number(meta.revision)},"updatedAt":${JSON.stringify(meta.updated_at)}}`;
+  const body = new ReadableStream({
+    pull(controller) {
+      if (index === 0) {
+        controller.enqueue(encoder.encode('{"payload":'));
+        index++;
+        return;
+      }
+      const chunkIndex = index - 1;
+      if (chunkIndex < chunks.length) {
+        controller.enqueue(encoder.encode(chunks[chunkIndex].chunk_data));
+        index++;
+        return;
+      }
+      controller.enqueue(encoder.encode(suffix));
+      controller.close();
+    }
+  });
+  return new Response(body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
 export async function onRequestGet({ env, request }) {
@@ -30,28 +54,36 @@ export async function onRequestGet({ env, request }) {
   if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
   if (new URL(request.url).searchParams.get('revisionOnly') === '1')
     return json({ revision: Number(meta.revision), updatedAt: meta.updated_at });
-  const payload = await readSnapshot(env, meta.object_key);
-  if (!payload) return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
-  return json({ payload, revision: Number(meta.revision), updatedAt: meta.updated_at });
+  const chunks = await readSnapshot(env, meta.object_key);
+  if (!chunks) return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
+  return streamSnapshot(chunks, meta);
 }
 
 export async function onRequestPut({ request, env }) {
   if (Number(request.headers.get('Content-Length') || 0) > MAX_STATE_BYTES)
     return json({ error: 'La copia de datos supera el límite de 20 MB.' }, 413);
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'El contenido no es JSON válido.' }, 400); }
-  const expected = Number(body?.expectedRevision);
-  const payload = body?.payload;
-  if (!Number.isSafeInteger(expected) || expected < 0 || !payload || typeof payload !== 'object' || Array.isArray(payload))
+  let serialized;
+  const revisionHeader = request.headers.get('X-LRX-Expected-Revision');
+  let expected = revisionHeader === null ? Number.NaN : Number(revisionHeader);
+  try { serialized = await request.text(); } catch { return json({ error: 'No se pudo leer la copia de datos.' }, 400); }
+
+  // Accept older clients that send {expectedRevision, payload}, but unwrap the
+  // JSON text without parsing or re-stringifying the entire multi-megabyte state.
+  if (!Number.isSafeInteger(expected) || expected < 0) {
+    const legacy = serialized.match(/^\{"expectedRevision":(\d+),"payload":/);
+    if (!legacy || !serialized.endsWith('}')) return json({ error: 'Falta una copia de datos válida o su revisión.' }, 400);
+    expected = Number(legacy[1]);
+    serialized = serialized.slice(legacy[0].length, -1);
+  }
+  if (!Number.isSafeInteger(expected) || expected < 0 || serialized.length < 2 || serialized[0] !== '{' || serialized.at(-1) !== '}')
     return json({ error: 'Falta una copia de datos válida o su revisión.' }, 400);
+  if (new TextEncoder().encode(serialized).byteLength > MAX_STATE_BYTES)
+    return json({ error: 'La copia de datos supera el límite de 20 MB.' }, 413);
 
   const prior = await env.LRX_META.prepare('SELECT revision, object_key FROM lrx_state_meta WHERE singleton = 1').first();
   const current = Number(prior?.revision || 0);
   if (current !== expected) return json({ error: 'La copia compartida cambió. Actualiza antes de guardar.', revision: current }, 409);
 
-  const serialized = JSON.stringify(payload);
-  if (new TextEncoder().encode(serialized).byteLength > MAX_STATE_BYTES)
-    return json({ error: 'La copia de datos supera el límite de 20 MB.' }, 413);
   const next = current + 1;
   const now = new Date().toISOString();
   const snapshotId = `${next}-${crypto.randomUUID()}`;
