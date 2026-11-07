@@ -5,19 +5,25 @@ rm -rf dist
 mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
-# Keep one versioned service-worker registration. Older registrations in app.js
-# fought the current registration in index.html and caused reload loops.
+# app.js contains an obsolete service-worker update path. It competes with the
+# versioned updater in index.html, which can make clients switch workers and reload.
 python3 - <<'PY'
 from pathlib import Path
+import re
 p = Path("dist/app.js")
 s = p.read_text()
-old1 = "if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-22-v422',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}window.LRXAppReady=init();"
-old2 = "if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-22-v422',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);"
-if old1 not in s or old2 not in s:
-    raise SystemExit("Expected legacy service-worker registration code was not found")
-s = s.replace(old1, "}window.LRXAppReady=init();", 1).replace(old2, "", 1)
-if "serviceWorker.register" in s:
-    raise SystemExit("Unexpected service-worker registration remains in app.js")
+s, first = re.subn(
+    r"if\(['\"]serviceWorker['\"]\s*in navigator\)\{navigator\.serviceWorker\.register\(.*?\.catch\(\(\)=>\{\}\)\}",
+    "",
+    s,
+)
+s, second = re.subn(
+    r"if\(['\"]serviceWorker['\"]\s+in navigator\)setTimeout\(\(\)=>navigator\.serviceWorker\.register\(.*?\),1500\);",
+    "",
+    s,
+)
+if first + second != 2 or "serviceWorker.register" in s:
+    raise SystemExit(f"Expected two legacy registrations; removed {first + second}")
 p.write_text(s)
 print("Removed two legacy service worker registrations from app.js")
 PY
