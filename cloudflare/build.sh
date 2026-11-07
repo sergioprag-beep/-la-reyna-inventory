@@ -9,17 +9,18 @@ cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflar
 # fought the current registration in index.html and caused reload loops.
 python3 - <<'PY'
 from pathlib import Path
-import re
 p = Path("dist/app.js")
 s = p.read_text()
-s, first = re.subn(r"if\\('serviceWorker'in navigator\\)\\{navigator\\.serviceWorker\\.register\\('\\./sw\\.js\\?v=[^']+'\\s*,\\s*\\{updateViaCache:'none'\\}\\)\\.then\\(reg=>\\{try\\{reg\\.update\\(\\)\\}catch\\(e\\)\\{\\}\\}\\)\\.catch\\(\\(\\)=>\\{\\}\\)\\}\\}window\\.LRXAppReady=init\\(\\);", "}window.LRXAppReady=init();", s)
-s, second = re.subn(r"if\\('serviceWorker' in navigator\\)setTimeout\\(\\(\\)=>navigator\\.serviceWorker\\.register\\('\\./sw\\.js\\?v=[^']+',\\{updateViaCache:'none'\\}\\)\\.then\\(reg=>reg\\.update\\(\\)\\)\\.catch\\(\\(\\)=>\\{\\}\\),1500\\);", "", s)
-if first + second != 2 or "serviceWorker.register" in s:
-    raise SystemExit(f"Expected to remove exactly two legacy registrations; removed {first + second}")
+old1 = "if('serviceWorker'in navigator){navigator.serviceWorker.register('./sw.js?v=2026-10-22-v422',{updateViaCache:'none'}).then(reg=>{try{reg.update()}catch(e){}}).catch(()=>{})}}window.LRXAppReady=init();"
+old2 = "if('serviceWorker' in navigator)setTimeout(()=>navigator.serviceWorker.register('./sw.js?v=2026-10-22-v422',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}),1500);"
+if old1 not in s or old2 not in s:
+    raise SystemExit("Expected legacy service-worker registration code was not found")
+s = s.replace(old1, "}window.LRXAppReady=init();", 1).replace(old2, "", 1)
+if "serviceWorker.register" in s:
+    raise SystemExit("Unexpected service-worker registration remains in app.js")
 p.write_text(s)
 print("Removed two legacy service worker registrations from app.js")
 PY
-
 mkdir -p dist/assets
 cp -R assets/utensils dist/assets/
 
