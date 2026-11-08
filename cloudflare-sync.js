@@ -69,10 +69,11 @@ async function publish(payload){
   throw Error('No se pudo confirmar el guardado en la nube. Tus cambios siguen guardados en este dispositivo y se volverán a intentar.');
 }
 function mergeRecord(local,cloud){
+  const isProduction=record=>String(record?.id||'').startsWith('PRD-')||('startedAt' in (record||{})&&'finishedAt' in (record||{}));
   const localCompleted=String(local?.status||'').toLowerCase()==='completed';
   const cloudCompleted=String(cloud?.status||'').toLowerCase()==='completed';
   // Production is a one-way workflow: a completed record must not revert to in-progress.
-  if(localCompleted!==cloudCompleted)return localCompleted?local:cloud;
+  if(isProduction(local)&&isProduction(cloud)&&localCompleted!==cloudCompleted)return localCompleted?local:cloud;
   const timestamp=record=>{
     for(const key of ['updatedAt','modifiedAt','finishedAt','completedAt','startedAt','createdAt']){
       const value=Date.parse(record?.[key]||'');
