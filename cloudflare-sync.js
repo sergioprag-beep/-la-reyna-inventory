@@ -68,11 +68,27 @@ async function publish(payload){
   }
   throw Error('No se pudo confirmar el guardado en la nube. Tus cambios siguen guardados en este dispositivo y se volverán a intentar.');
 }
+function mergeRecord(local,cloud){
+  const localCompleted=String(local?.status||'').toLowerCase()==='completed';
+  const cloudCompleted=String(cloud?.status||'').toLowerCase()==='completed';
+  // Production is a one-way workflow: a completed record must not revert to in-progress.
+  if(localCompleted!==cloudCompleted)return localCompleted?local:cloud;
+  const timestamp=record=>{
+    for(const key of ['updatedAt','modifiedAt','finishedAt','completedAt','startedAt','createdAt']){
+      const value=Date.parse(record?.[key]||'');
+      if(Number.isFinite(value))return value;
+    }
+    return NaN;
+  };
+  const localTime=timestamp(local),cloudTime=timestamp(cloud);
+  if(Number.isFinite(localTime)&&Number.isFinite(cloudTime)&&localTime!==cloudTime)return localTime>cloudTime?local:cloud;
+  return mergeValues(local,cloud);
+}
 function mergeValues(local,cloud){
   if(Array.isArray(local)||Array.isArray(cloud)){
     const left=Array.isArray(local)?local:[],right=Array.isArray(cloud)?cloud:[],out=[],positions=new Map();
     const keyOf=value=>value&&typeof value==='object'&&!Array.isArray(value)?String(value.id??value.uuid??value.key??value.code??value.name??JSON.stringify(value)):JSON.stringify(value);
-    for(const item of [...right,...left]){const key=keyOf(item);if(!positions.has(key)){positions.set(key,out.length);out.push(item)}else{const at=positions.get(key),existing=out[at];if(item&&existing&&typeof item==='object'&&typeof existing==='object'&&!Array.isArray(item)&&!Array.isArray(existing))out[at]=mergeValues(item,existing)}}
+    for(const item of [...right,...left]){const key=keyOf(item);if(!positions.has(key)){positions.set(key,out.length);out.push(item)}else{const at=positions.get(key),existing=out[at];if(item&&existing&&typeof item==='object'&&typeof existing==='object'&&!Array.isArray(item)&&!Array.isArray(existing))out[at]=mergeRecord(item,existing)}}
     return out;
   }
   if(local&&cloud&&typeof local==='object'&&typeof cloud==='object'){
