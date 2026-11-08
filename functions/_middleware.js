@@ -47,6 +47,13 @@ export async function onRequest(context) {
     url.hostname = 'la-reyna-inventory.pages.dev';
     return Response.redirect(url.toString(), 302);
   }
+  if (url.hostname !== 'la-reyna-inventory.pages.dev' && url.hostname.endsWith('.la-reyna-inventory.pages.dev') && url.pathname.startsWith('/api/')) {
+    // A legacy installed PWA may keep calling its preview origin. Proxy its API
+    // requests to production so every device reads and writes the same D1 copy.
+    const canonicalUrl = new URL(request.url);
+    canonicalUrl.hostname = 'la-reyna-inventory.pages.dev';
+    return fetch(new Request(canonicalUrl.toString(), request));
+  }
   if (!url.pathname.startsWith('/api/')) return context.next();
 
   if (!env.LRX_APP_PASSWORD)
