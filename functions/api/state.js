@@ -5,22 +5,6 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), {
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
 });
 
-function utf8ByteLength(text) {
-  let bytes = 0;
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    if (code <= 0x7f) bytes++;
-    else if (code <= 0x7ff) bytes += 2;
-    else if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length &&
-             text.charCodeAt(i + 1) >= 0xdc00 && text.charCodeAt(i + 1) <= 0xdfff) {
-      bytes += 4;
-      i++;
-    } else bytes += 3;
-    if (bytes > MAX_STATE_BYTES) return bytes;
-  }
-  return bytes;
-}
-
 function splitText(text) {
   const chunks = [];
   for (let offset = 0; offset < text.length;) {
@@ -91,7 +75,8 @@ export async function onRequestGet({ env, request }) {
 }
 
 export async function onRequestPut({ request, env }) {
-  if (Number(request.headers.get('Content-Length') || 0) > MAX_STATE_BYTES)
+  const contentLength = Number(request.headers.get('Content-Length') || 0);
+  if (contentLength > MAX_STATE_BYTES)
     return json({ error: 'La copia de datos supera el límite de 40 MB.' }, 413);
   let serialized;
   const revisionHeader = request.headers.get('X-LRX-Expected-Revision');
@@ -108,7 +93,7 @@ export async function onRequestPut({ request, env }) {
   }
   if (!Number.isSafeInteger(expected) || expected < 0 || serialized.length < 2 || serialized[0] !== '{' || serialized.at(-1) !== '}')
     return json({ error: 'Falta una copia de datos válida o su revisión.' }, 400);
-  if (utf8ByteLength(serialized) > MAX_STATE_BYTES)
+  if (!contentLength && new TextEncoder().encode(serialized).byteLength > MAX_STATE_BYTES)
     return json({ error: 'La copia de datos supera el límite de 40 MB.' }, 413);
 
   const prior = await env.LRX_META.prepare('SELECT revision, object_key FROM lrx_state_meta WHERE singleton = 1').first();
