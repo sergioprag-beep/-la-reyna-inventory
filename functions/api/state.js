@@ -1,9 +1,25 @@
-const MAX_STATE_BYTES = 20 * 1024 * 1024;
+const MAX_STATE_BYTES = 40 * 1024 * 1024;
 const CHUNK_CHARS = 400_000;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
 });
+
+function utf8ByteLength(text) {
+  let bytes = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code <= 0x7f) bytes++;
+    else if (code <= 0x7ff) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length &&
+             text.charCodeAt(i + 1) >= 0xdc00 && text.charCodeAt(i + 1) <= 0xdfff) {
+      bytes += 4;
+      i++;
+    } else bytes += 3;
+    if (bytes > MAX_STATE_BYTES) return bytes;
+  }
+  return bytes;
+}
 
 function splitText(text) {
   const chunks = [];
@@ -16,13 +32,24 @@ function splitText(text) {
   return chunks;
 }
 
-async function readSnapshot(env, snapshotId) {
-  const rows = await env.LRX_META.prepare(
-    'SELECT chunk_index, chunk_data FROM lrx_state_chunks WHERE snapshot_id = ? ORDER BY chunk_index'
-  ).bind(snapshotId).all();
-  if (!rows.results?.length) return null;
-  if (rows.results.some((row, index) => Number(row.chunk_index) !== index || typeof row.chunk_data !== 'string')) return null;
-  return rows.results;
+async function readSnapshot(env) {
+  // Read the active revision pointer and chunks in one D1 statement. Separate
+  // reads can race a PUT that switches the pointer and removes the old chunks.
+  const rows = await env.LRX_META.prepare(`
+    SELECT meta.revision, meta.updated_at, meta.object_key,
+           chunks.chunk_index, chunks.chunk_data
+    FROM lrx_state_meta AS meta
+    LEFT JOIN lrx_state_chunks AS chunks ON chunks.snapshot_id = meta.object_key
+    WHERE meta.singleton = 1
+    ORDER BY chunks.chunk_index
+  `).all();
+  if (!rows.results?.length) return { meta: null, chunks: null };
+  const first = rows.results[0];
+  const meta = { revision: Number(first.revision), updated_at: first.updated_at, object_key: first.object_key };
+  if (!first.chunk_data || first.chunk_index === null) return { meta, chunks: null };
+  if (rows.results.some((row, index) => Number(row.chunk_index) !== index || typeof row.chunk_data !== 'string'))
+    return { meta, chunks: null };
+  return { meta, chunks: rows.results };
 }
 
 function streamSnapshot(chunks, meta) {
@@ -50,33 +77,22 @@ function streamSnapshot(chunks, meta) {
 }
 
 export async function onRequestGet({ env, request }) {
-  const readMeta = () => env.LRX_META.prepare(
-    'SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1'
-  ).first();
-  let meta = await readMeta();
-  if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
-  if (new URL(request.url).searchParams.get('revisionOnly') === '1')
+  if (new URL(request.url).searchParams.get('revisionOnly') === '1') {
+    const meta = await env.LRX_META.prepare(
+      'SELECT revision, updated_at FROM lrx_state_meta WHERE singleton = 1'
+    ).first();
+    if (!meta) return json({ revision: 0, updatedAt: null });
     return json({ revision: Number(meta.revision), updatedAt: meta.updated_at });
-
-  // A concurrent PUT can switch the active snapshot and clean up the old chunks
-  // after this request reads its metadata. Re-read the pointer before reporting
-  // an incomplete snapshot; the new active snapshot is written before the pointer
-  // is switched, so a fresh metadata read should point to a complete copy.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const chunks = await readSnapshot(env, meta.object_key);
-    if (chunks) return streamSnapshot(chunks, meta);
-    if (attempt < 2) {
-      await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
-      meta = await readMeta();
-      if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
-    }
   }
-  return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
+  const { meta, chunks } = await readSnapshot(env);
+  if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
+  if (!chunks) return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
+  return streamSnapshot(chunks, meta);
 }
 
 export async function onRequestPut({ request, env }) {
   if (Number(request.headers.get('Content-Length') || 0) > MAX_STATE_BYTES)
-    return json({ error: 'La copia de datos supera el límite de 20 MB.' }, 413);
+    return json({ error: 'La copia de datos supera el límite de 40 MB.' }, 413);
   let serialized;
   const revisionHeader = request.headers.get('X-LRX-Expected-Revision');
   let expected = revisionHeader === null ? Number.NaN : Number(revisionHeader);
@@ -92,8 +108,8 @@ export async function onRequestPut({ request, env }) {
   }
   if (!Number.isSafeInteger(expected) || expected < 0 || serialized.length < 2 || serialized[0] !== '{' || serialized.at(-1) !== '}')
     return json({ error: 'Falta una copia de datos válida o su revisión.' }, 400);
-  if (new TextEncoder().encode(serialized).byteLength > MAX_STATE_BYTES)
-    return json({ error: 'La copia de datos supera el límite de 20 MB.' }, 413);
+  if (utf8ByteLength(serialized) > MAX_STATE_BYTES)
+    return json({ error: 'La copia de datos supera el límite de 40 MB.' }, 413);
 
   const prior = await env.LRX_META.prepare('SELECT revision, object_key FROM lrx_state_meta WHERE singleton = 1').first();
   const current = Number(prior?.revision || 0);
