@@ -50,13 +50,28 @@ function streamSnapshot(chunks, meta) {
 }
 
 export async function onRequestGet({ env, request }) {
-  const meta = await env.LRX_META.prepare('SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1').first();
+  const readMeta = () => env.LRX_META.prepare(
+    'SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1'
+  ).first();
+  let meta = await readMeta();
   if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
   if (new URL(request.url).searchParams.get('revisionOnly') === '1')
     return json({ revision: Number(meta.revision), updatedAt: meta.updated_at });
-  const chunks = await readSnapshot(env, meta.object_key);
-  if (!chunks) return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
-  return streamSnapshot(chunks, meta);
+
+  // A concurrent PUT can switch the active snapshot and clean up the old chunks
+  // after this request reads its metadata. Re-read the pointer before reporting
+  // an incomplete snapshot; the new active snapshot is written before the pointer
+  // is switched, so a fresh metadata read should point to a complete copy.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const chunks = await readSnapshot(env, meta.object_key);
+    if (chunks) return streamSnapshot(chunks, meta);
+    if (attempt < 2) {
+      await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
+      meta = await readMeta();
+      if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
+    }
+  }
+  return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
 }
 
 export async function onRequestPut({ request, env }) {
