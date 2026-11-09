@@ -1,5 +1,6 @@
 const MAX_STATE_BYTES = 40 * 1024 * 1024;
 const CHUNK_CHARS = 400_000;
+const INSERT_BATCH_SIZE = 8;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
@@ -104,9 +105,22 @@ export async function onRequestPut({ request, env }) {
   const now = new Date().toISOString();
   const snapshotId = `${next}-${crypto.randomUUID()}`;
   const chunks = splitText(serialized);
-  await env.LRX_META.batch(chunks.map((chunk, index) => env.LRX_META.prepare(
-    'INSERT INTO lrx_state_chunks (snapshot_id, chunk_index, chunk_data) VALUES (?, ?, ?)'
-  ).bind(snapshotId, index, chunk)));
+  try {
+    // Keep each D1 batch small. Large phone/laptop merges can contain dozens
+    // of chunks; stage them in groups and publish the pointer only after all
+    // groups have been written successfully.
+    for (let offset = 0; offset < chunks.length; offset += INSERT_BATCH_SIZE) {
+      const batch = chunks.slice(offset, offset + INSERT_BATCH_SIZE);
+      await env.LRX_META.batch(batch.map((chunk, index) => env.LRX_META.prepare(
+        'INSERT INTO lrx_state_chunks (snapshot_id, chunk_index, chunk_data) VALUES (?, ?, ?)'
+      ).bind(snapshotId, offset + index, chunk)));
+    }
+  } catch (error) {
+    try { await env.LRX_META.prepare('DELETE FROM lrx_state_chunks WHERE snapshot_id = ?').bind(snapshotId).run(); }
+    catch (cleanupError) { console.error('LRX incomplete snapshot cleanup failed', cleanupError); }
+    console.error('LRX snapshot staging failed', error);
+    return json({ error: 'No se pudo completar la copia. La versión compartida anterior sigue intacta; vuelve a intentarlo.' }, 503);
+  }
 
   const result = await env.LRX_META.prepare(`
     INSERT INTO lrx_state_meta (singleton, revision, object_key, updated_at) VALUES (1, ?, ?, ?)
