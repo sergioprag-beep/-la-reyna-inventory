@@ -99,10 +99,41 @@ function mergeValues(local,cloud){
   }
   return local===undefined?cloud:cloud===undefined?local:cloud;
 }
+function purchaseTombstones(state){
+  const found=new Map();
+  for(const item of Array.isArray(state?.syncTombstones)?state.syncTombstones:[]){
+    if(item?.collection==='purchases'&&item?.scope==='group'&&item?.targetId){
+      const targetId=String(item.targetId);
+      found.set(targetId,{id:String(item.id||`TOMB-purchases-group-${targetId}`),collection:'purchases',scope:'group',targetId,createdAt:item.createdAt||''});
+    }
+  }
+  for(const item of Array.isArray(state?.audit)?state.audit:[]){
+    if(item?.event!=='PURCHASE_DELETE')continue;
+    const detail=String(item.detail||'');
+    const match=detail.match(/Compra eliminada:\s*(.+)$/i);
+    if(!match)continue;
+    const targetId=match[1].trim();
+    if(targetId)found.set(targetId,{id:`TOMB-purchases-group-${targetId}`,collection:'purchases',scope:'group',targetId,createdAt:item.date||''});
+  }
+  return [...found.values()];
+}
+function applyPurchaseTombstones(state){
+  const tombstones=purchaseTombstones(state);
+  if(!tombstones.length)return state;
+  state.syncTombstones=tombstones;
+  const deleted=new Set(tombstones.map(item=>item.targetId));
+  const belongsToDeletedPurchase=item=>deleted.has(String(item?.purchaseId||item?.id||''));
+  for(const key of ['purchases','purchaseHeaders','purchasePayments','purchaseReceipts']){
+    if(Array.isArray(state[key]))state[key]=state[key].filter(item=>!belongsToDeletedPurchase(item));
+  }
+  if(Array.isArray(state.documents))state.documents=state.documents.filter(item=>!deleted.has(String(item?.contextRecordId||item?.purchaseId||'')));
+  if(Array.isArray(state.movements))state.movements=state.movements.filter(item=>!belongsToDeletedPurchase(item)||String(item?.type||'').toUpperCase()==='REVERSA COMPRA');
+  return state;
+}
 async function publishMerged(local,cloud){
   let base=cloud,merged=local;
   for(let attempt=0;attempt<3;attempt++){
-    merged=mergeValues(merged,base?.payload||{});revision=Number(base?.revision)||0;await saveLocal(merged);
+    merged=applyPurchaseTombstones(mergeValues(merged,base?.payload||{}));revision=Number(base?.revision)||0;await saveLocal(merged);
     try{await publish(merged);return merged}
     catch(error){if(error.status!==409||attempt===2)throw error;base=await getCloud();if(!base)throw error}
   }
@@ -111,7 +142,7 @@ async function publishMerged(local,cloud){
 function chooseCopy(){
   return new Promise(resolve=>{
     const layer=document.createElement('div');layer.style.cssText='position:fixed;inset:0;z-index:31000;background:#10182899;display:grid;place-items:center;padding:18px';
-    layer.innerHTML='<div style="background:#fff;color:#182235;width:min(480px,100%);padding:22px;border-radius:16px;box-shadow:0 18px 70px #0005"><h2 style="margin:0 0 8px">Hay dos copias de los datos</h2><p style="line-height:1.5">Tus datos locales se respaldan antes de cualquier reemplazo. Si eliminaste registros en un equipo, no elijas combinar sin revisar: esa acción puede recuperar registros que se borraron.</p><div style="display:grid;gap:9px;margin-top:18px"><button data-choice="merge" style="padding:12px;background:#c92d70;color:white;border:0;border-radius:9px;font-weight:700">Combinar ambas copias</button><button data-choice="cloud" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Usar la copia de Cloudflare</button><button data-choice="local" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Subir la copia de esta computadora</button><button data-choice="cancel" style="padding:9px;background:transparent;border:0">Cancelar</button></div></div>';
+    layer.innerHTML='<div style="background:#fff;color:#182235;width:min(480px,100%);padding:22px;border-radius:16px;box-shadow:0 18px 70px #0005"><h2 style="margin:0 0 8px">Hay dos copias de los datos</h2><p style="line-height:1.5">Se guardará un respaldo antes de combinar. La combinación conserva los cambios de ambos equipos y respeta las compras eliminadas registradas en la auditoría.</p><div style="display:grid;gap:9px;margin-top:18px"><button data-choice="merge" style="padding:12px;background:#c92d70;color:white;border:0;border-radius:9px;font-weight:700">Combinar ambas copias</button><button data-choice="cloud" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Usar la copia de Cloudflare</button><button data-choice="local" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Subir la copia de esta computadora</button><button data-choice="cancel" style="padding:9px;background:transparent;border:0">Cancelar</button></div></div>';
     layer.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;layer.remove();resolve(choice==='cancel'?null:choice)});document.body.append(layer);
   });
 }
