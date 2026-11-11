@@ -3,7 +3,7 @@
 'use strict';
 
 const DATA_KEY='lrx_state_v140',BACKUP_KEY=DATA_KEY+'.backup';
-let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=60000;
+let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=60000,checkingCloud=false;
 let publishRetryDelay=1500,busy=false,queuedSnapshot=null,conflict=false,ready=false,connectPromise=null;
 
 const statusEl=()=>document.getElementById('syncStatus');
@@ -42,7 +42,37 @@ async function api(path,options={}){
   if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
   return body;
 }
-async function getCloud(){return api('./api/state')}
+async function getCloud(){
+  // Fetch the shared state in bounded pieces. A single response forces a Pages
+  // Worker/D1 query to materialize the whole restaurant database and can hit
+  // Cloudflare's 1102 resource limit on larger backups.
+  for(let attempt=0;attempt<3;attempt++){
+    const manifest=await api('./api/state?manifest=1');
+    const count=Number(manifest.chunkCount)||0;
+    if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
+    if(!Number.isSafeInteger(count)||count<1||count>256)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
+    const chunks=new Array(count);let changed=false;
+    for(let start=0;start<count;start+=4){
+      const end=Math.min(start+4,count);
+      try{
+        const batch=await Promise.all(Array.from({length:end-start},(_,offset)=>{
+          const index=start+offset;
+          return api(`./api/state?chunk=${index}&snapshot=${encodeURIComponent(manifest.snapshotId)}`);
+        }));
+        for(const item of batch){
+          if(item.snapshotId!==manifest.snapshotId||!Number.isSafeInteger(item.index)||typeof item.data!=='string')throw Error('La copia compartida devolvió un fragmento inválido. No se modificó la copia local.');
+          chunks[item.index]=item.data;
+        }
+      }catch(error){if(error.status===409){changed=true;break}throw error}
+    }
+    if(changed)continue;
+    for(let index=0;index<chunks.length;index++)if(typeof chunks[index]!=='string')throw Error('La copia compartida está incompleta. No se modificó la copia local.');
+    let payload;
+    try{payload=JSON.parse(chunks.join(''))}catch{throw Error('No se pudo reconstruir la copia compartida. No se modificó la copia local.')}
+    return{payload,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
+  }
+  throw Error('La copia compartida cambió mientras se descargaba. Vuelve a sincronizar en unos segundos.');
+}
 async function publishOnce(payload){
   return api('./api/state',{method:'PUT',body:JSON.stringify(payload),headers:{'X-LRX-Expected-Revision':String(revision)}});
 }
@@ -172,14 +202,21 @@ async function connect(){
 }
 function connectOnce(){if(!connectPromise)connectPromise=connect().finally(()=>{connectPromise=null});return connectPromise}
 async function checkCloud(){
-  const head=await api('./api/state?revisionOnly=1');
-  if(Number(head.revision)===revision)return false;
-  const cloud=await getCloud(),local=localState(),cloudText=stableJSON(cloud.payload||{});
-  if(stableJSON(local)===lastSynced&&!queuedSnapshot){await saveLocal(cloud.payload||{});revision=Number(cloud.revision)||0;lastSynced=cloudText;status('Sincronizado','cloud');location.reload();return true}
-  conflict=true;revision=Number(cloud.revision)||0;status('Conflicto: toca para revisar','error');return false;
+  if(checkingCloud||busy)return false;
+  checkingCloud=true;
+  try{
+    const head=await api('./api/state?revisionOnly=1');
+    if(Number(head.revision)===revision)return false;
+    const cloud=await getCloud(),local=localState(),cloudText=stableJSON(cloud.payload||{});
+    if(stableJSON(local)===lastSynced&&!queuedSnapshot){await saveLocal(cloud.payload||{});revision=Number(cloud.revision)||0;lastSynced=cloudText;status('Sincronizado','cloud');location.reload();return true}
+    conflict=true;revision=Number(cloud.revision)||0;status('Conflicto: toca para revisar','error');return false;
+  }finally{checkingCloud=false}
 }
 function startPolling(){
   if(pollTimer)return;
+  const refresh=()=>{if(document.visibilityState!=='visible'||!ready||busy||checkingCloud)return;checkCloud().catch(error=>{console.warn('LRX Cloudflare foreground sync',error);status('Sin conexión; guardado local','error')})};
+  window.addEventListener('focus',refresh);window.addEventListener('online',refresh);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
   const schedule=()=>{pollTimer=setTimeout(async()=>{
     pollTimer=null;
     try{await checkCloud();pollDelay=60000}
