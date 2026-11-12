@@ -1,5 +1,5 @@
-const CACHE='lrx-v554-chunked-sync';
-const VERSION='2026-11-10-v554-chunked-sync';
+const CACHE='lrx-v555-sync-read-retry';
+const VERSION='2026-11-12-v555-sync-read-retry';
 const ASSETS=[
   './','./index.html','./styles.css?v=2026-11-05-v546',
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,`./ui-translation-extra.js?v=${VERSION}`,

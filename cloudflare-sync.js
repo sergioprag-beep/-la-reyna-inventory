@@ -37,10 +37,28 @@ function preserveLocal(value){
   }catch(error){console.warn('LRX backup download unavailable',error)}
 }
 async function api(path,options={}){
-  const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
-  let body={};try{body=await response.json()}catch{}
-  if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
-  return body;
+  const method=String(options.method||'GET').toUpperCase(),safeRead=method==='GET';
+  for(let attempt=0;;attempt++){
+    try{
+      const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
+      const body=await response.json();
+      if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
+      return body;
+    }catch(error){
+      const retryable=!error.status||error.status===408||error.status===425||error.status===429||error.status>=500;
+      if(!safeRead||!retryable||attempt>=3){
+        if(safeRead&&!error.status){
+          const offline=Error('No se pudo cargar la copia compartida después de varios intentos. No combines las copias; cierra este aviso y vuelve a intentarlo con conexión estable. Tus datos locales no se modificaron.');
+          offline.cause=error;throw offline;
+        }
+        throw error;
+      }
+      // Safari may drop one large D1 fragment during a transient radio/network
+      // interruption. Reads are idempotent, so retry that request before
+      // surfacing a failure; writes intentionally never pass through this path.
+      await wait(Math.min(500*2**attempt,4000)+Math.floor(Math.random()*250));
+    }
+  }
 }
 async function getCloud(){
   // Fetch the shared state in bounded pieces. A single response forces a Pages
@@ -52,8 +70,8 @@ async function getCloud(){
     if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
     if(!Number.isSafeInteger(count)||count<1||count>256)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
     const chunks=new Array(count);let changed=false;
-    for(let start=0;start<count;start+=4){
-      const end=Math.min(start+4,count);
+    for(let start=0;start<count;start+=2){
+      const end=Math.min(start+2,count);
       try{
         const batch=await Promise.all(Array.from({length:end-start},(_,offset)=>{
           const index=start+offset;
