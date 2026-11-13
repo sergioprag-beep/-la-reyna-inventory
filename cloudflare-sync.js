@@ -69,23 +69,38 @@ async function getCloud(){
     const manifest=await api('./api/state?manifest=1');
     const count=Number(manifest.chunkCount)||0;
     if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
-    if(!Number.isSafeInteger(count)||count<1||count>256)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
-    const chunks=new Array(count);let changed=false;
-    for(let start=0;start<count;start+=4){
-      const end=Math.min(start+4,count);
-      try{
-        const batch=await Promise.all(Array.from({length:end-start},(_,offset)=>{
-          const index=start+offset;
-          return api(`./api/state?chunk=${index}&snapshot=${encodeURIComponent(manifest.snapshotId)}`);
-        }));
-        for(const item of batch){
-          if(item.snapshotId!==manifest.snapshotId||!Number.isSafeInteger(item.index)||typeof item.data!=='string')throw Error('La copia compartida devolvió un fragmento inválido. No se modificó la copia local.');
-          chunks[item.index]=item.data;
-        }
-      }catch(error){if(error.status===409){changed=true;break}throw error}
-    }
+    if(!Number.isSafeInteger(count)||count<1||count>512)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
+    const pieces=Array.from({length:count},()=>[]);let changed=false;
+    const fetchParts=async jobs=>{
+      for(let start=0;start<jobs.length;start+=4){
+        const batchJobs=jobs.slice(start,start+4);
+        try{
+          const batch=await Promise.all(batchJobs.map(({index,part})=>api(`./api/state?chunk=${index}&part=${part}&snapshot=${encodeURIComponent(manifest.snapshotId)}`)));
+          for(let position=0;position<batch.length;position++){
+            const item=batch[position],job=batchJobs[position];
+            if(item.snapshotId!==manifest.snapshotId||item.index!==job.index||item.part!==job.part||!Number.isSafeInteger(item.partCount)||item.partCount<1||item.partCount>4||typeof item.data!=='string')
+              throw Error('La copia compartida devolvió un fragmento inválido. No se modificó la copia local.');
+            if(job.part===0){pieces[job.index].length=item.partCount;pieces[job.index].fill(undefined);}
+            else if(pieces[job.index].length!==item.partCount)throw Error('La copia compartida cambió durante la descarga. No se modificó la copia local.');
+            pieces[job.index][job.part]=item.data;
+          }
+        }catch(error){if(error.status===409){changed=true;return}throw error}
+      }
+    };
+    await fetchParts(Array.from({length:count},(_,index)=>({index,part:0})));
     if(changed)continue;
-    for(let index=0;index<chunks.length;index++)if(typeof chunks[index]!=='string')throw Error('La copia compartida está incompleta. No se modificó la copia local.');
+    const remaining=[];
+    for(let index=0;index<count;index++){
+      const partCount=pieces[index].length;
+      if(!partCount)throw Error('La copia compartida está incompleta. No se modificó la copia local.');
+      for(let part=1;part<partCount;part++)remaining.push({index,part});
+    }
+    await fetchParts(remaining);
+    if(changed)continue;
+    const chunks=pieces.map((parts,index)=>{
+      if(!parts.length||parts.some(part=>typeof part!=='string'))throw Error('La copia compartida está incompleta. No se modificó la copia local.');
+      return parts.join('');
+    });
     let payload;
     try{payload=JSON.parse(chunks.join(''))}catch{throw Error('No se pudo reconstruir la copia compartida. No se modificó la copia local.')}
     return{payload,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};

@@ -2,7 +2,10 @@
 // can exceed 20 MiB. Keep headroom for a reconciled snapshot while staying
 // below D1's 50 MB query-result limit and Cloudflare's 100 MB request limit.
 const MAX_STATE_BYTES = 40 * 1024 * 1024;
-const CHUNK_CHARS = 400_000;
+// Keep every new D1 row small enough for older clients that still request a
+// whole chunk, while new clients can also read legacy rows in SQL slices.
+const CHUNK_CHARS = 100_000;
+const READ_PART_CHARS = 100_000;
 // Fetch only a few D1 rows at a time. Large restaurant snapshots can approach
 // the D1 result limit, and buffering every chunk in a Worker is wasteful on
 // mobile clients.
@@ -123,19 +126,44 @@ export async function onRequestGet({ env, request }) {
   if (url.searchParams.has('chunk')) {
     const index = Number(url.searchParams.get('chunk'));
     const snapshotId = url.searchParams.get('snapshot') || '';
+    const partParam = url.searchParams.get('part');
+    const part = partParam === null ? null : Number(partParam);
     if (!Number.isSafeInteger(index) || index < 0 || !snapshotId)
       return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
-    const row = await env.LRX_META.prepare(`
+    if (part !== null && (!Number.isSafeInteger(part) || part < 0 || part > 3))
+      return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
+    // Slice legacy 400 KB rows inside SQLite, so the Worker never materializes
+    // the whole row just to return a 100 KB piece. SQLite substr counts Unicode
+    // code points, preserving UTF-8 text across part boundaries.
+    const partStart = part === null ? null : part * READ_PART_CHARS + 1;
+    const query = part === null ? `
       SELECT meta.revision, meta.updated_at, meta.object_key,
              chunks.chunk_index, chunks.chunk_data
       FROM lrx_state_meta AS meta
       LEFT JOIN lrx_state_chunks AS chunks
         ON chunks.snapshot_id = meta.object_key AND chunks.chunk_index = ?
       WHERE meta.singleton = 1 AND meta.object_key = ?
-    `).bind(index, snapshotId).first();
+    ` : `
+      SELECT meta.revision, meta.updated_at, meta.object_key,
+             chunks.chunk_index, length(chunks.chunk_data) AS chunk_length,
+             substr(chunks.chunk_data, ?, ?) AS chunk_part
+      FROM lrx_state_meta AS meta
+      LEFT JOIN lrx_state_chunks AS chunks
+        ON chunks.snapshot_id = meta.object_key AND chunks.chunk_index = ?
+      WHERE meta.singleton = 1 AND meta.object_key = ?
+    `;
+    const row = part === null
+      ? await env.LRX_META.prepare(query).bind(index, snapshotId).first()
+      : await env.LRX_META.prepare(query).bind(partStart, READ_PART_CHARS, index, snapshotId).first();
     if (!row) return json({ error: 'La copia cambió mientras se descargaba; vuelve a sincronizar.' }, 409);
-    if (row.chunk_index === null || typeof row.chunk_data !== 'string')
+    if (row.chunk_index === null || (part === null ? typeof row.chunk_data !== 'string' : typeof row.chunk_part !== 'string'))
       return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
+    if (part !== null) {
+      const partCount = Math.max(1, Math.ceil(Number(row.chunk_length) / READ_PART_CHARS));
+      if (part >= partCount) return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
+      return json({ snapshotId: row.object_key, revision: Number(row.revision), updatedAt: row.updated_at,
+        index: Number(row.chunk_index), part, partCount, data: row.chunk_part });
+    }
     return json({ snapshotId: row.object_key, revision: Number(row.revision), updatedAt: row.updated_at, index: Number(row.chunk_index), data: row.chunk_data });
   }
   const meta = await env.LRX_META.prepare('SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1').first();
