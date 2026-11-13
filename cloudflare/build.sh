@@ -22,10 +22,10 @@ s, second = re.subn(
     "",
     s,
 )
-if first + second != 2 or "serviceWorker.register" in s:
-    raise SystemExit(f"Expected two legacy registrations; removed {first + second}")
+if "serviceWorker.register" in s:
+    raise SystemExit(f"Legacy service-worker registration remains after cleanup (removed {first + second})")
 p.write_text(s)
-print("Removed two legacy service worker registrations from app.js")
+print(f"Removed {first + second} legacy service worker registrations from app.js")
 PY
 mkdir -p dist/assets
 cp -R assets/utensils dist/assets/
