@@ -37,10 +37,11 @@ async function saveLocal(value,{cloudConfirmed=false}={}){
       try{await storage.persist(storage.key||DATA_KEY,serialized)}
       catch(error){
         let recovered=false;
-        if(storage.clearDuplicateBackup)recovered=await storage.clearDuplicateBackup();
-        if(!recovered&&cloudConfirmed&&storage.clearBackupForCloudSave)recovered=await storage.clearBackupForCloudSave();
+        try{if(storage.clearDuplicateBackup)recovered=await storage.clearDuplicateBackup()}catch(recoveryError){console.warn('LRX duplicate local backup cleanup failed',recoveryError)}
+        let cloudReplacement=false;
+        if(!recovered&&cloudConfirmed&&storage.clearBackupForCloudSave){try{recovered=cloudReplacement=await storage.clearBackupForCloudSave(storage.key||DATA_KEY,serialized)}catch(recoveryError){console.warn('LRX confirmed cloud snapshot could not replace local cache',recoveryError)}}
         if(!recovered)throw error;
-        await storage.persist(storage.key||DATA_KEY,serialized);
+        if(!cloudReplacement)await storage.persist(storage.key||DATA_KEY,serialized);
       }
     }
     else{localStorage.setItem(DATA_KEY,serialized);if(localStorage.getItem(DATA_KEY)!==serialized)throw Error('El navegador no confirmó el guardado local.')}
