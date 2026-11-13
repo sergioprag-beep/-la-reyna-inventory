@@ -25,9 +25,15 @@ async function saveLocal(value){
   const persistent=window.LRXPersistentState;
   if(persistent?.ready)await persistent.ready;
   if(persistent?.error?.())throw Error('No se pudo preparar el almacenamiento local. La copia de Cloudflare sigue intacta; recarga la app actualizada antes de volver a sincronizar.');
-  try{localStorage.setItem(DATA_KEY,JSON.stringify(value));if(persistent?.flush)await persistent.flush()}
-  catch{throw Error('El navegador no pudo guardar la copia local. La copia de Cloudflare sigue intacta; no borres los datos del sitio.')}
-  return true;
+  const serialized=JSON.stringify(value);
+  try{localStorage.setItem(DATA_KEY,serialized);if(persistent?.flush)await persistent.flush();return true}
+  catch(error){
+    // Free space only when the optional backup is proven byte-for-byte equivalent
+    // to the primary IndexedDB state. Never discard unique device data.
+    try{if(await persistent?.clearDuplicateBackup?.()){localStorage.setItem(DATA_KEY,serialized);if(persistent?.flush)await persistent.flush();return true}}catch(retryError){console.warn('LRX could not retry local persistence after clearing a verified duplicate backup',retryError)}
+    console.error('LRX primary local persistence failed; Cloudflare copy remains intact',error);
+    throw Error('El navegador no pudo guardar la copia local. La copia de Cloudflare sigue intacta; no borres los datos del sitio.');
+  }
 }
 function preserveLocal(value){
   try{localStorage.setItem(BACKUP_KEY,JSON.stringify({savedAt:new Date().toISOString(),state:value}))}catch(error){console.warn('LRX local backup unavailable',error)}

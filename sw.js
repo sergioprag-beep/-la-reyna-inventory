@@ -1,7 +1,7 @@
-const CACHE='lrx-v556-inventory-receipt-picker';
-const VERSION='2026-11-12-v556-inventory-receipt-picker';
+const CACHE='lrx-2026-11-12-local-backup-quota';
+const VERSION='2026-11-12-local-backup-quota';
 const ASSETS=[
-  './','./index.html','./styles.css?v=2026-11-12-v556-inventory-receipt-picker',
+  './','./index.html','./styles.css?v=2026-11-12-local-backup-quota',
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,`./ui-translation-extra.js?v=${VERSION}`,
   './manifest.webmanifest','./hero-food.jpg','./hero-bar.jpg','./LRX-LOGO-PLANTILLAS.png',
   './recipe-price-mobile.js?v=2026-11-05-v546','./LRX-LOGO-LOCKUP-BRANDSAFE.svg','./LRX-LOGO-IMPRESION.jpeg','./LRX-LOGO-IMPRESION-TRANSPARENTE.png',
