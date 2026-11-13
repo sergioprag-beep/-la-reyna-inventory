@@ -2,10 +2,11 @@
 // can exceed 20 MiB. Keep headroom for a reconciled snapshot while staying
 // below D1's 50 MB query-result limit and Cloudflare's 100 MB request limit.
 const MAX_STATE_BYTES = 40 * 1024 * 1024;
-// Keep every new D1 row small enough for older clients that still request a
-// whole chunk, while new clients can also read legacy rows in SQL slices.
-const CHUNK_CHARS = 100_000;
-const READ_PART_CHARS = 100_000;
+// Match the 400 KB rows already stored in D1. Keeping the current row in one
+// transfer cuts a 36 MB snapshot from roughly 352 fetches to 88, which avoids
+// exhausting Pages Functions while a phone or laptop bootstraps the app.
+const CHUNK_CHARS = 400_000;
+const READ_PART_CHARS = 400_000;
 // Fetch only a few D1 rows at a time. Large restaurant snapshots can approach
 // the D1 result limit, and buffering every chunk in a Worker is wasteful on
 // mobile clients.
@@ -16,6 +17,7 @@ const READ_BATCH_SIZE = 8;
 // enough previous revisions that ordinary edits on other devices cannot
 // prune the snapshot while that response is still streaming.
 const RETAIN_RECENT_SNAPSHOTS = 16;
+let snapshotIndexReady;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
@@ -51,19 +53,33 @@ async function readSnapshotBatch(env, snapshotId, startIndex) {
   return chunks;
 }
 
-async function pruneOldSnapshots(env, latestRevision) {
+async function ensureSnapshotIndex(env) {
+  if (!snapshotIndexReady) snapshotIndexReady = env.LRX_META.prepare(`
+    CREATE TABLE IF NOT EXISTS lrx_state_snapshots (
+      revision INTEGER PRIMARY KEY,
+      snapshot_id TEXT NOT NULL UNIQUE
+    )
+  `).run().catch(error => { snapshotIndexReady = null; throw error; });
+  await snapshotIndexReady;
+}
+
+async function pruneOldSnapshots(env, latestRevision, previousSnapshotId, currentSnapshotId) {
   const oldestRevisionToKeep = latestRevision - RETAIN_RECENT_SNAPSHOTS + 1;
-  if (oldestRevisionToKeep <= 1) return;
-  const snapshots = await env.LRX_META.prepare(
-    'SELECT DISTINCT snapshot_id FROM lrx_state_chunks'
-  ).all();
-  for (const row of snapshots.results || []) {
-    const snapshotId = String(row.snapshot_id || '');
-    const revision = Number(snapshotId.slice(0, snapshotId.indexOf('-')));
-    if (Number.isSafeInteger(revision) && revision > 0 && revision < oldestRevisionToKeep) {
-      await env.LRX_META.prepare('DELETE FROM lrx_state_chunks WHERE snapshot_id = ?').bind(snapshotId).run();
-    }
+  await ensureSnapshotIndex(env);
+  const statements = [];
+  if (previousSnapshotId) {
+    const previousRevision = Number(String(previousSnapshotId).split('-', 1)[0]);
+    if (Number.isSafeInteger(previousRevision) && previousRevision > 0)
+      statements.push(env.LRX_META.prepare('INSERT OR IGNORE INTO lrx_state_snapshots (revision, snapshot_id) VALUES (?, ?)').bind(previousRevision, previousSnapshotId));
   }
+  statements.push(env.LRX_META.prepare('INSERT OR IGNORE INTO lrx_state_snapshots (revision, snapshot_id) VALUES (?, ?)').bind(latestRevision, currentSnapshotId));
+  if (oldestRevisionToKeep > 1) {
+    statements.push(env.LRX_META.prepare(`DELETE FROM lrx_state_chunks WHERE snapshot_id IN (
+      SELECT snapshot_id FROM lrx_state_snapshots WHERE revision < ?
+    )`).bind(oldestRevisionToKeep));
+    statements.push(env.LRX_META.prepare('DELETE FROM lrx_state_snapshots WHERE revision < ?').bind(oldestRevisionToKeep));
+  }
+  await env.LRX_META.batch(statements);
 }
 
 function streamSnapshot(env, snapshotId, firstBatch, chunkCount, meta) {
@@ -132,8 +148,8 @@ export async function onRequestGet({ env, request }) {
       return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
     if (part !== null && (!Number.isSafeInteger(part) || part < 0 || part > 3))
       return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
-    // Slice legacy 400 KB rows inside SQLite, so the Worker never materializes
-    // the whole row just to return a 100 KB piece. SQLite substr counts Unicode
+    // Slice legacy rows inside SQLite when requested, so older clients can
+    // continue downloading pieces. SQLite substr counts Unicode
     // code points, preserving UTF-8 text across part boundaries.
     const partStart = part === null ? null : part * READ_PART_CHARS + 1;
     const query = part === null ? `
@@ -229,7 +245,7 @@ export async function onRequestPut({ request, env }) {
   // have read its metadata and still be streaming later chunks to a phone or
   // tablet; deleting them mid-response makes Safari report a generic
   // "Load failed" / HTTP 503 and can trigger a false local-copy conflict.
-  try { await pruneOldSnapshots(env, next); }
+  try { await pruneOldSnapshots(env, next, prior?.object_key, snapshotId); }
   catch (error) { console.warn('LRX old snapshot cleanup deferred', error); }
   return json({ revision: next, updatedAt: now });
 }
