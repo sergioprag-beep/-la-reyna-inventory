@@ -1,7 +1,7 @@
-const CACHE='lrx-v555-sync-read-retry';
-const VERSION='2026-11-12-v555-sync-read-retry';
+const CACHE='lrx-v556-inventory-receipt-picker';
+const VERSION='2026-11-12-v556-inventory-receipt-picker';
 const ASSETS=[
-  './','./index.html','./styles.css?v=2026-11-05-v546',
+  './','./index.html','./styles.css?v=2026-11-12-v556-inventory-receipt-picker',
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,`./ui-translation-extra.js?v=${VERSION}`,
   './manifest.webmanifest','./hero-food.jpg','./hero-bar.jpg','./LRX-LOGO-PLANTILLAS.png',
   './recipe-price-mobile.js?v=2026-11-05-v546','./LRX-LOGO-LOCKUP-BRANDSAFE.svg','./LRX-LOGO-IMPRESION.jpeg','./LRX-LOGO-IMPRESION-TRANSPARENTE.png',
@@ -36,18 +36,4 @@ self.addEventListener('fetch',event=>{
         const response=await fetch(event.request,{cache:'no-store'});
         if(response.ok){const cache=await caches.open(CACHE);await cache.put(event.request,response.clone())}
         return response;
-      }catch(error){
-        const cached=await caches.match(event.request)||await caches.match('./index.html');
-        if(cached)return cached;
-        return new Response('LRX no está disponible sin conexión.',{status:503,headers:{'Content-Type':'text/plain;charset=utf-8'}});
       }
-    })());
-    return;
-  }
-  event.respondWith((async()=>{
-    const cached=await caches.match(event.request);
-    if(cached)return cached;
-    try{const response=await fetch(event.request);if(response.ok){const cache=await caches.open(CACHE);cache.put(event.request,response.clone()).catch(()=>{})}return response}
-    catch(error){return await caches.match('./index.html')||new Response('',{status:503})}
-  })());
-});
