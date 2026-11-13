@@ -36,17 +36,24 @@ async function saveLocal(value,{cloudConfirmed=false}={}){
     if(storage?.persist){
       try{await storage.persist(storage.key||DATA_KEY,serialized)}
       catch(error){
-        let recovered=false;
-        if(storage.clearDuplicateBackup)recovered=await storage.clearDuplicateBackup();
-        if(!recovered&&cloudConfirmed&&storage.clearBackupForCloudSave)recovered=await storage.clearBackupForCloudSave();
-        if(!recovered)throw error;
-        await storage.persist(storage.key||DATA_KEY,serialized);
+        let recoveryError=error,recovered=false;
+        if(storage.clearDuplicateBackup){
+          try{recovered=await storage.clearDuplicateBackup()}catch(cleanupError){recoveryError=cleanupError}
+          if(recovered){try{await storage.persist(storage.key||DATA_KEY,serialized);recovered='saved'}catch(retryError){recoveryError=retryError;recovered=false}}
+        }
+        // After Cloudflare confirms this exact snapshot, both local copies are
+        // disposable: rebuild them from the confirmed cloud state to recover
+        // from quota exhaustion without risking the only copy of user data.
+        if(recovered!=='saved'&&cloudConfirmed&&storage.clearBrowserCopiesForCloudSave){
+          try{if(await storage.clearBrowserCopiesForCloudSave()){await storage.persist(storage.key||DATA_KEY,serialized);recovered='saved'}}catch(retryError){recoveryError=retryError}
+        }
+        if(recovered!=='saved')throw recoveryError;
       }
     }
     else{localStorage.setItem(DATA_KEY,serialized);if(localStorage.getItem(DATA_KEY)!==serialized)throw Error('El navegador no confirmó el guardado local.')}
     localCacheFailed=false;
     return true;
-  }catch(error){localCacheFailed=true;console.warn('LRX cloud copy was applied, but browser cache could not be saved',error);status('Copia local no guardada; nube pendiente','error');return false}
+  }catch(error){localCacheFailed=true;console.warn('LRX cloud copy was applied, but browser cache could not be saved',error);status(cloudConfirmed?'Nube sincronizada; copia local pendiente':'Copia local pendiente; nube por confirmar','error');return false}
 }
 function hasPendingLocalChanges(){if(localPending)return true;try{return localStorage.getItem(PENDING_KEY)==='1'}catch{return false}}
 function markLocalChangesPending(){localPending=true;try{localStorage.setItem(PENDING_KEY,'1')}catch(error){console.warn('LRX could not mark local changes as pending',error)}}

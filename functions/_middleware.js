@@ -41,12 +41,6 @@ async function hasSession(request, env) {
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
-  // Pages preview hosts have a separate browser origin and can expose a different
-  // state environment. Keep users on the canonical host so every device shares one copy.
-  if (url.hostname !== 'la-reyna-inventory.pages.dev' && url.hostname.endsWith('.la-reyna-inventory.pages.dev') && !url.pathname.startsWith('/api/')) {
-    url.hostname = 'la-reyna-inventory.pages.dev';
-    return Response.redirect(url.toString(), 302);
-  }
   if (url.hostname !== 'la-reyna-inventory.pages.dev' && url.hostname.endsWith('.la-reyna-inventory.pages.dev') && url.pathname.startsWith('/api/')) {
     // A legacy installed PWA may keep calling its preview origin. Proxy its API
     // requests to production so every device reads and writes the same D1 copy.
