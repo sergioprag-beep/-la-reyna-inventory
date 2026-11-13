@@ -62,7 +62,36 @@ async function api(path,options={}){
   if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
   return body;
 }
-async function getCloud(){return api('./api/state')}
+async function getCloud(){
+  // Download the immutable snapshot in bounded pieces. A single full-state
+  // read can exceed the Pages Worker resource budget for larger restaurants.
+  for(let attempt=0;attempt<3;attempt++){
+    const manifest=await api('./api/state?manifest=1');
+    const count=Number(manifest.chunkCount)||0;
+    if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
+    if(!Number.isSafeInteger(count)||count<1||count>256)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
+    const chunks=new Array(count);let changed=false;
+    for(let start=0;start<count;start+=4){
+      const end=Math.min(start+4,count);
+      try{
+        const batch=await Promise.all(Array.from({length:end-start},(_,offset)=>{
+          const index=start+offset;
+          return api(`./api/state?chunk=${index}&snapshot=${encodeURIComponent(manifest.snapshotId)}`);
+        }));
+        for(const item of batch){
+          if(item.snapshotId!==manifest.snapshotId||!Number.isSafeInteger(item.index)||typeof item.data!=='string')throw Error('La copia compartida devolvió un fragmento inválido. No se modificó la copia local.');
+          chunks[item.index]=item.data;
+        }
+      }catch(error){if(error.status===409){changed=true;break}throw error}
+    }
+    if(changed)continue;
+    for(let index=0;index<chunks.length;index++)if(typeof chunks[index]!=='string')throw Error('La copia compartida está incompleta. No se modificó la copia local.');
+    let payload;
+    try{payload=JSON.parse(chunks.join(''))}catch{throw Error('No se pudo reconstruir la copia compartida. No se modificó la copia local.')}
+    return{payload,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
+  }
+  throw Error('La copia compartida cambió mientras se descargaba. Vuelve a sincronizar en unos segundos.');
+}
 async function publishOnce(payload){
   return api('./api/state',{method:'PUT',body:JSON.stringify(payload),headers:{'X-LRX-Expected-Revision':String(revision)}});
 }

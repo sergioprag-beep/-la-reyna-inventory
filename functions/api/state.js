@@ -98,10 +98,48 @@ function streamSnapshot(env, snapshotId, firstBatch, chunkCount, meta) {
 }
 
 export async function onRequestGet({ env, request }) {
+  const url = new URL(request.url);
+  if (url.searchParams.get('revisionOnly') === '1') {
+    const meta = await env.LRX_META.prepare(
+      'SELECT revision, updated_at FROM lrx_state_meta WHERE singleton = 1'
+    ).first();
+    if (!meta) return json({ revision: 0, updatedAt: null });
+    return json({ revision: Number(meta.revision), updatedAt: meta.updated_at });
+  }
+  // Keep large snapshots out of one Worker response. The browser fetches a
+  // small manifest followed by bounded chunks, avoiding the 1102 resource
+  // limit that a single 35 MB D1 read can trigger.
+  if (url.searchParams.get('manifest') === '1') {
+    const meta = await env.LRX_META.prepare(`
+      SELECT meta.revision, meta.updated_at, meta.object_key,
+             (SELECT COUNT(*) FROM lrx_state_chunks AS chunks WHERE chunks.snapshot_id = meta.object_key) AS chunk_count
+      FROM lrx_state_meta AS meta
+      WHERE meta.singleton = 1
+    `).first();
+    if (!meta) return json({ snapshotId: null, revision: 0, updatedAt: null, chunkCount: 0 });
+    if (!Number(meta.chunk_count)) return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
+    return json({ snapshotId: meta.object_key, revision: Number(meta.revision), updatedAt: meta.updated_at, chunkCount: Number(meta.chunk_count) });
+  }
+  if (url.searchParams.has('chunk')) {
+    const index = Number(url.searchParams.get('chunk'));
+    const snapshotId = url.searchParams.get('snapshot') || '';
+    if (!Number.isSafeInteger(index) || index < 0 || !snapshotId)
+      return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
+    const row = await env.LRX_META.prepare(`
+      SELECT meta.revision, meta.updated_at, meta.object_key,
+             chunks.chunk_index, chunks.chunk_data
+      FROM lrx_state_meta AS meta
+      LEFT JOIN lrx_state_chunks AS chunks
+        ON chunks.snapshot_id = meta.object_key AND chunks.chunk_index = ?
+      WHERE meta.singleton = 1 AND meta.object_key = ?
+    `).bind(index, snapshotId).first();
+    if (!row) return json({ error: 'La copia cambió mientras se descargaba; vuelve a sincronizar.' }, 409);
+    if (row.chunk_index === null || typeof row.chunk_data !== 'string')
+      return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
+    return json({ snapshotId: row.object_key, revision: Number(row.revision), updatedAt: row.updated_at, index: Number(row.chunk_index), data: row.chunk_data });
+  }
   const meta = await env.LRX_META.prepare('SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1').first();
   if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
-  if (new URL(request.url).searchParams.get('revisionOnly') === '1')
-    return json({ revision: Number(meta.revision), updatedAt: meta.updated_at });
   try {
     const chunkCount = await readSnapshotInfo(env, meta.object_key);
     if (!chunkCount) return json({ error: 'La copia de datos está incompleta; no se modificó nada.' }, 503);
