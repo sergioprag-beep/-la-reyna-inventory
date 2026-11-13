@@ -3,16 +3,18 @@
 'use strict';
 
 const DATA_KEY='lrx_state_v140',BACKUP_KEY=DATA_KEY+'.backup';
-let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=60000,checkingCloud=false;
-let publishRetryDelay=1500,busy=false,queuedSnapshot=null,conflict=false,ready=false,connectPromise=null;
+let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=12000,localCacheFailed=false,localPending=false,localMutationSeq=0;
+let publishRetryDelay=1500,busy=false,queuedSnapshot=null,conflict=false,ready=false,connectPromise=null,reconciling=false,checkPromise=null;
+const BOOTSTRAP_KEY='lrx_cloud_bootstrapped_v1',PENDING_KEY='lrx_cloud_local_pending_v1';
 
 const statusEl=()=>document.getElementById('syncStatus');
 function status(label,kind='local'){
   const el=statusEl();if(!el)return;
+  if(kind==='cloud'&&localCacheFailed){label='Nube sincronizada; copia local pendiente';kind='error'}
   el.querySelector('b').textContent=label;el.dataset.state=kind;
-  el.title=kind==='cloud'?'Datos sincronizados en Cloudflare':kind==='error'?'Hay cambios pendientes o dos copias por revisar':'Sincroniza los registros en Cloudflare';
+  el.title=localCacheFailed?'Cloudflare conserva los datos sincronizados, pero este navegador no pudo guardar su copia local.':kind==='cloud'?'Datos sincronizados en Cloudflare':kind==='error'?'Hay cambios pendientes o dos copias por revisar':'Sincroniza los registros en Cloudflare';
 }
-function localState(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||'{}')}catch{return{}}}
+function localState(){try{const shared=window.LRXGetSharedState?.();if(shared&&typeof shared==='object')return shared;return JSON.parse(localStorage.getItem(DATA_KEY)||'{}')}catch{return{}}}
 function stableJSON(value,path=''){
   if(Array.isArray(value))return '['+value.map((item,index)=>stableJSON(item,`${path}[${index}]`)).join(',')+']';
   if(value&&typeof value==='object')return '{'+Object.keys(value).sort().filter(key=>value[key]!==undefined&&key!=='legacyRecoveredAt'&&!(path==='_recipeLegacyRecovered'&&key==='at')).map(key=>JSON.stringify(key)+':'+stableJSON(value[key],path?path+'.'+key:key)).join(',')+'}';
@@ -21,82 +23,42 @@ function stableJSON(value,path=''){
 function hasRecords(value){return Object.entries(value||{}).some(([key,items])=>key!=='users'&&key!=='audit'&&Array.isArray(items)&&items.length>0)}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-async function saveLocal(value){
-  const persistent=window.LRXPersistentState;
-  if(persistent?.ready)await persistent.ready;
-  if(persistent?.error?.())throw Error('No se pudo preparar el almacenamiento local. La copia de Cloudflare sigue intacta; recarga la app actualizada antes de volver a sincronizar.');
-  const serialized=JSON.stringify(value);
-  try{localStorage.setItem(DATA_KEY,serialized);if(persistent?.flush)await persistent.flush();return true}
-  catch(error){
-    // Free space only when the optional backup is proven byte-for-byte equivalent
-    // to the primary IndexedDB state. Never discard unique device data.
-    try{if(await persistent?.clearDuplicateBackup?.()){localStorage.setItem(DATA_KEY,serialized);if(persistent?.flush)await persistent.flush();return true}}catch(retryError){console.warn('LRX could not retry local persistence after clearing a verified duplicate backup',retryError)}
-    console.error('LRX primary local persistence failed; Cloudflare copy remains intact',error);
-    throw Error('El navegador no pudo guardar la copia local. La copia de Cloudflare sigue intacta; no borres los datos del sitio.');
-  }
-}
-function preserveLocal(value){
-  try{localStorage.setItem(BACKUP_KEY,JSON.stringify({savedAt:new Date().toISOString(),state:value}))}catch(error){console.warn('LRX local backup unavailable',error)}
-  if(typeof URL?.createObjectURL==='function')try{
-    const link=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify({savedAt:new Date().toISOString(),state:value},null,2)],{type:'application/json'}));
-    link.href=url;link.download=`LRX-respaldo-${new Date().toISOString().slice(0,10)}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }catch(error){console.warn('LRX backup download unavailable',error)}
-}
-async function api(path,options={}){
-  const method=String(options.method||'GET').toUpperCase(),safeRead=method==='GET';
-  for(let attempt=0;;attempt++){
-    try{
-      const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
-      const body=await response.json();
-      if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
-      return body;
-    }catch(error){
-      const retryable=!error.status||error.status===408||error.status===425||error.status===429||error.status>=500;
-      if(!safeRead||!retryable||attempt>=3){
-        if(safeRead&&!error.status){
-          const offline=Error('No se pudo cargar la copia compartida después de varios intentos. No combines las copias; cierra este aviso y vuelve a intentarlo con conexión estable. Tus datos locales no se modificaron.');
-          offline.cause=error;throw offline;
-        }
-        throw error;
+async function saveLocal(value,{cloudConfirmed=false}={}){
+  const serialized=JSON.stringify(value),storage=window.LRXPersistentState;
+  try{
+    if(typeof window.LRXApplySharedState==='function'){
+      const applied=window.LRXApplySharedState(value);
+      if(applied===false)throw Error('La app rechazó la copia compartida.');
+    }else throw Error('La app todavía no está lista para recibir la copia compartida.');
+  }catch(error){localCacheFailed=true;console.warn('LRX cloud copy could not be applied in memory',error);status('Nube sincronizada; vuelve a cargar para aplicar la copia','error');return false}
+  try{
+    if(storage?.ready)await storage.ready;
+    if(storage?.persist){
+      try{await storage.persist(storage.key||DATA_KEY,serialized)}
+      catch(error){
+        let recovered=false;
+        if(storage.clearDuplicateBackup)recovered=await storage.clearDuplicateBackup();
+        if(!recovered&&cloudConfirmed&&storage.clearBackupForCloudSave)recovered=await storage.clearBackupForCloudSave();
+        if(!recovered)throw error;
+        await storage.persist(storage.key||DATA_KEY,serialized);
       }
-      // Safari may drop one large D1 fragment during a transient radio/network
-      // interruption. Reads are idempotent, so retry that request before
-      // surfacing a failure; writes intentionally never pass through this path.
-      await wait(Math.min(500*2**attempt,4000)+Math.floor(Math.random()*250));
     }
-  }
+    else{localStorage.setItem(DATA_KEY,serialized);if(localStorage.getItem(DATA_KEY)!==serialized)throw Error('El navegador no confirmó el guardado local.')}
+    localCacheFailed=false;
+    return true;
+  }catch(error){localCacheFailed=true;console.warn('LRX cloud copy was applied, but browser cache could not be saved',error);status('Copia local no guardada; nube pendiente','error');return false}
 }
-async function getCloud(){
-  // Fetch the shared state in bounded pieces. A single response forces a Pages
-  // Worker/D1 query to materialize the whole restaurant database and can hit
-  // Cloudflare's 1102 resource limit on larger backups.
-  for(let attempt=0;attempt<3;attempt++){
-    const manifest=await api('./api/state?manifest=1');
-    const count=Number(manifest.chunkCount)||0;
-    if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
-    if(!Number.isSafeInteger(count)||count<1||count>256)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
-    const chunks=new Array(count);let changed=false;
-    for(let start=0;start<count;start+=2){
-      const end=Math.min(start+2,count);
-      try{
-        const batch=await Promise.all(Array.from({length:end-start},(_,offset)=>{
-          const index=start+offset;
-          return api(`./api/state?chunk=${index}&snapshot=${encodeURIComponent(manifest.snapshotId)}`);
-        }));
-        for(const item of batch){
-          if(item.snapshotId!==manifest.snapshotId||!Number.isSafeInteger(item.index)||typeof item.data!=='string')throw Error('La copia compartida devolvió un fragmento inválido. No se modificó la copia local.');
-          chunks[item.index]=item.data;
-        }
-      }catch(error){if(error.status===409){changed=true;break}throw error}
-    }
-    if(changed)continue;
-    for(let index=0;index<chunks.length;index++)if(typeof chunks[index]!=='string')throw Error('La copia compartida está incompleta. No se modificó la copia local.');
-    let payload;
-    try{payload=JSON.parse(chunks.join(''))}catch{throw Error('No se pudo reconstruir la copia compartida. No se modificó la copia local.')}
-    return{payload,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
-  }
-  throw Error('La copia compartida cambió mientras se descargaba. Vuelve a sincronizar en unos segundos.');
+function hasPendingLocalChanges(){if(localPending)return true;try{return localStorage.getItem(PENDING_KEY)==='1'}catch{return false}}
+function markLocalChangesPending(){localPending=true;try{localStorage.setItem(PENDING_KEY,'1')}catch(error){console.warn('LRX could not mark local changes as pending',error)}}
+function markCloudBootstrapComplete(){try{localStorage.setItem(BOOTSTRAP_KEY,'1')}catch(error){console.warn('LRX could not store sync bootstrap marker',error)}}
+function clearPendingIfCurrent(snapshot){if(stableJSON(localState())!==stableJSON(snapshot)||queuedSnapshot)return false;localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}return true}
+async function api(path,options={}){
+  const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
+  let body={};try{body=await response.json()}catch{}
+  if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
+  return body;
 }
+async function getCloud(){return api('./api/state')}
 async function publishOnce(payload){
   return api('./api/state',{method:'PUT',body:JSON.stringify(payload),headers:{'X-LRX-Expected-Revision':String(revision)}});
 }
@@ -122,81 +84,98 @@ async function publish(payload){
   }
   throw Error('No se pudo confirmar el guardado en la nube. Tus cambios siguen guardados en este dispositivo y se volverán a intentar.');
 }
-function mergeRecord(local,cloud){
-  const isProduction=record=>String(record?.id||'').startsWith('PRD-')||('startedAt' in (record||{})&&'finishedAt' in (record||{}));
-  const localCompleted=String(local?.status||'').toLowerCase()==='completed';
-  const cloudCompleted=String(cloud?.status||'').toLowerCase()==='completed';
-  // Production is a one-way workflow: a completed record must not revert to in-progress.
-  if(isProduction(local)&&isProduction(cloud)&&localCompleted!==cloudCompleted)return localCompleted?local:cloud;
-  const timestamp=record=>{
-    for(const key of ['updatedAt','modifiedAt','finishedAt','completedAt','startedAt','createdAt']){
-      const value=Date.parse(record?.[key]||'');
-      if(Number.isFinite(value))return value;
-    }
-    return NaN;
-  };
-  const localTime=timestamp(local),cloudTime=timestamp(cloud);
-  if(Number.isFinite(localTime)&&Number.isFinite(cloudTime)&&localTime!==cloudTime)return localTime>cloudTime?local:cloud;
-  return mergeValues(local,cloud);
-}
-function mergeValues(local,cloud){
+function mergeValues(local,cloud,path=''){
   if(Array.isArray(local)||Array.isArray(cloud)){
     const left=Array.isArray(local)?local:[],right=Array.isArray(cloud)?cloud:[],out=[],positions=new Map();
     const keyOf=value=>value&&typeof value==='object'&&!Array.isArray(value)?String(value.id??value.uuid??value.key??value.code??value.name??JSON.stringify(value)):JSON.stringify(value);
-    for(const item of [...right,...left]){const key=keyOf(item);if(!positions.has(key)){positions.set(key,out.length);out.push(item)}else{const at=positions.get(key),existing=out[at];if(item&&existing&&typeof item==='object'&&typeof existing==='object'&&!Array.isArray(item)&&!Array.isArray(existing))out[at]=mergeRecord(item,existing)}}
+    for(const item of [...right,...left]){const key=keyOf(item);if(!positions.has(key)){positions.set(key,out.length);out.push(item)}else{const at=positions.get(key),existing=out[at];if(item&&existing&&typeof item==='object'&&typeof existing==='object'&&!Array.isArray(item)&&!Array.isArray(existing))out[at]=mergeValues(item,existing,path)}}
     return out;
   }
   if(local&&cloud&&typeof local==='object'&&typeof cloud==='object'){
-    const lt=Date.parse(local.updatedAt||local.modifiedAt||''),ct=Date.parse(cloud.updatedAt||cloud.modifiedAt||''),preferred=Number.isFinite(lt)&&lt>ct?local:cloud,other=preferred===local?cloud:local,out={...other,...preferred};
-    for(const key of new Set([...Object.keys(local),...Object.keys(cloud)]))if(local[key]&&cloud[key]&&typeof local[key]==='object'&&typeof cloud[key]==='object')out[key]=mergeValues(local[key],cloud[key]);
+    const localCompleted=path==='production'&&local.status==='completed',cloudCompleted=path==='production'&&cloud.status==='completed';
+    const localTime=Date.parse(local.updatedAt||local.modifiedAt||local.finishedAt||local.startedAt||''),cloudTime=Date.parse(cloud.updatedAt||cloud.modifiedAt||cloud.finishedAt||cloud.startedAt||''),preferred=localCompleted!==cloudCompleted?(localCompleted?local:cloud):Number.isFinite(localTime)&&localTime>cloudTime?local:cloud,other=preferred===local?cloud:local,out={...other,...preferred};
+    for(const key of new Set([...Object.keys(local),...Object.keys(cloud)]))if(local[key]&&cloud[key]&&typeof local[key]==='object'&&typeof cloud[key]==='object')out[key]=mergeValues(local[key],cloud[key],key);
+    if(path==='production'&&(localCompleted||cloudCompleted)){out.status='completed';out.finishedAt=preferred.finishedAt||other.finishedAt||null;out.lot=preferred.lot||other.lot||null}
     return out;
   }
   return local===undefined?cloud:cloud===undefined?local:cloud;
 }
 function purchaseTombstones(state){
-  const found=new Map();
-  for(const item of Array.isArray(state?.syncTombstones)?state.syncTombstones:[]){
-    if(item?.collection==='purchases'&&item?.scope==='group'&&item?.targetId){
-      const targetId=String(item.targetId);
-      found.set(targetId,{id:String(item.id||`TOMB-purchases-group-${targetId}`),collection:'purchases',scope:'group',targetId,createdAt:item.createdAt||''});
-    }
+  const tombstones=Array.isArray(state?.syncTombstones)?state.syncTombstones.slice():[];
+  const known=new Set(tombstones.filter(x=>x?.collection==='purchases'&&x?.scope==='group').map(x=>String(x.targetId)));
+  for(const event of Array.isArray(state?.audit)?state.audit:[]){
+    if(event?.event!=='PURCHASE_DELETE')continue;
+    const match=String(event.detail||'').match(/Compra eliminada:\s*(.+)$/i),targetId=match?.[1]?.trim();
+    if(!targetId||known.has(targetId))continue;
+    tombstones.push({id:`TOMB-purchases-group-${targetId}`,collection:'purchases',scope:'group',targetId,createdAt:event.date||''});
+    known.add(targetId);
   }
-  for(const item of Array.isArray(state?.audit)?state.audit:[]){
-    if(item?.event!=='PURCHASE_DELETE')continue;
-    const detail=String(item.detail||'');
-    const match=detail.match(/Compra eliminada:\s*(.+)$/i);
-    if(!match)continue;
-    const targetId=match[1].trim();
-    if(targetId)found.set(targetId,{id:`TOMB-purchases-group-${targetId}`,collection:'purchases',scope:'group',targetId,createdAt:item.date||''});
-  }
-  return [...found.values()];
+  return tombstones;
 }
 function applyPurchaseTombstones(state){
-  const tombstones=purchaseTombstones(state);
-  if(!tombstones.length)return state;
+  const tombstones=purchaseTombstones(state),deleted=new Set(tombstones.filter(x=>x?.collection==='purchases'&&x?.scope==='group').map(x=>String(x.targetId)));
   state.syncTombstones=tombstones;
-  const deleted=new Set(tombstones.map(item=>item.targetId));
-  const belongsToDeletedPurchase=item=>deleted.has(String(item?.purchaseId||item?.id||''));
-  for(const key of ['purchases','purchaseHeaders','purchasePayments','purchaseReceipts']){
-    if(Array.isArray(state[key]))state[key]=state[key].filter(item=>!belongsToDeletedPurchase(item));
+  const deletedRows=new Map();
+  for(const tombstone of tombstones){if(tombstone?.scope!=='record'||!tombstone?.collection||!tombstone?.targetId)continue;if(!deletedRows.has(tombstone.collection))deletedRows.set(tombstone.collection,new Set());deletedRows.get(tombstone.collection).add(String(tombstone.targetId))}
+  for(const [collection,ids] of deletedRows){if(Array.isArray(state[collection]))state[collection]=state[collection].filter(row=>!ids.has(String(row?.id||'')))}
+  if(deletedRows.has('production')){const ids=deletedRows.get('production');if(Array.isArray(state.labels))state.labels=state.labels.filter(row=>!ids.has(String(row?.productionId||'')))}
+  if(deleted.size){
+    for(const collection of ['purchases','purchasePayments','purchaseReceipts']){
+      if(Array.isArray(state[collection]))state[collection]=state[collection].filter(row=>!deleted.has(String(row?.purchaseId||row?.id||'')));
+    }
+    if(Array.isArray(state.documents))state.documents=state.documents.filter(row=>!deleted.has(String(row?.contextRecordId||row?.purchaseId||'')));
+    if(Array.isArray(state.movements))state.movements=state.movements.filter(row=>!deleted.has(String(row?.purchaseId||''))||String(row?.type||'').toUpperCase()==='REVERSA COMPRA');
   }
-  if(Array.isArray(state.documents))state.documents=state.documents.filter(item=>!deleted.has(String(item?.contextRecordId||item?.purchaseId||'')));
-  if(Array.isArray(state.movements))state.movements=state.movements.filter(item=>!belongsToDeletedPurchase(item)||String(item?.type||'').toUpperCase()==='REVERSA COMPRA');
   return state;
 }
 async function publishMerged(local,cloud){
-  let base=cloud,merged=local;
+  // Freeze the input. `localState()` returns the live application object, which
+  // can be edited while a large snapshot is being uploaded to Cloudflare.
+  const initial=JSON.parse(JSON.stringify(local||{})),initialText=stableJSON(initial),mutationAtStart=localMutationSeq;
+  let base=cloud,merged=initial;
   for(let attempt=0;attempt<3;attempt++){
-    merged=applyPurchaseTombstones(mergeValues(merged,base?.payload||{}));revision=Number(base?.revision)||0;await saveLocal(merged);
-    try{await publish(merged);return merged}
+    merged=applyPurchaseTombstones(mergeValues(merged,base?.payload||{}));revision=Number(base?.revision)||0;
+    try{
+      await publish(merged);
+      // From this point Cloudflare accepted the merge and is authoritative.
+      // A quota/IndexedDB error on this device must not turn a successful
+      // cloud commit back into a conflict or cause stale data to be merged.
+      markCloudBootstrapComplete();
+      const current=localState(),changedDuringPublish=localMutationSeq!==mutationAtStart||stableJSON(current)!==initialText;
+      if(!changedDuringPublish){
+        const saved=await saveLocal(merged,{cloudConfirmed:true});
+        clearPendingIfCurrent(merged);
+        if(!saved)status('Nube sincronizada; copia local pendiente','error');
+      }else{
+        // Preserve edits made during the network request and queue them on top
+        // of the committed merge instead of replacing them with an older copy.
+        const followup=applyPurchaseTombstones(mergeValues(localState(),merged));
+        if(stableJSON(followup)!==stableJSON(merged)){
+          queuedSnapshot=JSON.parse(JSON.stringify(followup));markLocalChangesPending();
+        }else clearPendingIfCurrent(merged);
+      }
+      return merged;
+    }
     catch(error){if(error.status!==409||attempt===2)throw error;base=await getCloud();if(!base)throw error}
   }
   throw Error('La copia compartida siguió cambiando. Espera unos segundos y vuelve a sincronizar.');
 }
+async function reconcileConflict(cloud,local=localState()){
+  if(reconciling)return false;
+  reconciling=true;conflict=true;status('Combinando copias…','local');
+  try{
+    const merged=await publishMerged(local,cloud);
+    conflict=false;ready=true;lastSynced=stableJSON(merged);markCloudBootstrapComplete();clearPendingIfCurrent(merged);pollDelay=12000;publishRetryDelay=1500;
+    if(queuedSnapshot){status('Guardando cambios…','local');schedulePublish(0)}else status('Sincronizado','cloud');return true;
+  }catch(error){
+    console.error('LRX automatic reconciliation',error);
+    status('Conflicto pendiente; reintentando','error');pollDelay=12000;return false;
+  }finally{reconciling=false}
+}
 function chooseCopy(){
   return new Promise(resolve=>{
     const layer=document.createElement('div');layer.style.cssText='position:fixed;inset:0;z-index:31000;background:#10182899;display:grid;place-items:center;padding:18px';
-    layer.innerHTML='<div style="background:#fff;color:#182235;width:min(480px,100%);padding:22px;border-radius:16px;box-shadow:0 18px 70px #0005"><h2 style="margin:0 0 8px">Hay dos copias de los datos</h2><p style="line-height:1.5">Se guardará un respaldo antes de combinar. La combinación conserva los cambios de ambos equipos y respeta las compras eliminadas registradas en la auditoría.</p><div style="display:grid;gap:9px;margin-top:18px"><button data-choice="merge" style="padding:12px;background:#c92d70;color:white;border:0;border-radius:9px;font-weight:700">Combinar ambas copias</button><button data-choice="cloud" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Usar la copia de Cloudflare</button><button data-choice="local" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Subir la copia de esta computadora</button><button data-choice="cancel" style="padding:9px;background:transparent;border:0">Cancelar</button></div></div>';
+    layer.innerHTML='<div style="background:#fff;color:#182235;width:min(480px,100%);padding:22px;border-radius:16px;box-shadow:0 18px 70px #0005"><h2 style="margin:0 0 8px">Hay dos copias de los datos</h2><p style="line-height:1.5">La copia de Cloudflare se conserva hasta que el envío se confirme. Si el navegador no logra guardar su copia local, los cambios pueden seguir en la nube, pero este dispositivo podría volver a mostrar datos antiguos al recargar. La combinación también respeta las compras eliminadas registradas en la auditoría.</p><div style="display:grid;gap:9px;margin-top:18px"><button data-choice="merge" style="padding:12px;background:#c92d70;color:white;border:0;border-radius:9px;font-weight:700">Combinar ambas copias</button><button data-choice="cloud" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Usar la copia de Cloudflare</button><button data-choice="local" style="padding:11px;background:white;border:1px solid #cbd5e1;border-radius:9px">Subir la copia de esta computadora</button><button data-choice="cancel" style="padding:9px;background:transparent;border:0">Cancelar</button></div></div>';
     layer.addEventListener('click',event=>{const choice=event.target.closest('[data-choice]')?.dataset.choice;if(!choice)return;layer.remove();resolve(choice==='cancel'?null:choice)});document.body.append(layer);
   });
 }
@@ -216,31 +195,42 @@ async function connect(){
   const cloud=await getCloud(),local=localState(),localText=stableJSON(local);revision=Number(cloud.revision)||0;
   if(!cloud.payload){
     if(!hasRecords(local)){ready=true;status('Sin copia compartida','local');startPolling();return}
-    preserveLocal(local);if(!confirm('Cloudflare todavía no tiene una copia de LRX. ¿Quieres publicar los datos de esta computadora? Se descargó un respaldo antes de continuar.')){ready=true;status('Solo en esta computadora','local');startPolling();return}
-    await publish(local);ready=true;status('Sincronizado','cloud');startPolling();return;
+    if(!confirm('Cloudflare todavía no tiene una copia de LRX. ¿Quieres publicar los datos de esta computadora?')){ready=true;status('Solo en esta computadora','local');startPolling();return}
+    await publish(local);lastSynced=stableJSON(local);markCloudBootstrapComplete();clearPendingIfCurrent(local);ready=true;status('Sincronizado','cloud');startPolling();return;
   }
   const cloudText=stableJSON(cloud.payload);
-  if(localText===cloudText){lastSynced=cloudText;status('Sincronizado','cloud');ready=true;startPolling();if(queuedSnapshot)schedulePublish(0);return}
-  if(!hasRecords(local)){preserveLocal(local);await saveLocal(cloud.payload);lastSynced=cloudText;location.reload();return}
-  conflict=true;status('Conflicto: toca para revisar','error');ready=true;startPolling();
+  if(localText===cloudText){lastSynced=cloudText;markCloudBootstrapComplete();try{localStorage.removeItem(PENDING_KEY)}catch{}status('Sincronizado','cloud');ready=true;startPolling();if(queuedSnapshot)schedulePublish(0);return}
+  if(!hasRecords(local)){
+    const saved=await saveLocal(cloud.payload,{cloudConfirmed:true});lastSynced=cloudText;ready=true;startPolling();
+    markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}
+    if(saved)status('Sincronizado','cloud')
+    else status('Nube disponible; falta guardar copia local','error');return;
+  }
+  // Before first bootstrap, combine existing device data once. Later, only a
+  // device with real local edits may contribute; otherwise Cloudflare is the
+  // canonical copy and stale browser storage must not resurrect deleted data.
+  if(localStorage.getItem(BOOTSTRAP_KEY)==='1'&&!hasPendingLocalChanges()){
+    const saved=await saveLocal(cloud.payload,{cloudConfirmed:true});lastSynced=cloudText;ready=true;startPolling();
+    markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}
+    if(saved)status('Sincronizado','cloud');else status('Nube disponible; falta guardar copia local','error');return;
+  }
+  conflict=true;ready=true;startPolling();await reconcileConflict(cloud,local);
 }
 function connectOnce(){if(!connectPromise)connectPromise=connect().finally(()=>{connectPromise=null});return connectPromise}
 async function checkCloud(){
-  if(checkingCloud||busy)return false;
-  checkingCloud=true;
-  try{
+  if(checkPromise)return checkPromise;
+  if(reconciling||busy||!ready)return false;
+  checkPromise=(async()=>{
     const head=await api('./api/state?revisionOnly=1');
-    if(Number(head.revision)===revision)return false;
+    if(Number(head.revision)===revision&&!conflict)return false;
     const cloud=await getCloud(),local=localState(),cloudText=stableJSON(cloud.payload||{});
-    if(stableJSON(local)===lastSynced&&!queuedSnapshot){await saveLocal(cloud.payload||{});revision=Number(cloud.revision)||0;lastSynced=cloudText;status('Sincronizado','cloud');location.reload();return true}
-    conflict=true;revision=Number(cloud.revision)||0;status('Conflicto: toca para revisar','error');return false;
-  }finally{checkingCloud=false}
+    if(stableJSON(local)===lastSynced&&!hasPendingLocalChanges()&&!queuedSnapshot){const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});revision=Number(cloud.revision)||0;lastSynced=cloudText;if(saved){markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}status('Sincronizado','cloud')}else status('Nube disponible; falta guardar copia local','error');return saved}
+    revision=Number(cloud.revision)||0;conflict=true;return reconcileConflict(cloud,local);
+  })();
+  try{return await checkPromise}finally{checkPromise=null}
 }
 function startPolling(){
   if(pollTimer)return;
-  const refresh=()=>{if(document.visibilityState!=='visible'||!ready||busy||checkingCloud)return;checkCloud().catch(error=>{console.warn('LRX Cloudflare foreground sync',error);status('Sin conexión; guardado local','error')})};
-  window.addEventListener('focus',refresh);window.addEventListener('online',refresh);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
   const schedule=()=>{pollTimer=setTimeout(async()=>{
     pollTimer=null;
     try{await checkCloud();pollDelay=60000}
@@ -254,18 +244,28 @@ async function flushQueued(){
   if(busy||!queuedSnapshot||!ready||conflict)return;
   const snapshot=queuedSnapshot;queuedSnapshot=null;busy=true;let retryDelay=900;
   try{
-    await window.LRXPersistentState?.flush?.();await publish(snapshot);publishRetryDelay=1500;
-    if(queuedSnapshot)status('Guardando cambios…','local');else status('Sincronizado','cloud');
+    await publish(snapshot);publishRetryDelay=1500;
+    if(queuedSnapshot)status('Guardando cambios…','local');
+    else{markCloudBootstrapComplete();clearPendingIfCurrent(snapshot);status('Sincronizado','cloud')}
   }catch(error){
     console.error('LRX Cloudflare publish',error);
-    if(error.status===409){conflict=true;queuedSnapshot=localState();revision=Number(error.revision)||revision;status('Conflicto: toca para revisar','error')}
+    if(error.status===409){conflict=true;queuedSnapshot=localState();revision=Number(error.revision)||revision;status('Conflicto: sincronizando copias…','error');try{await reconcileConflict(await getCloud(),localState())}catch(syncError){console.warn('LRX reconciliation deferred',syncError)}}
     else{queuedSnapshot=localState();status('Guardado local; nube pendiente','error');retryDelay=publishRetryDelay;publishRetryDelay=Math.min(publishRetryDelay*2,60000)}
   }finally{busy=false;if(queuedSnapshot&&!conflict)schedulePublish(retryDelay)}
 }
 function onLocalSave(value){
+  localMutationSeq++;
   queuedSnapshot=JSON.parse(JSON.stringify(value));
-  if(conflict){status('Conflicto: toca para revisar','error');return}
+  markLocalChangesPending();
+  if(conflict){status(reconciling?'Combinando copias…':'Conflicto pendiente; reintentando','error');return}
   if(ready)schedulePublish(900);else status('Guardado local; conectando…','local');
+}
+function onLocalCacheFailure(error){localCacheFailed=true;console.warn('LRX local cache unavailable; cloud publish remains enabled',error);status('Copia local falló; nube pendiente','error')}
+function onLocalCacheSaved(){if(!localCacheFailed)return;localCacheFailed=false;if(ready&&!queuedSnapshot&&!conflict)status('Sincronizado','cloud')}
+function refreshWhenActive(){
+  if(!ready||document.visibilityState==='hidden'||!navigator.onLine||busy||reconciling)return;
+  clearTimeout(pollTimer);pollTimer=null;
+  checkCloud().catch(error=>{console.warn('LRX foreground sync',error);status('Sin conexión; guardado local','error')}).finally(startPolling);
 }
 async function uploadResourceFile(file,resourceId){
   const safeName=String(file.name||'documento').normalize('NFKD').replace(/[^\w.-]+/g,'_').slice(-120)||'documento',path=`cloudflare/${String(resourceId).replace(/[^\w-]/g,'_')}/${crypto.randomUUID()}-${safeName}`;
@@ -281,10 +281,10 @@ async function downloadResourceFile(path){
 async function handle(){
   try{
     if(conflict){
-      const cloud=await getCloud(),local=localState(),choice=await chooseCopy();if(!choice)return;preserveLocal(local);revision=Number(cloud.revision)||0;
-      if(choice==='cloud'){queuedSnapshot=null;await saveLocal(cloud.payload||{});lastSynced=stableJSON(cloud.payload||{});location.reload();return}
-      if(choice==='local'){await publish(local);queuedSnapshot=null}
-      else{await publishMerged(local,cloud);queuedSnapshot=null;location.reload();return}
+      const cloud=await getCloud(),local=localState(),choice=await chooseCopy();if(!choice)return;revision=Number(cloud.revision)||0;
+      if(choice==='cloud'){queuedSnapshot=null;const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});lastSynced=stableJSON(cloud.payload||{});markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}conflict=false;ready=true;status(saved?'Sincronizado':'Nube sincronizada; copia local pendiente',saved?'cloud':'error');startPolling();return}
+      if(choice==='local'){await publish(local);queuedSnapshot=null;markCloudBootstrapComplete();clearPendingIfCurrent(local)}
+      else{await publishMerged(local,cloud);queuedSnapshot=null;conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return}
       conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return;
     }
     if(queuedSnapshot){schedulePublish(0);return}
@@ -294,9 +294,13 @@ async function handle(){
     console.error('LRX Cloudflare connection',error);status('Guardado local; nube no disponible','error');alert(error.message||'No se pudo conectar con Cloudflare. Tus datos locales se conservan.');
   }
 }
-window.LRXCloudSync={onLocalSave,uploadResourceFile,downloadResourceFile};
+window.LRXCloudSync={onLocalSave,onLocalCacheFailure,onLocalCacheSaved,uploadResourceFile,downloadResourceFile};
 document.addEventListener('DOMContentLoaded',()=>{
   status('Esperando acceso…','local');statusEl()?.addEventListener('click',handle);
+  window.addEventListener('online',refreshWhenActive);
+  window.addEventListener('pageshow',refreshWhenActive);
+  window.addEventListener('focus',refreshWhenActive);
+  document.addEventListener('visibilitychange',refreshWhenActive);
   loginGate().then(()=>connectOnce().catch(error=>{console.error('LRX Cloudflare connect',error);status('Guardado local; nube no disponible','error')}));
 });
 })();
