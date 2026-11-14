@@ -148,39 +148,36 @@ export async function onRequestGet({ env, request }) {
       return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
     if (part !== null && (!Number.isSafeInteger(part) || part < 0 || part > 3))
       return json({ error: 'La solicitud de sincronización no es válida.' }, 400);
-    // Slice legacy rows inside SQLite when requested, so older clients can
-    // continue downloading pieces. SQLite substr counts Unicode
-    // code points, preserving UTF-8 text across part boundaries.
+    // Read from the immutable snapshot named by the manifest, not from the
+    // current metadata pointer. Other devices can publish while this device
+    // downloads; pinning reads to the requested snapshot lets that download
+    // finish instead of restarting forever on every revision change.
+    // SQLite substr counts Unicode code points, preserving UTF-8 text across
+    // part boundaries.
     const partStart = part === null ? null : part * READ_PART_CHARS + 1;
     const query = part === null ? `
-      SELECT meta.revision, meta.updated_at, meta.object_key,
-             chunks.chunk_index, chunks.chunk_data
-      FROM lrx_state_meta AS meta
-      LEFT JOIN lrx_state_chunks AS chunks
-        ON chunks.snapshot_id = meta.object_key AND chunks.chunk_index = ?
-      WHERE meta.singleton = 1 AND meta.object_key = ?
+      SELECT chunk_index, chunk_data
+      FROM lrx_state_chunks
+      WHERE snapshot_id = ? AND chunk_index = ?
     ` : `
-      SELECT meta.revision, meta.updated_at, meta.object_key,
-             chunks.chunk_index, length(chunks.chunk_data) AS chunk_length,
-             substr(chunks.chunk_data, ?, ?) AS chunk_part
-      FROM lrx_state_meta AS meta
-      LEFT JOIN lrx_state_chunks AS chunks
-        ON chunks.snapshot_id = meta.object_key AND chunks.chunk_index = ?
-      WHERE meta.singleton = 1 AND meta.object_key = ?
+      SELECT chunk_index, length(chunk_data) AS chunk_length,
+             substr(chunk_data, ?, ?) AS chunk_part
+      FROM lrx_state_chunks
+      WHERE snapshot_id = ? AND chunk_index = ?
     `;
     const row = part === null
-      ? await env.LRX_META.prepare(query).bind(index, snapshotId).first()
-      : await env.LRX_META.prepare(query).bind(partStart, READ_PART_CHARS, index, snapshotId).first();
-    if (!row) return json({ error: 'La copia cambió mientras se descargaba; vuelve a sincronizar.' }, 409);
-    if (row.chunk_index === null || (part === null ? typeof row.chunk_data !== 'string' : typeof row.chunk_part !== 'string'))
+      ? await env.LRX_META.prepare(query).bind(snapshotId, index).first()
+      : await env.LRX_META.prepare(query).bind(partStart, READ_PART_CHARS, snapshotId, index).first();
+    if (!row) return json({ error: 'El respaldo solicitado ya no está disponible; vuelve a sincronizar.' }, 409);
+    if (part === null ? typeof row.chunk_data !== 'string' : typeof row.chunk_part !== 'string')
       return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
     if (part !== null) {
       const partCount = Math.max(1, Math.ceil(Number(row.chunk_length) / READ_PART_CHARS));
       if (part >= partCount) return json({ error: 'La copia compartida está incompleta; no se modificó nada.' }, 503);
-      return json({ snapshotId: row.object_key, revision: Number(row.revision), updatedAt: row.updated_at,
+      return json({ snapshotId,
         index: Number(row.chunk_index), part, partCount, data: row.chunk_part });
     }
-    return json({ snapshotId: row.object_key, revision: Number(row.revision), updatedAt: row.updated_at, index: Number(row.chunk_index), data: row.chunk_data });
+    return json({ snapshotId, index: Number(row.chunk_index), data: row.chunk_data });
   }
   const meta = await env.LRX_META.prepare('SELECT revision, object_key, updated_at FROM lrx_state_meta WHERE singleton = 1').first();
   if (!meta) return json({ payload: null, revision: 0, updatedAt: null });
