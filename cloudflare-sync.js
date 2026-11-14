@@ -58,24 +58,37 @@ function markCloudBootstrapComplete(){try{localStorage.setItem(BOOTSTRAP_KEY,'1'
 function clearPendingIfCurrent(snapshot){if(stableJSON(localState())!==stableJSON(snapshot)||queuedSnapshot)return false;localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}return true}
 async function api(path,options={}){
   const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});
-  let body={};try{body=await response.json()}catch{}
-  if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;throw error}
+  let body={};try{body=await response.json()}catch(parseError){if(response.ok){const error=Error('La respuesta de sincronización llegó incompleta.');error.status=response.status;error.retryable=true;throw error}}
+  if(!response.ok){const error=Error(body.error||`Error HTTP ${response.status}`);error.status=response.status;error.revision=body.revision;error.retryAfter=response.headers.get('Retry-After');throw error}
   return body;
+}
+async function readApi(path){
+  for(let attempt=0;attempt<4;attempt++){
+    try{return await api(path)}catch(error){
+      const temporary=error.retryable||!error.status||error.status===429||error.status>=500;
+      if(!temporary||attempt===3)throw error;
+      const retryAfter=Number(error.retryAfter);
+      const backoff=Number.isFinite(retryAfter)&&retryAfter>0?Math.min(retryAfter*1000,5000):Math.min(600*2**attempt,5000);
+      await wait(backoff+Math.floor(Math.random()*250));
+    }
+  }
 }
 async function getCloud(){
   // Download the immutable snapshot in bounded pieces. A single full-state
   // read can exceed the Pages Worker resource budget for larger restaurants.
   for(let attempt=0;attempt<3;attempt++){
-    const manifest=await api('./api/state?manifest=1');
+    const manifest=await readApi('./api/state?manifest=1');
     const count=Number(manifest.chunkCount)||0;
     if(!manifest.snapshotId)return{payload:null,revision:Number(manifest.revision)||0,updatedAt:manifest.updatedAt||null};
     if(!Number.isSafeInteger(count)||count<1||count>512)throw Error('La copia compartida informó fragmentos inválidos. No se modificó la copia local.');
     const pieces=Array.from({length:count},()=>[]);let changed=false;
     const fetchParts=async jobs=>{
-      for(let start=0;start<jobs.length;start+=4){
-        const batchJobs=jobs.slice(start,start+4);
+      // Keep concurrency low: many devices can bootstrap at once, and a
+      // burst of large D1 reads otherwise produces transient 503 responses.
+      for(let start=0;start<jobs.length;start+=2){
+        const batchJobs=jobs.slice(start,start+2);
         try{
-          const batch=await Promise.all(batchJobs.map(({index,part})=>api(`./api/state?chunk=${index}&part=${part}&snapshot=${encodeURIComponent(manifest.snapshotId)}`)));
+          const batch=await Promise.all(batchJobs.map(({index,part})=>readApi(`./api/state?chunk=${index}&part=${part}&snapshot=${encodeURIComponent(manifest.snapshotId)}`)));
           for(let position=0;position<batch.length;position++){
             const item=batch[position],job=batchJobs[position];
             if(item.snapshotId!==manifest.snapshotId||item.index!==job.index||item.part!==job.part||!Number.isSafeInteger(item.partCount)||item.partCount<1||item.partCount>4||typeof item.data!=='string')
