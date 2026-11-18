@@ -43,3 +43,20 @@ if "window.extendLRXEnglishDictionary" not in s:
     s = s.replace("const _lrxPreviewDreImport=previewDreImport;\npreviewDreImport=async function(file){", "const _lrxPreviewDreImport=typeof previewDreImport==='function'?previewDreImport:null;\nif(_lrxPreviewDreImport)previewDreImport=async function(file){")
     p.write_text(s)
 PY
+
+# Render the application before performing optional image normalization.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+changes = [
+    ("const APP_VERSION='v555';", "const APP_VERSION='v556';"),
+    ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-17-startup-render-v1"),
+    ("seedRecipeUtensils();await normalizeUserUtensilImages();", "seedRecipeUtensils();setTimeout(()=>{normalizeUserUtensilImages().catch(error=>console.warn('LRX utensil image normalization deferred',error))},0);"),
+]
+for old, new in changes:
+    if s.count(old) != 1:
+        raise SystemExit(f"Expected one occurrence in dist/app.js: {old}")
+    s = s.replace(old, new, 1)
+p.write_text(s)
+PY
