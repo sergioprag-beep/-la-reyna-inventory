@@ -155,7 +155,8 @@ function mergeValues(local,cloud,path=''){
   if(local&&cloud&&typeof local==='object'&&typeof cloud==='object'){
     const isProductionCompleted=value=>value?.status==='completed'||(typeof value?.finishedAt==='number'?Number.isFinite(value.finishedAt)&&value.finishedAt>0&&Number.isFinite(new Date(value.finishedAt).getTime()):typeof value?.finishedAt==='string'&&value.finishedAt.trim()!==''&&Number.isFinite(Date.parse(value.finishedAt)));
     const localCompleted=path==='production'&&isProductionCompleted(local),cloudCompleted=path==='production'&&isProductionCompleted(cloud);
-    const localTime=Date.parse(local.updatedAt||local.modifiedAt||local.finishedAt||local.startedAt||''),cloudTime=Date.parse(cloud.updatedAt||cloud.modifiedAt||cloud.finishedAt||cloud.startedAt||''),preferred=localCompleted!==cloudCompleted?(localCompleted?local:cloud):Number.isFinite(localTime)&&localTime>cloudTime?local:cloud,other=preferred===local?cloud:local,out={...other,...preferred};
+    const recordTime=value=>Date.parse(value.updatedAt||value.modifiedAt||value.finishedAt||value.startedAt||(path==='shopping'?value.doneAt:'')||value.createdAt||'');
+    const localTime=recordTime(local),cloudTime=recordTime(cloud),preferred=localCompleted!==cloudCompleted?(localCompleted?local:cloud):Number.isFinite(localTime)&&localTime>cloudTime?local:cloud,other=preferred===local?cloud:local,out={...other,...preferred};
     for(const key of new Set([...Object.keys(local),...Object.keys(cloud)]))if(local[key]&&cloud[key]&&typeof local[key]==='object'&&typeof cloud[key]==='object')out[key]=mergeValues(local[key],cloud[key],key);
     if(path==='production'&&(localCompleted||cloudCompleted)){out.status='completed';out.finishedAt=preferred.finishedAt||other.finishedAt||null;out.lot=preferred.lot||other.lot||null}
     return out;
@@ -165,12 +166,21 @@ function mergeValues(local,cloud,path=''){
 function purchaseTombstones(state){
   const tombstones=Array.isArray(state?.syncTombstones)?state.syncTombstones.slice():[];
   const known=new Set(tombstones.filter(x=>x?.collection==='purchases'&&x?.scope==='group').map(x=>String(x.targetId)));
+  const knownRecords=new Set(tombstones.filter(x=>x?.scope==='record').map(x=>`${x.collection}:${x.targetId}`));
   for(const event of Array.isArray(state?.audit)?state.audit:[]){
-    if(event?.event!=='PURCHASE_DELETE')continue;
-    const match=String(event.detail||'').match(/Compra eliminada:\s*(.+)$/i),targetId=match?.[1]?.trim();
-    if(!targetId||known.has(targetId))continue;
-    tombstones.push({id:`TOMB-purchases-group-${targetId}`,collection:'purchases',scope:'group',targetId,createdAt:event.date||''});
-    known.add(targetId);
+    if(event?.event==='PURCHASE_DELETE'){
+      const match=String(event.detail||'').match(/Compra eliminada:\s*(.+)$/i),targetId=match?.[1]?.trim();
+      if(!targetId||known.has(targetId))continue;
+      tombstones.push({id:`TOMB-purchases-group-${targetId}`,collection:'purchases',scope:'group',targetId,createdAt:event.date||''});
+      known.add(targetId);
+      continue;
+    }
+    if(event?.event==='RECORD_DELETE'){
+      const match=String(event.detail||'').match(/^shopping\s*·\s*([^·]+)/i),targetId=match?.[1]?.trim(),key=targetId?`shopping:${targetId}`:'';
+      if(!targetId||knownRecords.has(key))continue;
+      tombstones.push({id:`TOMB-shopping-${targetId}`,collection:'shopping',scope:'record',targetId,createdAt:event.date||''});
+      knownRecords.add(key);
+    }
   }
   return tombstones;
 }
