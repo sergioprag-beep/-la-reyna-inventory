@@ -1,5 +1,5 @@
-const CACHE='lrx-2026-11-17-startup-render-v1';
-const VERSION='2026-11-17-startup-render-v1';
+const CACHE='lrx-2026-11-17-startup-render-v2';
+const VERSION='2026-11-17-startup-render-v2';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
