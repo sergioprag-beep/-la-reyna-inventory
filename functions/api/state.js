@@ -224,9 +224,30 @@ export async function onRequestPut({ request, env }) {
   const now = new Date().toISOString();
   const snapshotId = `${next}-${crypto.randomUUID()}`;
   const chunks = splitText(serialized);
-  await env.LRX_META.batch(chunks.map((chunk, index) => env.LRX_META.prepare(
-    'INSERT INTO lrx_state_chunks (snapshot_id, chunk_index, chunk_data) VALUES (?, ?, ?)'
-  ).bind(snapshotId, index, chunk)));
+  // D1 batch accepts at most 100 statements. A 40 MB state can contain more
+  // than 100 chunks, so write bounded batches and expose the snapshot in the
+  // metadata table only after every chunk has landed.
+  const writeBatchSize = 50;
+  try {
+    for (let offset = 0; offset < chunks.length; offset += writeBatchSize) {
+      const statements = chunks.slice(offset, offset + writeBatchSize).map((chunk, batchIndex) =>
+        env.LRX_META.prepare(
+          'INSERT INTO lrx_state_chunks (snapshot_id, chunk_index, chunk_data) VALUES (?, ?, ?)'
+        ).bind(snapshotId, offset + batchIndex, chunk)
+      );
+      await env.LRX_META.batch(statements);
+    }
+  } catch (error) {
+    // This unique snapshot is not yet referenced by metadata; deleting only
+    // its partial chunks is safe and leaves the active cloud copy untouched.
+    try {
+      await env.LRX_META.prepare('DELETE FROM lrx_state_chunks WHERE snapshot_id = ?').bind(snapshotId).run();
+    } catch (cleanupError) {
+      console.warn('LRX incomplete snapshot cleanup deferred', cleanupError);
+    }
+    console.error('LRX state snapshot write failed', error);
+    return json({ error: 'No se pudo guardar la copia compartida; la copia anterior sigue intacta.' }, 503);
+  }
 
   const result = await env.LRX_META.prepare(`
     INSERT INTO lrx_state_meta (singleton, revision, object_key, updated_at) VALUES (1, ?, ?, ?)
