@@ -352,8 +352,16 @@ async function downloadResourceFile(path){
 }
 async function handle(){
   try{
+    let checkedCloud=null,checkedLocal=null;
+    // A manual sync must compare the actual local snapshot with Cloudflare,
+    // not only the server revision. Older clients can retain device-only
+    // shopping edits even when no newer cloud revision was published.
+    if(!conflict&&ready&&!queuedSnapshot){
+      checkedCloud=await getCloud();checkedLocal=localState();
+      if(stableJSON(checkedLocal)!==stableJSON(checkedCloud.payload||{}))conflict=true;
+    }
     if(conflict){
-      const cloud=await getCloud(),local=localState(),choice=await chooseCopy();if(!choice)return;revision=Number(cloud.revision)||0;
+      const cloud=checkedCloud||await getCloud(),local=checkedLocal||localState(),choice=await chooseCopy();if(!choice)return;revision=Number(cloud.revision)||0;
       if(choice==='cloud'){queuedSnapshot=null;const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});lastSynced=stableJSON(cloud.payload||{});markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}conflict=false;ready=true;status(saved?'Sincronizado':'Nube sincronizada; copia local pendiente',saved?'cloud':'error');startPolling();return}
       if(choice==='local'){await publish(local);queuedSnapshot=null;markCloudBootstrapComplete();clearPendingIfCurrent(local)}
       else{await publishMerged(local,cloud);queuedSnapshot=null;conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return}
