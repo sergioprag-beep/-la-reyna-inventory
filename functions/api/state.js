@@ -5,7 +5,7 @@ const MAX_STATE_BYTES = 40 * 1024 * 1024;
 // Match the 400 KB rows already stored in D1. Keeping the current row in one
 // transfer cuts a 36 MB snapshot from roughly 352 fetches to 88, which avoids
 // exhausting Pages Functions while a phone or laptop bootstraps the app.
-const CHUNK_CHARS = 400_000;
+const CHUNK_CHARS = 200_000;
 const READ_PART_CHARS = 400_000;
 // Fetch only a few D1 rows at a time. Large restaurant snapshots can approach
 // the D1 result limit, and buffering every chunk in a Worker is wasteful on
@@ -227,7 +227,7 @@ export async function onRequestPut({ request, env }) {
   // D1 batch accepts at most 100 statements. A 40 MB state can contain more
   // than 100 chunks, so write bounded batches and expose the snapshot in the
   // metadata table only after every chunk has landed.
-  const writeBatchSize = 50;
+  const writeBatchSize = 5;
   try {
     for (let offset = 0; offset < chunks.length; offset += writeBatchSize) {
       const statements = chunks.slice(offset, offset + writeBatchSize).map((chunk, batchIndex) =>
@@ -245,8 +245,9 @@ export async function onRequestPut({ request, env }) {
     } catch (cleanupError) {
       console.warn('LRX incomplete snapshot cleanup deferred', cleanupError);
     }
+    const detail = String(error?.message || error).replace(/\\s+/g, ' ').slice(0, 220);
     console.error('LRX state snapshot write failed', error);
-    return json({ error: 'No se pudo guardar la copia compartida; la copia anterior sigue intacta.' }, 503);
+    return json({ error: `No se pudo guardar la copia compartida; la copia anterior sigue intacta. Detalle: ${detail}` }, 503);
   }
 
   const result = await env.LRX_META.prepare(`
