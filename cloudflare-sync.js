@@ -153,7 +153,8 @@ function mergeValues(local,cloud,path=''){
     return out;
   }
   if(local&&cloud&&typeof local==='object'&&typeof cloud==='object'){
-    const localCompleted=path==='production'&&local.status==='completed',cloudCompleted=path==='production'&&cloud.status==='completed';
+    const isProductionCompleted=value=>value?.status==='completed'||(typeof value?.finishedAt==='number'?Number.isFinite(value.finishedAt)&&value.finishedAt>0&&Number.isFinite(new Date(value.finishedAt).getTime()):typeof value?.finishedAt==='string'&&value.finishedAt.trim()!==''&&Number.isFinite(Date.parse(value.finishedAt)));
+    const localCompleted=path==='production'&&isProductionCompleted(local),cloudCompleted=path==='production'&&isProductionCompleted(cloud);
     const localTime=Date.parse(local.updatedAt||local.modifiedAt||local.finishedAt||local.startedAt||''),cloudTime=Date.parse(cloud.updatedAt||cloud.modifiedAt||cloud.finishedAt||cloud.startedAt||''),preferred=localCompleted!==cloudCompleted?(localCompleted?local:cloud):Number.isFinite(localTime)&&localTime>cloudTime?local:cloud,other=preferred===local?cloud:local,out={...other,...preferred};
     for(const key of new Set([...Object.keys(local),...Object.keys(cloud)]))if(local[key]&&cloud[key]&&typeof local[key]==='object'&&typeof cloud[key]==='object')out[key]=mergeValues(local[key],cloud[key],key);
     if(path==='production'&&(localCompleted||cloudCompleted)){out.status='completed';out.finishedAt=preferred.finishedAt||other.finishedAt||null;out.lot=preferred.lot||other.lot||null}

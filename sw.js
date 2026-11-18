@@ -1,5 +1,5 @@
-const CACHE='lrx-2026-11-14-sync-read-retry-v1';
-const VERSION='2026-11-14-sync-read-retry-v1';
+const CACHE='lrx-2026-11-17-production-finishedAt-v1';
+const VERSION='2026-11-17-production-finishedAt-v1';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
