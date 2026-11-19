@@ -237,11 +237,11 @@ async function reconcileConflict(cloud,local=localState()){
   reconciling=true;conflict=true;status('Combinando copias…','local');
   try{
     const merged=await publishMerged(local,cloud);
-    conflict=false;ready=true;lastSynced=stableJSON(merged);markCloudBootstrapComplete();clearPendingIfCurrent(merged);pollDelay=12000;publishRetryDelay=1500;
+    conflict=false;ready=true;lastSynced=stableJSON(merged);markCloudBootstrapComplete();clearPendingIfCurrent(merged);pollDelay=5000;publishRetryDelay=1500;
     if(queuedSnapshot){status('Guardando cambios…','local');schedulePublish(0)}else status('Sincronizado','cloud');return true;
   }catch(error){
     console.error('LRX automatic reconciliation',error);
-    status('Conflicto pendiente; reintentando','error');pollDelay=12000;return false;
+    status('Conflicto pendiente; reintentando','error');pollDelay=5000;return false;
   }finally{reconciling=false}
 }
 function chooseCopy(){
