@@ -16,7 +16,7 @@ const READ_BATCH_SIZE = 8;
 // A multi-megabyte snapshot can take a while to download on a phone. Keep
 // enough previous revisions that ordinary edits on other devices cannot
 // prune the snapshot while that response is still streaming.
-const RETAIN_RECENT_SNAPSHOTS = 16;
+const RETAIN_RECENT_SNAPSHOTS = 3;
 let snapshotIndexReady;
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status,
@@ -219,6 +219,19 @@ export async function onRequestPut({ request, env }) {
   const prior = await env.LRX_META.prepare('SELECT revision, object_key FROM lrx_state_meta WHERE singleton = 1').first();
   const current = Number(prior?.revision || 0);
   if (current !== expected) return json({ error: 'La copia compartida cambió. Actualiza antes de guardar.', revision: current }, 409);
+
+  // A write stores a complete immutable snapshot. Prune older snapshots
+  // before inserting the next one so a full D1 database can recover space and
+  // accept this write. Keep the active snapshot plus two recent revisions for
+  // readers that started downloading just before another device saved.
+  if (current >= RETAIN_RECENT_SNAPSHOTS && prior?.object_key) {
+    try {
+      await pruneOldSnapshots(env, current, prior.object_key, prior.object_key);
+    } catch (error) {
+      console.error('LRX stale snapshot cleanup failed', error);
+      return json({ error: 'No se pudo liberar espacio para guardar. La copia compartida actual sigue intacta.' }, 503);
+    }
+  }
 
   const next = current + 1;
   const now = new Date().toISOString();
