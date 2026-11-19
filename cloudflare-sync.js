@@ -3,7 +3,7 @@
 'use strict';
 
 const DATA_KEY='lrx_state_v140',BACKUP_KEY=DATA_KEY+'.backup';
-let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=12000,localCacheFailed=false,localPending=false,localMutationSeq=0;
+let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=5000,localCacheFailed=false,localPending=false,localMutationSeq=0;
 let publishRetryDelay=1500,busy=false,queuedSnapshot=null,conflict=false,ready=false,connectPromise=null,reconciling=false,checkPromise=null;
 const BOOTSTRAP_KEY='lrx_cloud_bootstrapped_v1',PENDING_KEY='lrx_cloud_local_pending_v1';
 
