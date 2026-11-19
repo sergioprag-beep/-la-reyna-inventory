@@ -356,7 +356,7 @@ async function handle(){
     // A manual sync must compare the actual local snapshot with Cloudflare,
     // not only the server revision. Older clients can retain device-only
     // shopping edits even when no newer cloud revision was published.
-    if(!conflict&&ready&&!queuedSnapshot){
+    if(!conflict&&ready){
       checkedCloud=await getCloud();checkedLocal=localState();
       if(stableJSON(checkedLocal)!==stableJSON(checkedCloud.payload||{}))conflict=true;
     }
@@ -367,7 +367,7 @@ async function handle(){
       else{await publishMerged(local,cloud);queuedSnapshot=null;conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return}
       conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return;
     }
-    if(queuedSnapshot){schedulePublish(0);return}
+    if(queuedSnapshot){status('Guardando cambios pendientes…','local');schedulePublish(0);return}
     if(!ready){await connectOnce();return}
     await checkCloud();
   }catch(error){
