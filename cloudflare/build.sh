@@ -53,7 +53,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v559';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v560';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();", "seedRecipeUtensils();setTimeout(()=>{normalizeUserUtensilImages().catch(error=>console.warn('LRX utensil image normalization deferred',error))},0);"),
 ]
