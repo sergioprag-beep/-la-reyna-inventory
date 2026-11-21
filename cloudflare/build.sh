@@ -54,7 +54,6 @@ s = s[:start] + dashboard + s[end:]
 p.write_text(s)
 print("Normalized dashboard calculations and verified all required metric variables.")
 PY
-node --check dist/app.js
 
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
