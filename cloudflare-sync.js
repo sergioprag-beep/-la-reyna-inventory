@@ -85,8 +85,8 @@ async function getCloud(){
     const fetchParts=async jobs=>{
       // Keep concurrency low: many devices can bootstrap at once, and a
       // burst of large D1 reads otherwise produces transient 503 responses.
-      for(let start=0;start<jobs.length;start+=2){
-        const batchJobs=jobs.slice(start,start+2);
+      for(let start=0;start<jobs.length;start+=6){
+        const batchJobs=jobs.slice(start,start+6);
         try{
           const batch=await Promise.all(batchJobs.map(({index,part})=>readApi(`./api/state?chunk=${index}&part=${part}&snapshot=${encodeURIComponent(manifest.snapshotId)}`)));
           for(let position=0;position<batch.length;position++){
