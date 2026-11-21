@@ -58,7 +58,7 @@ dash = replace_line(dash, " const dreExpenses=rangeDre.filter", " const dreExpen
 dash = dash.replace("const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales?posCogs/sales*100:0;", "const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;")
 if "actualFoodCost=sales&&costComplete?" not in dash:
     raise SystemExit("Could not apply dashboard food-cost coverage")
-dash = dash.replace("<div><span>⚙</span><b>Cobertura:</b><strong class=\"coverage\">● Completa</strong></div>", "<div><span>⚙</span><b>Costeo POS:</b><strong class=\"coverage\">● '+(costComplete?'Completo':'Pendiente · '+costIncompleteSales.length+' ventas')+'</strong></div>")
+dash = dash.replace("<div><span>⚙</span><b>Cobertura:</b><strong class=\"coverage\">● Completa</strong></div>", "<div><span>⚙</span><b>Costeo POS:</b><strong class=\"coverage\">● ${costComplete?'Completo':'Pendiente · '+costIncompleteSales.length+' ventas'}</strong></div>")
 dash = dash.replace("sales?actualFoodCost.toFixed(1)+'%':'—'", "actualFoodCost==null?'Pendiente':actualFoodCost.toFixed(1)+'%'")
 dash = dash.replace("hasDreCogs?'DRE · CMV contable':`POS · objetivo ${fcTarget.toFixed(1)}%`", "costComplete?(hasDreCogs?'DRE · CMV contable':'POS · objetivo '+fcTarget.toFixed(1)+'%'):'Falta costo en '+costIncompleteSales.length+' ventas")
 dash = dash.replace("sales?grossMargin.toFixed(1)+'%':'—'", "!sales?'—':costComplete?grossMargin.toFixed(1)+'%':'Pendiente'")
