@@ -295,6 +295,13 @@ async function connect(){
     await publish(local);lastSynced=stableJSON(local);markCloudBootstrapComplete();clearPendingIfCurrent(local);ready=true;status('Sincronizado','cloud');startPolling();return;
   }
   const cloudText=stableJSON(cloud.payload);
+  if((localText===cloudText||!hasRecords(local)&&!hasPendingLocalChanges())){
+    const canonical=applyPurchaseTombstones(JSON.parse(JSON.stringify(cloud.payload))),canonicalText=stableJSON(canonical);
+    if(canonicalText!==cloudText){
+      await publish(canonical);const saved=await saveLocal(canonical,{cloudConfirmed:true});lastSynced=canonicalText;markCloudBootstrapComplete();clearPendingIfCurrent(canonical);ready=true;startPolling();
+      if(saved)status('Sincronizado','cloud');else status('Nube disponible; falta guardar copia local','error');return;
+    }
+  }
   if(localText===cloudText){lastSynced=cloudText;markCloudBootstrapComplete();try{localStorage.removeItem(PENDING_KEY)}catch{}status('Sincronizado','cloud');ready=true;startPolling();if(queuedSnapshot)schedulePublish(0);return}
   if(!hasRecords(local)){
     const saved=await saveLocal(cloud.payload,{cloudConfirmed:true});lastSynced=cloudText;ready=true;startPolling();
