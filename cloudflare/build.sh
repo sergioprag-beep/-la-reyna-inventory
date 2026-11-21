@@ -45,9 +45,15 @@ def replace_line(section, prefix, replacement, label):
     lines[indexes[0]] = replacement
     return "\n".join(lines)
 
+replace_exact("function saleDetail(s,recipes=allRecipes()){", "let __lrxCachedSaleRecipes=null;\nfunction saleDetail(s,recipes){if(!recipes)recipes=__lrxCachedSaleRecipes||(__lrxCachedSaleRecipes=allRecipes());", "recipe lookup cache")
+replace_exact("function save(){", "function save(){__lrxCachedSaleRecipes=null;", "recipe lookup cache invalidation")
+
 dash_start = s.index("function dashboard(){")
 dash_end = s.index("\nfunction ", dash_start + 1)
 dash = s[dash_start:dash_end]
+cost_map_at = dash.index("const rangeDre=")
+dash = dash[:cost_map_at] + dash[cost_map_at:].replace("saleDetail(x)", "(saleDetailByRecord.get(x)||saleDetail(x))")
+replace_exact("rangeSaleDetails=rangeSales.map(x=>saleDetail(x));", "rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));", "dashboard sale-detail cache")
 old_range = "const rangeSales=(state.sales||[]).filter(inSelectedRange)"
 if dash.count(old_range) != 1:
     raise SystemExit("Could not apply dashboard period-summary range correction")
