@@ -27,32 +27,34 @@ rm -f "$patch_log"
 # variables and an empty dashboard.
 python3 - <<'PY'
 from pathlib import Path
-import re
 p = Path("dist/app.js")
 s = p.read_text()
-start = s.index("function dashboard(){")
-end = s.find("\\nfunction ", start + 1)
+dashboard = s.index("function dashboard(){")
+start = s.find(" const rangeSales=", dashboard)
+if start < 0:
+    start = s.find("const rangeSales=", dashboard)
+end = s.find(" const invValue=", start)
 if end < 0:
-    end = len(s)
-dashboard = s[start:end]
-pattern = r" const rangeSales=.*? const invValue="
+    end = s.find("const invValue=", start)
+if start < 0 or end < 0:
+    raise SystemExit("Could not locate dashboard calculation boundaries.")
 replacement = """ const rangeSales=(state.sales||[]).filter(inSelectedRange),rangePurchases=(state.purchases||[]).filter(inSelectedRange),rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));
  const rangeDre=(state.dreRecords||[]).filter(inSelectedRange),dreMetrics=rangeDre.filter(x=>x.dreMetric),dreGross=dreMetrics.filter(x=>x.dreMetric==='grossSales').reduce((n,x)=>n+Number(x.amount||0),0),dreCogs=dreMetrics.filter(x=>x.dreMetric==='cogs').reduce((n,x)=>n+Number(x.amount||0),0),hasDreSales=dreMetrics.some(x=>x.dreMetric==='grossSales'),hasDreCogs=dreMetrics.some(x=>x.dreMetric==='cogs');
  const channelFeeRecords=rangeDre.filter(x=>x.type==='expense'&&(x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:'))),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0);
  const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;
  const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;
  const purchases=rangePurchases.reduce((n,x)=>n+Number(x.total||0),0);
- const invValue="""
-dashboard, count = re.subn(pattern, replacement, dashboard, count=1, flags=re.S)
-if count != 1:
-    raise SystemExit("Could not normalize dashboard calculations; refusing to ship an incomplete dashboard.")
-food_pattern = r" const fcTarget=Number\\(state\\.settings\\.targetFoodCost\\|\\|30\\),actualFoodCost=[^;]+;"
-dashboard, food_count = re.subn(food_pattern, " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;", dashboard, count=1)
-if food_count != 1:
-    raise SystemExit("Could not normalize the Food Cost metric; refusing to ship incomplete dashboard metrics.")
-s = s[:start] + dashboard + s[end:]
+ """
+s = s[:start] + replacement + s[end:]
+food = s.find(" const fcTarget=", dashboard)
+if food < 0:
+    food = s.find("const fcTarget=", dashboard)
+food_end = s.find(";", food)
+if food < 0 or food_end < 0:
+    raise SystemExit("Could not locate Food Cost calculation.")
+s = s[:food] + " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null" + s[food_end:]
 p.write_text(s)
-print("Normalized dashboard calculations and verified all required metric variables.")
+print("Normalized dashboard calculations after partial patch application.")
 PY
 
 # app.js contains an obsolete service-worker update path. It competes with the
