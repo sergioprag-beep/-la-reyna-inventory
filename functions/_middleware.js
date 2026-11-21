@@ -42,11 +42,18 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   if (url.hostname !== 'la-reyna-inventory.pages.dev' && url.hostname.endsWith('.la-reyna-inventory.pages.dev') && url.pathname.startsWith('/api/')) {
-    // A legacy installed PWA may keep calling its preview origin. Proxy its API
-    // requests to production so every device reads and writes the same D1 copy.
+    // Proxy preview API calls to production so every device shares one D1 copy.
+    // Validate the browser's origin before forwarding, then rewrite it to the
+    // canonical origin so the production same-origin login check can succeed.
+    const origin = request.headers.get('Origin');
+    if (origin && origin !== url.origin)
+      return new Response(JSON.stringify({ error: 'Solicitud no válida.' }), { status: 403, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
     const canonicalUrl = new URL(request.url);
     canonicalUrl.hostname = 'la-reyna-inventory.pages.dev';
-    return fetch(new Request(canonicalUrl.toString(), request));
+    const forwarded = new Request(canonicalUrl.toString(), request);
+    const headers = new Headers(forwarded.headers);
+    if (origin) headers.set('Origin', canonicalUrl.origin);
+    return fetch(new Request(forwarded, { headers }));
   }
   if (!url.pathname.startsWith('/api/')) return context.next();
 
