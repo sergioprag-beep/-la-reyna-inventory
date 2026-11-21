@@ -1,3 +1,4 @@
+// Pages deployment refresh for the DRE accounting importer.
 const CACHE='lrx-2026-11-20-dre-report-v1';
 const VERSION='2026-11-20-dre-report-v1';
 const ASSETS=[
