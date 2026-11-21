@@ -26,26 +26,70 @@ rm -f "$patch_log"
 # shipping the old dashboard/DRE calculations.
 python3 - <<'PY'
 from pathlib import Path
-import re
+
 p = Path("dist/app.js")
 s = p.read_text()
 
-def replace_once(pattern, replacement, label, flags=0):
+def replace_exact(old, new, label):
     global s
-    s, count = re.subn(pattern, replacement, s, count=1, flags=flags)
+    count = s.count(old)
     if count != 1:
-        raise SystemExit(f"Could not apply current {label} correction (matches={count})")
+        raise SystemExit(f"Could not apply {label} correction (matches={count})")
+    s = s.replace(old, new, 1)
 
-# Date range summaries can span multiple days; include only records fully inside the selected range.
-s, count = re.subn(r"\(state\.sales\|\|\[\]\)\.filter\(inSelectedRange\)", "(state.sales||[]).filter(x=>saleFitsDateRange(x,rangeFrom,rangeTo))", s, count=1)
-if count != 1:
-    raise SystemExit("Could not apply current dashboard date-range correction")
+def replace_line(section, prefix, replacement, label):
+    lines = section.splitlines()
+    indexes = [i for i, line in enumerate(lines) if line.startswith(prefix)]
+    if len(indexes) != 1:
+        raise SystemExit(f"Could not locate {label} line (matches={len(indexes)})")
+    lines[indexes[0]] = replacement
+    return "\n".join(lines)
 
-replace_once(r"^ const sales=hasDreSales\?.*?;$", " const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;", "dashboard cost coverage", re.M)
-replace_once(r"^ const dreExpenses=rangeDre\.filter\(x=>x\.type==='expense'\).*?;$", " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),channelFeeRecords=dreExpenses.filter(x=>x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:')),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;", "dashboard operating result", re.M)
-replace_once(r"const fcTarget=Number\(state\.settings\.targetFoodCost\|\|30\),actualFoodCost=sales\?posCogs/sales\*100:0;", "const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;", "dashboard food cost")
-replace_once(r"<div><span>⚙</span><b>Cobertura:</b><strong class=\"coverage\">● Completa</strong></div>", "<div><span>⚙</span><b>Costeo POS:</b><strong class=\"coverage\">● ${costComplete?'Completo':`Pendiente · ${costIncompleteSales.length} ventas`}</strong></div>", "dashboard coverage")
-replace_once(r"\['🥗','Food Cost',sales\?actualFoodCost\.toFixed\(1\)\+'%'\:'—',hasDreCogs\?'DRE · CMV contable':`POS · objetivo \$\{fcTarget\.toFixed\(1\)\}%`,'green'\],\['↗','Margen Bruto',sales\?grossMargin\.toFixed\(1\)\+'%'\:'—',\x60\$\{money0\(grossProfit\)\} utilidad bruta · \$\{hasDreCogs\?'CMV DRE':'costo POS'\}\x60,'red'\],\['\
+dash_start = s.index("function dashboard(){")
+dash_end = s.index("\nfunction ", dash_start + 1)
+dash = s[dash_start:dash_end]
+old_range = "const rangeSales=(state.sales||[]).filter(inSelectedRange)"
+if dash.count(old_range) != 1:
+    raise SystemExit("Could not apply dashboard period-summary range correction")
+dash = dash.replace(old_range, "const rangeSales=(state.sales||[]).filter(x=>saleFitsDateRange(x,rangeFrom,rangeTo))", 1)
+
+dash = replace_line(dash, " const sales=hasDreSales?", " const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;", "dashboard cost coverage")
+dash = replace_line(dash, " const dreExpenses=rangeDre.filter", " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),channelFeeRecords=dreExpenses.filter(x=>x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:')),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;", "dashboard operating result")
+dash = dash.replace("const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales?posCogs/sales*100:0;", "const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;")
+if "actualFoodCost=sales&&costComplete?" not in dash:
+    raise SystemExit("Could not apply dashboard food-cost coverage")
+dash = dash.replace("<div><span>⚙</span><b>Cobertura:</b><strong class=\"coverage\">● Completa</strong></div>", "<div><span>⚙</span><b>Costeo POS:</b><strong class=\"coverage\">● '+(costComplete?'Completo':'Pendiente · '+costIncompleteSales.length+' ventas')+'</strong></div>")
+dash = dash.replace("sales?actualFoodCost.toFixed(1)+'%':'—'", "actualFoodCost==null?'Pendiente':actualFoodCost.toFixed(1)+'%'")
+dash = dash.replace("hasDreCogs?'DRE · CMV contable':`POS · objetivo ${fcTarget.toFixed(1)}%`", "costComplete?(hasDreCogs?'DRE · CMV contable':'POS · objetivo '+fcTarget.toFixed(1)+'%'):'Falta costo en '+costIncompleteSales.length+' ventas")
+dash = dash.replace("sales?grossMargin.toFixed(1)+'%':'—'", "!sales?'—':costComplete?grossMargin.toFixed(1)+'%':'Pendiente'")
+dash = dash.replace("${money0(grossProfit)} utilidad bruta · ${hasDreCogs?'CMV DRE':'costo POS'}", "${costComplete?money0(grossProfit)+' utilidad bruta · '+(hasDreCogs?'CMV DRE':'costo POS'):'Costos incompletos · '+money0(grossProfit)+' parcial'}")
+dash = dash.replace("money0(operatingResult),'DRE · utilidad bruta − gastos + ingresos'", "operatingResult==null?'Pendiente':money0(operatingResult),operatingResult==null?'Costea '+costIncompleteSales.length+' ventas · gastos DRE '+money0(operatingExpenses)+' · ingresos '+money0(incomeTotal):'DRE '+money0(operatingExpenses)+' gastos · '+money0(incomeTotal)+' ingresos'")
+if "actualFoodCost==null?'Pendiente'" not in dash or "Costos incompletos" not in dash:
+    raise SystemExit("Could not apply dashboard pending-cost labels")
+s = s[:dash_start] + dash + s[dash_end:]
+
+dre_start=s.index("function dreRowsScope(){")
+dre_end=s.index("\nfunction dre(){",dre_start)
+dre=s[dre_start:dre_end]
+dre=dre.replace("sales:sales.filter(r=>inRange(r.date||r.createdAt))", "sales:sales.filter(r=>saleFitsDateRange(r,from,to))")
+if "saleFitsDateRange(r,from,to)" not in dre:
+    raise SystemExit("Could not apply DRE period-summary date correction")
+s=s[:dre_start]+dre+s[dre_end:]
+
+fin_start=s.index("function financeReportData(){")
+fin_end=s.index("\nfunction ",fin_start+1)
+fin=s[fin_start:fin_end]
+fin=fin.replace("sales=(state.sales||[]).filter(s=>inRange(s.date||s.createdAt)).map", "sales=(state.sales||[]).filter(s=>saleFitsDateRange(s,from,to)).map")
+if "filter(s=>saleFitsDateRange(s,from,to)).map" not in fin:
+    raise SystemExit("Could not apply finance period-summary date correction")
+s=s[:fin_start]+fin+s[fin_end:]
+
+if "function salePeriodBounds(" not in s or "function saleFitsDateRange(" not in s:
+    raise SystemExit("Period-summary helpers were not applied")
+p.write_text(s)
+print("Applied current dashboard, DRE, and finance date/cost corrections")
+PY
+
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
 python3 - <<'PY'
