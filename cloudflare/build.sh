@@ -102,13 +102,40 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v569';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v570';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
+    ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
 ]
 for old, new in changes:
     if s.count(old) != 1:
         raise SystemExit(f"Expected one occurrence in dist/app.js: {old}")
     s = s.replace(old, new, 1)
 p.write_text(s)
+PY
+
+# Force all clients and installed PWAs onto the fresh app shell and sync client.
+python3 - <<'PY'
+from pathlib import Path
+index = Path("dist/index.html")
+html = index.read_text()
+replacements = {
+    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-21-render-recovery-v1",
+    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-21-render-recovery-v1",
+}
+for old, new in replacements.items():
+    if html.count(old) != 1:
+        raise SystemExit(f"Expected one asset URL in index.html: {old}")
+    html = html.replace(old, new, 1)
+index.write_text(html)
+sw = Path("dist/sw.js")
+worker = sw.read_text()
+if "2026-11-20-dre-report-v1" not in worker:
+    raise SystemExit("Expected service worker version was not found.")
+worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-21-render-recovery-v1")
+old = "'/purchase-engine.js','/master.json'"
+if old not in worker:
+    raise SystemExit("Could not update critical service worker assets.")
+worker = worker.replace(old, "'/purchase-engine.js','/cloudflare-sync.js','/master.json'", 1)
+sw.write_text(worker)
 PY
