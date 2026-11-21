@@ -53,7 +53,10 @@ dash_end = s.index("\nfunction ", dash_start + 1)
 dash = s[dash_start:dash_end]
 cost_map_at = dash.index("const rangeDre=")
 dash = dash[:cost_map_at] + dash[cost_map_at:].replace("saleDetail(x)", "(saleDetailByRecord.get(x)||saleDetail(x))")
-replace_exact("rangeSaleDetails=rangeSales.map(x=>saleDetail(x));", "rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));", "dashboard sale-detail cache")
+detail_needle = "rangeSaleDetails=rangeSales.map(x=>saleDetail(x));"
+if dash.count(detail_needle) != 1:
+    raise SystemExit("Could not add dashboard sale-detail cache")
+dash = dash.replace(detail_needle, "rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));", 1)
 old_range = "const rangeSales=(state.sales||[]).filter(inSelectedRange)"
 if dash.count(old_range) != 1:
     raise SystemExit("Could not apply dashboard period-summary range correction")
