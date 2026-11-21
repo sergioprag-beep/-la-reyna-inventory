@@ -3,7 +3,7 @@
 'use strict';
 
 const DATA_KEY='lrx_state_v140',BACKUP_KEY=DATA_KEY+'.backup';
-let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=5000,localCacheFailed=false,localPending=false,localMutationSeq=0;
+let revision=0,lastSynced='',pollTimer=null,publishTimer=null,pollDelay=12000,localCacheFailed=false,localPending=false,localMutationSeq=0;
 let publishRetryDelay=1500,busy=false,queuedSnapshot=null,conflict=false,ready=false,connectPromise=null,reconciling=false,checkPromise=null;
 const BOOTSTRAP_KEY='lrx_cloud_bootstrapped_v1',PENDING_KEY='lrx_cloud_local_pending_v1';
 
@@ -182,6 +182,30 @@ function purchaseTombstones(state){
       knownRecords.add(key);
     }
   }
+  // DRE imports replace complete periods. Older/offline clients can merge the
+  // removed rows back by ID, so recreate tombstones from the import audit only
+  // when the recorded replacement count matches the exact older rows covered
+  // by the newer batch. This safely repairs already-resurrected imports too.
+  const dreRows=Array.isArray(state?.dreRecords)?state.dreRecords:[];
+  for(const event of (Array.isArray(state?.audit)?state.audit:[]).filter(x=>x?.event==='DRE_EXCEL_IMPORT')){
+    const detail=String(event.detail||''),replaced=Number(detail.match(/reemplazados\s+(\d+)\s+importados\s+de\s+\d+\s+meses/i)?.[1]||0);
+    const inserted=Number(detail.match(/^(\d+)\s+(?:gastos|totales)\s+mensuales/i)?.[1]||0),eventAt=Date.parse(event.date||'');
+    if(!replaced||!inserted||!Number.isFinite(eventAt))continue;
+    const expectedFile=detail.split(' · ').slice(1).join(' · ').trim(),batches=new Map();
+    for(const row of dreRows){
+      if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||!row?.importBatch)continue;
+      const createdAt=Date.parse(row.createdAt||'');
+      if(!Number.isFinite(createdAt)||Math.abs(createdAt-eventAt)>10000||expectedFile&&String(row.importFile||'').trim()!==expectedFile)continue;
+      if(!batches.has(String(row.importBatch)))batches.set(String(row.importBatch),[]);
+      batches.get(String(row.importBatch)).push(row);
+    }
+    const fresh=[...batches.values()].find(rows=>rows.length===inserted);
+    if(!fresh)continue;
+    const periods=new Set(fresh.map(row=>String(row.importPeriod||row.date||'').slice(0,7))),freshBatches=new Set(fresh.map(row=>String(row.importBatch)));
+    const old=dreRows.filter(row=>String(row?.importSource||'').startsWith('DRE_XLSX_')&&!freshBatches.has(String(row.importBatch))&&periods.has(String(row?.importPeriod||row?.date||'').slice(0,7))&&Date.parse(row.createdAt||'')<eventAt);
+    if(old.length!==replaced)continue;
+    for(const row of old){const key=`dreRecords:${row.id}`;if(!row.id||knownRecords.has(key))continue;tombstones.push({id:`TOMB-dreRecords-${row.id}`,collection:'dreRecords',scope:'record',targetId:String(row.id),createdAt:event.date||''});knownRecords.add(key)}
+  }
   return tombstones;
 }
 function applyPurchaseTombstones(state){
@@ -237,11 +261,11 @@ async function reconcileConflict(cloud,local=localState()){
   reconciling=true;conflict=true;status('Combinando copias…','local');
   try{
     const merged=await publishMerged(local,cloud);
-    conflict=false;ready=true;lastSynced=stableJSON(merged);markCloudBootstrapComplete();clearPendingIfCurrent(merged);pollDelay=5000;publishRetryDelay=1500;
+    conflict=false;ready=true;lastSynced=stableJSON(merged);markCloudBootstrapComplete();clearPendingIfCurrent(merged);pollDelay=12000;publishRetryDelay=1500;
     if(queuedSnapshot){status('Guardando cambios…','local');schedulePublish(0)}else status('Sincronizado','cloud');return true;
   }catch(error){
     console.error('LRX automatic reconciliation',error);
-    status('Conflicto pendiente; reintentando','error');pollDelay=5000;return false;
+    status('Conflicto pendiente; reintentando','error');pollDelay=12000;return false;
   }finally{reconciling=false}
 }
 function chooseCopy(){
@@ -352,22 +376,14 @@ async function downloadResourceFile(path){
 }
 async function handle(){
   try{
-    let checkedCloud=null,checkedLocal=null;
-    // A manual sync must compare the actual local snapshot with Cloudflare,
-    // not only the server revision. Older clients can retain device-only
-    // shopping edits even when no newer cloud revision was published.
-    if(!conflict&&ready){
-      checkedCloud=await getCloud();checkedLocal=localState();
-      if(stableJSON(checkedLocal)!==stableJSON(checkedCloud.payload||{}))conflict=true;
-    }
     if(conflict){
-      const cloud=checkedCloud||await getCloud(),local=checkedLocal||localState(),choice=await chooseCopy();if(!choice)return;revision=Number(cloud.revision)||0;
+      const cloud=await getCloud(),local=localState(),choice=await chooseCopy();if(!choice)return;revision=Number(cloud.revision)||0;
       if(choice==='cloud'){queuedSnapshot=null;const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});lastSynced=stableJSON(cloud.payload||{});markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}conflict=false;ready=true;status(saved?'Sincronizado':'Nube sincronizada; copia local pendiente',saved?'cloud':'error');startPolling();return}
       if(choice==='local'){await publish(local);queuedSnapshot=null;markCloudBootstrapComplete();clearPendingIfCurrent(local)}
       else{await publishMerged(local,cloud);queuedSnapshot=null;conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return}
       conflict=false;ready=true;status('Sincronizado','cloud');startPolling();return;
     }
-    if(queuedSnapshot){status('Guardando cambios pendientes…','local');schedulePublish(0);return}
+    if(queuedSnapshot){schedulePublish(0);return}
     if(!ready){await connectOnce();return}
     await checkCloud();
   }catch(error){
