@@ -1,5 +1,5 @@
-const CACHE='lrx-2026-11-18-shopping-reconcile-v2';
-const VERSION='2026-11-18-shopping-reconcile-v2';
+const CACHE='lrx-2026-11-20-dre-report-v1';
+const VERSION='2026-11-20-dre-report-v1';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
