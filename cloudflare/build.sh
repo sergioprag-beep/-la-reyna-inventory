@@ -22,35 +22,39 @@ else
 fi
 rm -f "$patch_log"
 
-# A few old dashboard hunks can be rejected independently while their matching
-# card markup applies. Restore the required calculations before shipping.
+# Normalize dashboard calculations after the legacy patch. Its hunks can
+# partially apply when the source has moved, leaving the template with missing
+# variables and an empty dashboard.
 python3 - <<'PY'
 from pathlib import Path
+import re
 p = Path("dist/app.js")
 s = p.read_text()
 start = s.index("function dashboard(){")
-end = s.find("\nfunction ", start + 1)
+end = s.find("\\nfunction ", start + 1)
 if end < 0:
     end = len(s)
 dashboard = s[start:end]
-if "costComplete=" not in dashboard:
-    old_sales = " const sales=hasDreSales?dreGross:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0),posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0;"
-    new_sales = """ const channelFeeRecords=rangeDre.filter(x=>x.type==='expense'&&(x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:'))),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0);
- const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;"""
-    old_expenses = " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingResult=grossProfit-expenseTotal+incomeTotal;"
-    new_expenses = " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;"
-    old_food = " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales?posCogs/sales*100:0;"
-    new_food = " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;"
-    for old in (old_sales, old_expenses, old_food):
-        if dashboard.count(old) != 1:
-            raise SystemExit("Dashboard fallback could not find one expected calculation; refusing to deploy partial metrics.")
-    dashboard = dashboard.replace(old_sales, new_sales, 1).replace(old_expenses, new_expenses, 1).replace(old_food, new_food, 1)
-    s = s[:start] + dashboard + s[end:]
-    p.write_text(s)
-    print("Repaired dashboard calculations after partial legacy patch application.")
-else:
-    print("Dashboard calculation patch applied completely.")
+pattern = r" const rangeSales=.*? const invValue="
+replacement = """ const rangeSales=(state.sales||[]).filter(inSelectedRange),rangePurchases=(state.purchases||[]).filter(inSelectedRange),rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));
+ const rangeDre=(state.dreRecords||[]).filter(inSelectedRange),dreMetrics=rangeDre.filter(x=>x.dreMetric),dreGross=dreMetrics.filter(x=>x.dreMetric==='grossSales').reduce((n,x)=>n+Number(x.amount||0),0),dreCogs=dreMetrics.filter(x=>x.dreMetric==='cogs').reduce((n,x)=>n+Number(x.amount||0),0),hasDreSales=dreMetrics.some(x=>x.dreMetric==='grossSales'),hasDreCogs=dreMetrics.some(x=>x.dreMetric==='cogs');
+ const channelFeeRecords=rangeDre.filter(x=>x.type==='expense'&&(x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:'))),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0);
+ const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;
+ const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;
+ const purchases=rangePurchases.reduce((n,x)=>n+Number(x.total||0),0);
+ const invValue="""
+dashboard, count = re.subn(pattern, replacement, dashboard, count=1, flags=re.S)
+if count != 1:
+    raise SystemExit("Could not normalize dashboard calculations; refusing to ship an incomplete dashboard.")
+food_pattern = r" const fcTarget=Number\\(state\\.settings\\.targetFoodCost\\|\\|30\\),actualFoodCost=[^;]+;"
+dashboard, food_count = re.subn(food_pattern, " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;", dashboard, count=1)
+if food_count != 1:
+    raise SystemExit("Could not normalize the Food Cost metric; refusing to ship incomplete dashboard metrics.")
+s = s[:start] + dashboard + s[end:]
+p.write_text(s)
+print("Normalized dashboard calculations and verified all required metric variables.")
 PY
+node --check dist/app.js
 
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
