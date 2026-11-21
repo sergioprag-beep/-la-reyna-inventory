@@ -22,6 +22,36 @@ else
 fi
 rm -f "$patch_log"
 
+# A few old dashboard hunks can be rejected independently while their matching
+# card markup applies. Restore the required calculations before shipping.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+start = s.index("function dashboard(){")
+end = s.find("\nfunction ", start + 1)
+if end < 0:
+    end = len(s)
+dashboard = s[start:end]
+if "costComplete=" not in dashboard:
+    old_sales = " const sales=hasDreSales?dreGross:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0),posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0;"
+    new_sales = """ const channelFeeRecords=rangeDre.filter(x=>x.type==='expense'&&(x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:'))),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0);
+ const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;"""
+    old_expenses = " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingResult=grossProfit-expenseTotal+incomeTotal;"
+    new_expenses = " const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;"
+    old_food = " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales?posCogs/sales*100:0;"
+    new_food = " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null;"
+    for old in (old_sales, old_expenses, old_food):
+        if dashboard.count(old) != 1:
+            raise SystemExit("Dashboard fallback could not find one expected calculation; refusing to deploy partial metrics.")
+    dashboard = dashboard.replace(old_sales, new_sales, 1).replace(old_expenses, new_expenses, 1).replace(old_food, new_food, 1)
+    s = s[:start] + dashboard + s[end:]
+    p.write_text(s)
+    print("Repaired dashboard calculations after partial legacy patch application.")
+else:
+    print("Dashboard calculation patch applied completely.")
+PY
+
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
 python3 - <<'PY'
@@ -69,7 +99,7 @@ s = p.read_text()
 changes = [
     ("const APP_VERSION='v556';", "const APP_VERSION='v569';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
-    ("seedRecipeUtensils();await normalizeUserUtensilImages();", "seedRecipeUtensils();setTimeout(()=>{normalizeUserUtensilImages().catch(error=>console.warn('LRX utensil image normalization deferred',error))},0);"),
+    ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
 ]
 for old, new in changes:
     if s.count(old) != 1:
