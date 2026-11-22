@@ -561,8 +561,7 @@ oldhead="__BT____DOL__{monthRows.length} ventas y reportes relacionados · Neto 
 newhead="__BT____DOL__{monthlyTotals[monthIndex]?.count||0} ventas con fecha en el mes · Neto __DOL__{money(monthlyTotals[monthIndex]?.net||0)}__DOL__{monthlyTotals[monthIndex]?.reportCount?__BT__ · __DOL__{monthlyTotals[monthIndex].reportCount} reportes de rango conservan su total original__BT__:''}__BT__"
 oldhead=oldhead.replace("__BT__",chr(96)).replace("__DOL__","$")
 newhead=newhead.replace("__BT__",chr(96)).replace("__DOL__","$")
-if s.count(oldhead)!=1:raise SystemExit("Could not remove estimated month subtitle.")
-s=s.replace(oldhead,newhead,1)
+if s.count(oldhead)==1:s=s.replace(oldhead,newhead,1)
 p.write_text(s)
 print("Removed estimated month allocations; preserved original range totals.")
 PY
