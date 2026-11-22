@@ -539,3 +539,38 @@ for name in ("dist/index.html","dist/sw.js"):
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
  p.write_text(s.replace(old,new))
 PY
+
+# Remove estimated allocation of range totals; show only date-backed monthly revenue.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text();sales_start=s.find("function sales(){")
+a=s.find("const monthlyTotals=Array.from",sales_start);b=s.find(";\n const size=",a)
+if sales_start<0 or a<0 or b<0:raise SystemExit("Could not isolate monthly totals calculation.")
+block="""const monthlyTotals=Array.from({length:12},(_,i)=>{const key=__BT____DOL__{year}-__DOL__{String(i+1).padStart(2,'0')}__BT__,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((total,r)=>total+Number(r.net||0),0)}})"""
+block=block.replace("__BT__",chr(96)).replace("__DOL__","$")
+s=s[:a]+block+s[b:]
+old="m.count||m.reportCount?money(m.net):'—'"
+new="m.count?money(m.net):m.reportCount?'Ver total del rango':'—'"
+if s.count(old)!=1:raise SystemExit("Could not remove estimated amount from month cards.")
+s=s.replace(old,new,1)
+oldhint="Incluye ventas fechadas y una estimación de los reportes que abarcan varios meses."
+newhint="Solo suma ventas fechadas dentro del mes. Los reportes de varios meses aparecen al abrir cada mes, con su total original."
+if s.count(oldhint)!=1:raise SystemExit("Could not clarify monthly totals.")
+s=s.replace(oldhint,newhint,1)
+oldhead="__BT____DOL__{monthRows.length} ventas y reportes relacionados · Neto __DOL__{money(monthlyTotals[monthIndex]?.net||0)}__DOL__{monthlyTotals[monthIndex]?.estimated?' · incluye estimación de rangos':''}__BT__"
+newhead="__BT____DOL__{monthlyTotals[monthIndex]?.count||0} ventas con fecha en el mes · Neto __DOL__{money(monthlyTotals[monthIndex]?.net||0)}__DOL__{monthlyTotals[monthIndex]?.reportCount?__BT__ · __DOL__{monthlyTotals[monthIndex].reportCount} reportes de rango conservan su total original__BT__:''}__BT__"
+oldhead=oldhead.replace("__BT__",chr(96)).replace("__DOL__","$")
+newhead=newhead.replace("__BT__",chr(96)).replace("__DOL__","$")
+if s.count(oldhead)!=1:raise SystemExit("Could not remove estimated month subtitle.")
+s=s.replace(oldhead,newhead,1)
+p.write_text(s)
+print("Removed estimated month allocations; preserved original range totals.")
+PY
+python3 - <<'PY'
+from pathlib import Path
+old="2026-11-22-sales-month-products-v3";new="2026-11-22-sales-month-products-v4"
+for name in ("dist/index.html","dist/sw.js"):
+ p=Path(name);s=p.read_text()
+ if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
+ p.write_text(s.replace(old,new))
+PY
