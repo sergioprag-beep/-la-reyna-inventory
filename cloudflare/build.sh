@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v4";new="2026-11-22-sales-month-products-v5"
+old="2026-11-22-sales-month-products-v3";new="2026-11-22-sales-month-products-v5"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
