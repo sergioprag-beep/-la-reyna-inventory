@@ -481,12 +481,13 @@ group=""" const periodBatchGroups=new Map(),normalizedDisplay=[];for(const r of 
 """
 if s.count(needle)!=1: raise SystemExit("Could not locate monthly sales summary setup.")
 s=s.replace(needle,group+needle,1)
-a=s.find("const monthNames=Array.from")
+sales_start=s.find("function sales(){")
+a=s.find("const monthNames=Array.from",sales_start)
 b=s.find(";\n const size=",a)
-if a<0 or b<0: raise SystemExit("Could not locate monthly totals block.")
+if sales_start<0 or a<0 or b<0: raise SystemExit("Could not locate monthly totals block.")
 monthblock="""const monthNames=Array.from({length:12},(_,i)=>new Date(2026,i,15).toLocaleDateString('es-US',{month:'long'})),yearRows=filtered.filter(r=>String(r.date||'').slice(0,4)===year),monthlyTotals=Array.from({length:12},(_,i)=>{const key=`${year}-${String(i+1).padStart(2,'0')}`,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);let estimated=0;for(const r of ranges){const {start,end}=salePeriodBounds(r),from=new Date(Math.max(Date.parse(start+'T12:00:00'),Date.parse(monthStart+'T12:00:00'))),to=new Date(Math.min(Date.parse(end+'T12:00:00'),Date.parse(monthEnd+'T12:00:00')));const overlap=Math.max(0,Math.round((to-from)/86400000)+1),whole=Math.max(1,Math.round((Date.parse(end+'T12:00:00')-Date.parse(start+'T12:00:00'))/86400000)+1);estimated+=Number(r.net||0)*overlap/whole}return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((a,r)=>a+Number(r.net||0),0)+estimated,estimated}})"""
 monthblock=monthblock.replace("__BT__",chr(96)).replace("__DOL__","$")
-if s.count("const monthNames=Array.from")!=1: raise SystemExit("Could not locate month names.")
+
 s=s[:a]+monthblock+s[b:]
 old="monthIndex>=0?yearRows.filter(r=>String(r.date||'').slice(0,7)===selectedMonth):[]"
 new="monthIndex>=0?yearRows.filter(r=>!r.periodSummary?String(r.date||'').slice(0,7)===selectedMonth:(salePeriodBounds(r).start<=selectedMonth+'-31'&&salePeriodBounds(r).end>=selectedMonth+'-01')):[]"
