@@ -381,3 +381,24 @@ s=s.replace(old,new,1)
 p.write_text(s)
 print("Grouped channel sales and imported fees under one canonical platform card.")
 PY
+
+# Bust the production browser and service-worker caches for channel aggregation.
+python3 - <<'PY'
+from pathlib import Path
+tag = "2026-11-22-channel-rollup-v1"
+index = Path("dist/index.html")
+html = index.read_text()
+old = "2026-11-21-shift4-range-v2"
+for asset in ("app.js", "cloudflare-sync.js"):
+    before = f"{asset}?v={old}"
+    after = f"{asset}?v={tag}"
+    if html.count(before) != 1:
+        raise SystemExit(f"Expected one production URL for {asset}; found {html.count(before)}")
+    html = html.replace(before, after, 1)
+index.write_text(html)
+worker = Path("dist/sw.js")
+sw = worker.read_text()
+if sw.count(old) != 1:
+    raise SystemExit(f"Expected one service worker cache version; found {sw.count(old)}")
+worker.write_text(sw.replace(old, tag, 1))
+PY
