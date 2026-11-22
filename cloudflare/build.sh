@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+rm -rf dist
+mkdir -p dist
+cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
+
+# Apply the isolated Shift4 period-import correction to the built app bundle.
+# Three legacy hunks no longer match the updated app.js. Continue only for that
+# known mismatch; any different patch failure still stops the production build.
+patch_log=$(mktemp)
+if patch --batch --forward -p1 -d dist < shift4-period.patch >"$patch_log" 2>&1; then
+  cat "$patch_log"
+else
+  cat "$patch_log"
+  if ! grep -Fq '3 out of 31 hunks FAILED' "$patch_log"; then
+    rm -f "$patch_log" dist/app.js.rej
+    exit 1
+  fi
+  echo "Continuing with 28 applicable patch hunks; 3 stale hunks were rejected."
+  rm -f dist/app.js.rej
+fi
+rm -f "$patch_log"
+
+# Normalize dashboard calculations after the legacy patch. Its hunks can
+# partially apply when the source has moved, leaving the template with missing
+# variables and an empty dashboard.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+dashboard = s.index("function dashboard(){")
+start = s.find(" const rangeSales=", dashboard)
+if start < 0:
+    start = s.find("const rangeSales=", dashboard)
+end = s.find(" const invValue=", start)
+if end < 0:
+    end = s.find("const invValue=", start)
+if start < 0 or end < 0:
+    raise SystemExit("Could not locate dashboard calculation boundaries.")
+replacement = """ const rangeSales=(state.sales||[]).filter(inSelectedRange),rangePurchases=(state.purchases||[]).filter(inSelectedRange),rangeSaleDetails=rangeSales.map(x=>saleDetail(x)),saleDetailByRecord=new Map(rangeSales.map((x,i)=>[x,rangeSaleDetails[i]]));
+ const rangeDre=(state.dreRecords||[]).filter(inSelectedRange),dreMetrics=rangeDre.filter(x=>x.dreMetric),dreGross=dreMetrics.filter(x=>x.dreMetric==='grossSales').reduce((n,x)=>n+Number(x.amount||0),0),dreCogs=dreMetrics.filter(x=>x.dreMetric==='cogs').reduce((n,x)=>n+Number(x.amount||0),0),hasDreSales=dreMetrics.some(x=>x.dreMetric==='grossSales'),hasDreCogs=dreMetrics.some(x=>x.dreMetric==='cogs');
+ const channelFeeRecords=rangeDre.filter(x=>x.type==='expense'&&(x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:'))),channelFees=channelFeeRecords.reduce((n,x)=>n+Number(x.amount||0),0);
+ const sales=hasDreSales?dreGross-channelFees:rangeSaleDetails.reduce((n,x)=>n+Number(x.net||0),0)-channelFees,posCogs=hasDreCogs?dreCogs:rangeSaleDetails.reduce((n,x)=>n+Number(x.cost||0),0),grossProfit=sales-posCogs,grossMargin=sales?grossProfit/sales*100:0,costIncompleteSales=hasDreCogs?[]:rangeSales.filter((x,i)=>rangeSaleDetails[i]?.missing?.length&&!(Number(x.cost)>0)),costComplete=costIncompleteSales.length===0;
+ const dreExpenses=rangeDre.filter(x=>x.type==='expense'),dreIncome=rangeDre.filter(x=>x.type==='income'),expenseTotal=dreExpenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=dreIncome.reduce((n,x)=>n+Number(x.amount||0),0),operatingExpenses=expenseTotal-channelFees,operatingResult=costComplete?grossProfit-operatingExpenses+incomeTotal:null;
+ const purchases=rangePurchases.reduce((n,x)=>n+Number(x.total||0),0);
+ """
+s = s[:start] + replacement + s[end:]
+food = s.find(" const fcTarget=", dashboard)
+if food < 0:
+    food = s.find("const fcTarget=", dashboard)
+food_end = s.find(";", food)
+if food < 0 or food_end < 0:
+    raise SystemExit("Could not locate Food Cost calculation.")
+s = s[:food] + " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null" + s[food_end:]
+p.write_text(s)
+print("Normalized dashboard calculations after partial patch application.")
+PY
+
+# app.js contains an obsolete service-worker update path. It competes with the
+# versioned updater in index.html, which can make clients switch workers and reload.
+python3 - <<'PY'
+from pathlib import Path
+import re
+p = Path("dist/app.js")
+s = p.read_text()
+s, first = re.subn(
+    r"if\(['\"]serviceWorker['\"]\s*in navigator\)\{navigator\.serviceWorker\.register\(.*?\.catch\(\(\)=>\{\}\)\}",
+    "",
+    s,
+)
+s, second = re.subn(
+    r"if\(['\"]serviceWorker['\"]\s+in navigator\)setTimeout\(\(\)=>navigator\.serviceWorker\.register\(.*?\),1500\);",
+    "",
+    s,
+)
+if "serviceWorker.register" in s:
+    raise SystemExit(f"Legacy service-worker registration remains after cleanup (removed {first + second})")
+p.write_text(s)
+print(f"Removed {first + second} legacy service worker registrations from app.js")
+PY
+mkdir -p dist/assets
+cp -R assets/utensils dist/assets/
+
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+needle = "function updateLanguageChip(){"
+bridge = "const __lrxBaseApplyEnglishUI=applyEnglishUI;const __lrxRawText=new WeakMap();const __lrxRenderedText=new WeakMap();const __lrxRawAttrs=new WeakMap();const __lrxRenderedAttrs=new WeakMap();let __lrxTranslateLookup=new Map();let __lrxPhraseRegex=null;const __lrxBuildTranslationIndex=()=>{__lrxTranslateLookup=new Map(Object.entries(UI_EN).map(([k,v])=>[k.toLocaleLowerCase(),v]));const keys=Object.keys(UI_EN).filter(k=>k.length>=4&&/^[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]+$/.test(k)).sort((a,b)=>b.length-a.length);__lrxPhraseRegex=keys.length?new RegExp('(^|[^A-Za-zÀ-ÖØ-öø-ÿ0-9])('+keys.join('|')+')(?=$|[^A-Za-zÀ-ÖØ-öø-ÿ0-9])','gi'):null};__lrxBuildTranslationIndex();const __lrxTranslateValue=value=>{if(typeof value!=='string'||state.settings?.language!=='en')return value;let out=UI_EN[value]??__lrxTranslateLookup.get(value.toLocaleLowerCase())??value;const monthNames={Enero:'January',Febrero:'February',Marzo:'March',Abril:'April',Mayo:'May',Junio:'June',Julio:'July',Agosto:'August',Septiembre:'September',Octubre:'October',Noviembre:'November',Diciembre:'December'};for(const [es,en] of Object.entries(monthNames))out=out.replace(new RegExp('(^|[^A-Za-zÀ-ÖØ-öø-ÿ])'+es+'(?=$|[^A-Za-zÀ-ÖØ-öø-ÿ])','g'),(m,p)=>p+en);out=out.replace(/\\bMostrando\\b/g,'Showing').replace(/\\bPágina\\b/g,'Page').replace(/\\bde (\\d+) records/g,'of $1 records').replace(/\\bde (\\d+) resultados/g,'of $1 results').replace(/\\bregistros\\b/g,'records').replace(/\\bfichas\\b/g,'records').replace(/\\bmovimientos\\b/g,'transactions').replace(/\\bcompras\\b/g,'purchases').replace(/\\bgastos\\b/g,'expenses').replace(/\\bingresos\\b/g,'income').replace(/\\bórdenes\\b/gi,'orders').replace(/\\bord enes\\b/gi,'orders');out=out.replace(/^(January|February|March|April|May|June|July|August|September|October|November|December) De (\\d{4})$/,'$1 $2').replace(/^Gastos generales: (.+?) \\(([\\d.]+)% de los gastos DRE\\)\\. Revisa factura, consumo y alternativas\\.$/,'General expenses: $1 ($2% of P&L expenses). Review the invoice, usage, and alternatives.').replace(/^Hay gastos en el período actual, pero no en el período anterior \\((.+?)\\)\\. Aún no se puede calcular si subieron o bajaron\\.$/,'There are expenses in the current period but none in the previous period ($1). It is not yet possible to determine whether they increased or decreased.').replace(/^Período comparable anterior \\((.+?)\\): (.+?) · Variación de gastos: (.+)$/,'Previous comparable period ($1): $2 · Expense change: $3').replace(/^Empleados activos (\\d+) Producciones en período (\\d+) Productos bajo mínimo (\\d+) Aumentos de costo sobre umbral (\\d+) Ingresos manuales DRE (.+)$/,'Active employees $1 · Production runs during period $2 · Products below minimum $3 · Cost increases over threshold $4 · Manual P&L income $5').replace(/^MASTER: (\\d+) Productos · (\\d+) Proveedores · (\\d+) Recetas · (\\d+) Pre-elaborados$/,'MASTER: $1 Products · $2 Suppliers · $3 Recipes · $4 Pre-prepared items').replace('Ventas Totales: ','Total Sales: ').replace('Compras de Alimentos: ','Food Purchases: ').replace('Margen Bruto: ','Gross Margin: ').replace('Resultado Operativo: ','Operating Profit: ').replace('Cuentas por Pagar: ','Accounts Payable: ').replace('Inventario: ','Inventory: ').replace('Empleados: ','Employees: ').replace('Abrir módulo','Open module').replace('utilidad bruta · costo POS','gross profit · POS cost').replace('Productos ·','Products ·').replace('Proveedores ·','Suppliers ·').replace('Recetas ·','Recipes ·').replace('Pre-elaborados','Pre-prepared items');out=out.split('DATOS DEL PERÍODO').join('PERIOD DATA').split('DATOS DEL PERIODO').join('PERIOD DATA').split('Gastos generales: ').join('General expenses: ').split(' de los gastos DRE). Revisa factura, consumo y alternativas.').join(' of P&L expenses). Review the invoice, usage, and alternatives.').split('Hay gastos en el período actual, pero no en el período anterior (').join('There are expenses in the current period but none in the previous period (').split('). Aún no se puede calcular si subieron o bajaron.').join('). It is not yet possible to determine whether they increased or decreased.').split('Período comparable anterior (').join('Previous comparable period (').split(' · Variación de gastos:').join(' · Expense change:').split('El período activo es ').join('The active period is ').split('Septiembre').join('September').split('Agosto').join('August').split('Julio').join('July').split('Junio').join('June').split('Mayo').join('May').split('Abril').join('April').split('Marzo').join('March').split('Febrero').join('February').split('Enero').join('January').split(' De 2026').join(' 2026').split('Abrir DRE').join('Open P&L').split('Ver reportes').join('View reports').split('Revisar DRE').join('Review P&L').split('Aún no se puede calcular').join('It is not yet possible to calculate').split('Revisa factura').join('Review the invoice').split('Cotiza proveedores alternos').join('Request quotes from alternative suppliers').split('aumento(s) sobre el umbral; el mayor es').join('increase(s) above the threshold; the largest is').split('Usa estas categorías').join('Use these categories').split('para revisar contratos, facturas, consumo y recurrencias.').join('to review contracts, invoices, usage, and recurring costs.').split('Consulta los movimientos del DRE dentro de cada mes.').join('Review P&L transactions within each month.').split('Los gastos generales').join('General expenses').split('El promedio divide el total del rango').join('The average divides the range total');out=out.split('Lectura ejecutiva ·').join('Executive summary ·').split('Oportunidades y alertas').join('Opportunities and alerts').split('Food Cost real').join('Actual food cost').split('Food Cost promedio').join('Average food cost').split('recetas ').join('recipes ').split(' completas · teórico').join(' complete · theoretical').split('Empleados activos ').join('Active employees ').split('Producciones en período ').join('Production runs during period ').split('Productos bajo mínimo ').join('Products below minimum ').split('Aumentos de costo sobre umbral ').join('Cost increases above threshold ').split('Ingresos manuales DRE ').join('Manual P&L income ').split('Septiembre De ').join('September ').split('Agosto De ').join('August ').split('Julio De ').join('July ').split('Junio De ').join('June ').split('Mayo De ').join('May ').split('Abril De ').join('April ').split('Marzo De ').join('March ').split('Febrero De ').join('February ').split('Enero De ').join('January ');out=out.split('recetas').join('recipes').split('completas').join('complete').split('teórico').join('theoretical').split('Empleados activos').join('Active employees').split('Producciones en período').join('Production runs during period').split('Productos bajo mínimo').join('Products below minimum').split('Aumentos de costo sobre umbral').join('Cost increases above threshold').split('Ingresos manuales DRE').join('Manual P&L income').split('registros').join('records').split('fichas').join('records').split('Septiembre').join('September').split('Agosto').join('August').split('Julio').join('July').split('Junio').join('June').split('Mayo').join('May').split('Abril').join('April').split('Marzo').join('March').split('Febrero').join('February').split('Enero').join('January').split(' De 2026').join(' 2026');out=out.replace(/Mostrando (\\d+[–-]\\d+) de (\\d+) · Página (\\d+) de (\\d+)/g,'Showing $1 of $2 · Page $3 of $4');if(out.includes('Mostrando ')){out=out.replace('Mostrando ','Showing ').replace(' de ',' of ').replace(' · Página ',' · Page ')}if(out.includes(' turnos · ')&&out.includes(' empleados')){for(const [es,en] of Object.entries(monthNames))out=out.split(es+' De ').join(en+' ');out=out.split(' turnos · ').join(' shifts · ').split(' empleados').join(' employees')}if(out.includes('Highest-cost day:'))out=out.replace(' oct ',' Oct ').replace('Día de menor costo con jornadas:','Lowest-cost day with shifts:');;if(out.includes(' · Page ')||out.includes(' · Página '))out=out.split('Mostrando ').join('Showing ').split(' · Página ').join(' · Page ').split(' de ').join(' of ');const __lrxMonthYear=out.split(' De ');if(__lrxMonthYear.length===2){const __lrxYear=__lrxMonthYear[1].slice(0,4);if(__lrxYear.length===4&&!isNaN(Number(__lrxYear))&&(__lrxMonthYear[1].length===4||__lrxMonthYear[1][4]===' '))out=(monthNames[__lrxMonthYear[0]]||__lrxMonthYear[0])+' '+__lrxYear+__lrxMonthYear[1].slice(4)}out=out.split(' de los expenses DRE').join(' of P&L expenses').split('consumo y alternativas').join('usage and alternatives').split('Variación de expenses').join('Expense change').split('Consulta los transactions del DRE dentro de cada mes.').join('Review P&L transactions within each month.').split('Abrir mes').join('Open month').split('Por página').join('Per page');if(out.includes('Highest-cost day:'))out=out.split('Día de menor costo con jornadas:').join('Lowest-cost day with shifts:').split(' oct ').join(' Oct ');if(out.endsWith(' estimado'))out=out.slice(0,-9)+' estimated';;if(out.startsWith('Showing ')&&out.includes(' de '))out=out.replace(' de ',' of ');out=out.split(' resultados · página ').join(' results · page ').split(' páginas de ').join(' pages of ').split('Actualizado ').join('Updated ').split('Todos (').join('All (').split('Con fotos (').join('With photos (').split(' unidad disponibles').join(' units available').split(' unidad ').join(' unit ').split(' unidades').join(' units').split(' mov. ').join(' transactions ').split('Hay expenses en el período actual, pero no en el período anterior').join('There are expenses in the current period but none in the previous period').split('Abrir mes').join('Open month').split('Abrir Recetas').join('Open Recipes').split('Costo pendiente').join('Cost pending').split('Mostrar el selector de fechas').join('Show date picker');;return out};applyEnglishUI=function(){const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode())if(!__lrxRawText.has(node))__lrxRawText.set(node,node.nodeValue||'');__lrxBaseApplyEnglishUI();const textWalker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);while(node=textWalker.nextNode()){const current=node.nodeValue||'',last=__lrxRenderedText.get(node);if(last!==undefined&&current!==last)__lrxRawText.set(node,current);const raw=__lrxRawText.get(node)||'',next=__lrxTranslateValue(raw);if(current!==next)node.nodeValue=next;__lrxRenderedText.set(node,next)}document.querySelectorAll('[aria-label],[title],[placeholder],[data-label]').forEach(el=>{let raw=__lrxRawAttrs.get(el);if(!raw){raw={};__lrxRawAttrs.set(el,raw)}let rendered=__lrxRenderedAttrs.get(el);if(!rendered){rendered={};__lrxRenderedAttrs.set(el,rendered)}for(const attr of ['aria-label','title','placeholder','data-label']){const current=el.getAttribute(attr);if(current===null)continue;if(rendered[attr]!==undefined&&current!==rendered[attr])raw[attr]=current;else if(raw[attr]===undefined)raw[attr]=current;const next=__lrxTranslateValue(raw[attr]);if(current!==next)el.setAttribute(attr,next);rendered[attr]=next}})};window.extendLRXEnglishDictionary=extra=>{Object.assign(UI_EN,extra||{});for(const [key,value] of Object.entries(extra||{})){try{const repaired=decodeURIComponent(escape(key));if(repaired!==key)UI_EN[repaired]=value}catch{}}__lrxBuildTranslationIndex();applyEnglishUI()};let __lrxTranslationTimer=0;const __lrxTranslationObserver=new MutationObserver(()=>{if(state.settings?.language!=='en')return;clearTimeout(__lrxTranslationTimer);__lrxTranslationTimer=setTimeout(()=>applyEnglishUI(),180)});__lrxTranslationObserver.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-label','title','placeholder','data-label']});function updateLanguageChip(){"
+if "window.extendLRXEnglishDictionary" not in s:
+    if needle not in s:
+        raise SystemExit("Could not find language UI insertion point")
+    s = s.replace(needle, bridge, 1)
+    s = s.replace("const _lrxPreviewDreImport=previewDreImport;\npreviewDreImport=async function(file){", "const _lrxPreviewDreImport=typeof previewDreImport==='function'?previewDreImport:null;\nif(_lrxPreviewDreImport)previewDreImport=async function(file){")
+    p.write_text(s)
+PY
+
+# Render the application before performing optional image normalization.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+changes = [
+    ("const APP_VERSION='v556';", "const APP_VERSION='v570';"),
+    ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
+    ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
+    ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
+]
+for old, new in changes:
+    if s.count(old) != 1:
+        raise SystemExit(f"Expected one occurrence in dist/app.js: {old}")
+    s = s.replace(old, new, 1)
+p.write_text(s)
+PY
+
+# Force all clients and installed PWAs onto the fresh app shell and sync client.
+python3 - <<'PY'
+from pathlib import Path
+index = Path("dist/index.html")
+html = index.read_text()
+replacements = {
+    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-21-render-recovery-v1",
+    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-21-render-recovery-v1",
+}
+for old, new in replacements.items():
+    if html.count(old) != 1:
+        raise SystemExit(f"Expected one asset URL in index.html: {old}")
+    html = html.replace(old, new, 1)
+index.write_text(html)
+sw = Path("dist/sw.js")
+worker = sw.read_text()
+if "2026-11-20-dre-report-v1" not in worker:
+    raise SystemExit("Expected service worker version was not found.")
+worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-21-render-recovery-v1")
+old = "'/purchase-engine.js','/master.json'"
+if old not in worker:
+    raise SystemExit("Could not update critical service worker assets.")
+worker = worker.replace(old, "'/purchase-engine.js','/cloudflare-sync.js','/master.json'", 1)
+sw.write_text(worker)
+PY
