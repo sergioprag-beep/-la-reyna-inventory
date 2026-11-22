@@ -108,7 +108,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v570';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v571';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v13",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v13",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v14",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v14",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v13")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v14")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -360,4 +360,24 @@ if s.count(old)!=1: raise SystemExit("Could not fix the Product Mix preview noti
 s=s.replace(old,chr(36)+"{p.kind",1)
 p.write_text(s)
 print("Kept DoorDash as the selected channel and enabled the Product Mix preview notice.")
+PY
+
+ 
+# Merge channel cards and financial charges using the canonical platform name.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js")
+s=p.read_text()
+old=r"channelKey=value=>String(value||'Sin canal').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toLowerCase()"
+new="channelKey=value=>canonicalSalesChannelName(value||'Sin canal')"
+if s.count(old)!=1:
+    raise SystemExit(f"Could not normalize the channel summary key ({s.count(old)} matches)")
+s=s.replace(old,new,1)
+old="const channels=state.settings.channels||[],configured=new Set(channels.map(c=>channelKey(c.name))),channelCards=[...channels,...[...channelStats.values()].filter(x=>!configured.has(channelKey(x.name))).map(x=>({name:x.name,type:'Importado',active:true}))],q=String(state._salesQ||'').toLowerCase(),grouped=new Map(),display=[];"
+new="const channels=state.settings.channels||[],configured=new Set(channels.map(c=>channelKey(c.name))),channelCards=[...new Map(channels.map(c=>{const name=canonicalSalesChannelName(c.name);return [channelKey(name),{...c,name}]})).values(),...[...channelStats.values()].filter(x=>!configured.has(channelKey(x.name))).map(x=>({...x,name:canonicalSalesChannelName(x.name),type:'Importado',active:true}))],q=String(state._salesQ||'').toLowerCase(),grouped=new Map(),display=[];"
+if s.count(old)!=1:
+    raise SystemExit(f"Could not collapse duplicate channel cards ({s.count(old)} matches)")
+s=s.replace(old,new,1)
+p.write_text(s)
+print("Grouped channel sales and imported fees under one canonical platform card.")
 PY
