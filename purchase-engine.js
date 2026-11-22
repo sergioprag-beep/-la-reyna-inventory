@@ -1,10 +1,10 @@
-/* LRX Purchase Engine v192
+/* LRX Purchase Engine v195
    One canonical OCR/document parser for supplier purchases.
    No inventory mutation occurs here; this engine only reads and structures data.
 */
 (function(global){
  'use strict';
- const ENGINE_VERSION='v192';
+ const ENGINE_VERSION='v195';
  const unitAliases={
   cs:'caja',case:'caja',cases:'caja',caja:'caja',cajas:'caja',carton:'caja',cartons:'caja',
   ea:'unidad',each:'unidad',unit:'unidad',units:'unidad',unidad:'unidad',unidades:'unidad',pc:'unidad',pcs:'unidad',piece:'unidad',pieces:'unidad',pieza:'unidad',piezas:'unidad',
@@ -14,7 +14,7 @@
   kg:'kg',kgs:'kg',kilo:'kg',kilos:'kg',kilogram:'kg',kilograms:'kg',
   g:'g',gr:'g',gram:'g',grams:'g',gramo:'g',gramos:'g',
   gal:'gal',gallon:'gal',gallons:'gal',galon:'gal',galones:'gal',
-  l:'L',lt:'L',lts:'L',liter:'L',liters:'L',litro:'L',litros:'L',
+  l:'L',lt:'L',lts:'L',liter:'L',liters:'L',litro:'L',litros:'L','fl oz':'fl oz','fluid ounce':'fl oz','fluid ounces':'fl oz',
   ml:'mL',milliliter:'mL',milliliters:'mL',mililitro:'mL',mililitros:'mL'
  };
  const STOP=/^(subtotal|sub total|tax|sales tax|impuesto|iva|grand total|invoice total|total due|amount due|balance due|shipping|freight|discount|payment|terms|thank|product category|number of pieces|misc|received by|signature|please cut|pay this amount)/i;
@@ -44,17 +44,66 @@
  function moneyTokens(s){
   return (String(s||'').match(/(?:\$|€|£)?\s*\d[\d,]*(?:\.\d{1,4})?/g)||[]).map(x=>num(x));
  }
+ function credibleDescription(value){
+  const s=String(value||'').trim();
+  // OCR often joins columns into a plausible-looking but unusable name (for example,
+  // "ESA PEE == 954"). Keep parsing provider-neutral, but don't turn those artifacts
+  // into inventory products or purchase lines.
+  if(!s||/[=<>|{}\\]/.test(s))return false;
+  const letters=(s.match(/[\p{L}]/gu)||[]).length;
+  const words=s.match(/[\p{L}]{2,}/gu)||[];
+  return letters>=3&&(words.length>=2||words.some(w=>w.length>=4));
+ }
  function parseCandidateLine(line,catalog){
   let s=String(line||'').replace(/\s+/g,' ').trim();
   if(!s||HEADER.test(s)||STOP.test(s))return null;
   const numsIn=(str)=>[...String(str||'').matchAll(/(?:\$|€|£)?\s*\d[\d,]*(?:\.\d{1,4})?/g)].map(m=>({raw:m[0],value:num(m[0]),index:m.index,end:m.index+m[0].length}));
-  let m=s.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z0-9][A-Za-z0-9._\/-]{2,})\s+(.+)$/i);
+  const amount=/\$?\s*\d[\d,]*(?:\.\d{1,4})?/;
+ const unit='(?:fluid\\s+ounces?|fl\\s*oz|case|cases|cs|ea|each|unit|units|lb|lbs|oz|kg|g|gal|l|lt|ml|caja|cajas|unidad(?:es)?|pieza(?:s)?|pack|pk|ct|dozen|dz)';
+  // Code + quantity + description + amounts is another common column order.
+  let m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(\\d+(?:[.,]\\d+)?)\\s+(.+?)\\s+('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
+    const [,code,qtyText,desc,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog,code);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-qty-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
+    }
+  }
+  // Most supplier invoices put item code and description first, then quantity,
+  // unit, unit price and extended amount. Keep this separate from the legacy
+  // quantity-first formats so product names containing numbers stay intact.
+  m=s.match(new RegExp('^([A-Z0-9][A-Z0-9._/-]{2,})\\s+(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m&&(/[0-9]/.test(m[1])||catalog.some(p=>productCode(p)===m[1].replace(/[^A-Za-z0-9]/g,'').toLowerCase()))){
+    const [,code,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog,code);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'code-first',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')};
+    }
+  }
+  // Description-first invoices commonly omit an item code but still include
+  // quantity, optional unit, unit price and line total.
+  m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')\\s+('+amount.source+')$','i'));
+  if(m){
+    const [,desc,qtyText,unitText,priceText,totalText]=m,qty=num(qtyText),unitPrice=num(priceText),lineTotal=num(totalText);
+    if(qty>0&&credibleDescription(desc)&&Math.abs(qty*unitPrice-lineTotal)<=Math.max(.10,Math.max(1,lineTotal)*.05)){
+      const mt=matchProduct(desc,catalog);
+      return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:unitPrice,lineTotal,source:'description-first',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''};
+    }
+  }
+  // Some invoice formats provide only quantity and extended amount. Preserve
+  // that usable line and derive unit cost instead of dropping the whole row.
+  m=s.match(new RegExp('^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s+(?:('+unit+')\\s+)?('+amount.source+')$','i'));
+  if(m){
+    const [,desc,qtyText,unitText,totalText]=m,qty=num(qtyText),lineTotal=num(totalText);
+    if(qty>0&&credibleDescription(desc)&&lineTotal>=0){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc.trim(),qty,unit:mt?.p?.standardUnit||mt?.p?.unit||unitAliases[String(unitText||'').toLowerCase()]||inferUnit(desc),unitCost:lineTotal/qty,lineTotal,source:'extended-only',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
+  }
+  m=s.match(/^(\d+(?:[.,]\d+)?)\s+([A-Za-z0-9][A-Za-z0-9._\/-]{2,})\s+(.+)$/i);
   if(m){
     const qty=num(m[1]),code=m[2],rest=m[3],ns=numsIn(rest);
     if(ns.length>=2){
       const a=ns[ns.length-2],b=ns[ns.length-1];
       const desc=(rest.slice(0,a.index).trim()+' '+rest.slice(b.end).trim()).replace(/\s+/g,' ').trim();
-      if(qty>0&&desc&&a.value>=0&&b.value>=0){
+      if(qty>0&&credibleDescription(desc)&&a.value>=0&&b.value>=0){
         const arithmetic=a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03);
         if(arithmetic){const mt=matchProduct(desc,catalog,code);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code,matchedBy:mt?.byCode?'SKU':(mt?'NAME':'')}}
       }
@@ -65,7 +114,7 @@
     const qty=num(m[1]),rest=m[2],ns=numsIn(rest);
     if(ns.length>=2){
       const a=ns[ns.length-2],b=ns[ns.length-1],desc=(rest.slice(0,a.index).trim()+' '+rest.slice(b.end).trim()).replace(/\s+/g,' ').trim();
-      if(qty>0&&desc&&a.value>=0&&b.value>=0&&(a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03))){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
+      if(qty>0&&credibleDescription(desc)&&a.value>=0&&b.value>=0&&(a.value===0||b.value===0||Math.abs(qty*a.value-b.value)<=Math.max(.10,Math.max(1,b.value)*.03))){const mt=matchProduct(desc,catalog);return {product:mt?.p?.name||desc,qty,unit:mt?.p?.standardUnit||mt?.p?.unit||inferUnit(desc),unitCost:a.value,lineTotal:b.value,source:'universal-text',matchScore:mt?.score||0,code:'',matchedBy:mt?'NAME':''}}
     }
   }
   return null;
@@ -121,7 +170,7 @@
   let date='';const dm=compact.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2})\b/);if(dm)date=`${dm[3]}-${String(dm[1]).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;else{const iso=compact.match(/\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/);if(iso)date=`${iso[1]}-${String(iso[2]).padStart(2,'0')}-${String(iso[3]).padStart(2,'0')}`;else{const ord=compact.match(/\b(\d{1,2})(?:st|nd|rd|th)\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(20\d{2})\b/i);if(ord){const months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};const key=ord[2].slice(0,3).toLowerCase();date=`${ord[3]}-${String(months[key]).padStart(2,'0')}-${String(ord[1]).padStart(2,'0')}`}}}
   const labeled=(rx)=>{for(let i=0;i<lines.length;i++){const m=lines[i].match(rx);if(m)return num(m[1]);if(rx.test(lines[i])){const n=lines[i+1]?.match(/^\$?\s*([0-9][0-9,.]*)\s*$/);if(n)return num(n[1])}}return 0};
   let subtotal=labeled(/(?:^|\s)(?:subtotal|sub\s*total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
-  let tax=labeled(/(?:^|\s)(?:sales\s*tax|tax\s+amount|taxes|impuesto|impuestos|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
+  let tax=labeled(/(?:^|\s)(?:sales\s*tax|tax(?:\s+amount)?|taxes|impuesto(?:s)?|iva|total\s+tax)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)\s*$/i);
   const totals=[];for(const l of lines){const m=l.match(/(?:invoice\s+total|grand\s+total|total\s+due|amount\s+due|balance\s+due|total\s+factura|^total)\s*[:#-]?\s*\$?\s*([0-9][0-9,.]*)/i);if(m)totals.push(num(m[1]))}
   let total=totals.length?totals[totals.length-1]:0;if(!total&&subtotal)total=subtotal+tax;
   return {supplier,invoice,date,subtotal,tax,total,lines:[]};
@@ -147,7 +196,27 @@
  }
  async function ensureTesseract(){if(global.Tesseract)return global.Tesseract;const el=document.querySelector('script[data-lrx-ocr]');if(el){await new Promise((res,rej)=>{if(global.Tesseract)return res();el.addEventListener('load',res,{once:true});el.addEventListener('error',rej,{once:true})});if(global.Tesseract)return global.Tesseract}return await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.async=true;s.dataset.lrxOcr='1';s.onload=()=>global.Tesseract?resolve(global.Tesseract):reject(new Error('OCR no disponible'));s.onerror=()=>reject(new Error('No se pudo cargar OCR'));document.head.appendChild(s)})}
  function tsvLayout(tsv){const by=new Map();for(const raw of String(tsv||'').split(/\r?\n/)){const a=raw.split('\t');if(a.length<12||a[0]!=='5')continue;const text=(a[11]||'').trim(),conf=Number(a[10]);if(!text||(!Number.isNaN(conf)&&conf<20))continue;const key=[a[1],a[2],a[3],a[4],a[5]].join(':');let arr=by.get(key);if(!arr){arr=[];by.set(key,arr)}arr.push({x:Number(a[6]||0),y:Number(a[7]||0),text})}const items=[...by.values()].flat();return items.length?[{items}]:[]}
- async function ocrImage(file){const T=await ensureTesseract();const r=await T.recognize(file,'spa+eng');return {text:String(r?.data?.text||'').trim(),layout:tsvLayout(r?.data?.tsv||'')}}
+ async function preprocessedInvoiceImage(file){
+  let source,bitmap=null,url='';
+  try{if(typeof createImageBitmap==='function')bitmap=await createImageBitmap(file)}catch(e){}
+  if(bitmap)source=bitmap;else{url=URL.createObjectURL(file);source=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('No se pudo preparar la imagen'));image.src=url})}
+  try{
+   const width=Number(source.width||source.naturalWidth||0),height=Number(source.height||source.naturalHeight||0);if(!width||!height)return file;
+   const scale=Math.min(2,2400/Math.max(width,height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)return file;ctx.drawImage(source,0,0,canvas.width,canvas.height);
+   const frame=ctx.getImageData(0,0,canvas.width,canvas.height),data=frame.data;
+   for(let i=0;i<data.length;i+=4){const gray=.299*data[i]+.587*data[i+1]+.114*data[i+2],contrast=Math.max(0,Math.min(255,(gray-128)*1.28+128));data[i]=data[i+1]=data[i+2]=contrast}
+   ctx.putImageData(frame,0,0);return canvas;
+  }catch(e){return file}finally{bitmap?.close?.();if(url)URL.revokeObjectURL(url)}
+ }
+ async function ocrImage(file){
+  const T=await ensureTesseract(),recognize=async image=>T.recognize(image,'spa+eng',{tessedit_pageseg_mode:6,preserve_interword_spaces:'1'});
+  let original=null,processed=null;try{original=await recognize(file)}catch(e){}
+  const image=await preprocessedInvoiceImage(file);if(image!==file){try{processed=await recognize(image)}catch(e){}}
+  const results=[original,processed].filter(Boolean);if(!results.length)throw new Error('No se pudo reconocer el texto de la imagen');
+  const best=results.sort((a,b)=>Number(b?.data?.confidence||0)-Number(a?.data?.confidence||0)||String(b?.data?.text||'').trim().length-String(a?.data?.text||'').trim().length)[0];
+  return {text:String(best?.data?.text||'').trim(),layout:tsvLayout(best?.data?.tsv||''),confidence:Number(best?.data?.confidence||0)};
+ }
  async function pdfTextWith(pdfjs,file){
   if(!pdfjs)return null;
   if(pdfjs.GlobalWorkerOptions)pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';

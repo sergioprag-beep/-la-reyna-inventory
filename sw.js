@@ -1,8 +1,9 @@
-const CACHE='lrx-v406';
-const VERSION='2026-11-12-v406';
+// Pages deployment refresh for the DRE accounting importer.
+const CACHE='lrx-2026-11-20-dre-report-v1';
+const VERSION='2026-11-20-dre-report-v1';
 const ASSETS=[
-  './','./index.html','./styles.css?v=2026-11-12-v406',
-  `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./supabase-sync.js?v=2026-10-14-v16`,
+  './','./index.html',`./styles.css?v=${VERSION}`,
+  `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
   './manifest.webmanifest','./hero-food.jpg','./hero-bar.jpg','./LRX-LOGO-PLANTILLAS.png',
   './LRX-LOGO-LOCKUP-BRANDSAFE.svg','./LRX-LOGO-IMPRESION.jpeg','./LRX-LOGO-IMPRESION-TRANSPARENTE.png',
   `./master.json?v=${VERSION}`
@@ -26,6 +27,12 @@ self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
   if(url.origin!==self.location.origin)return;
+  // API responses are mutable shared state. Never serve them from Cache Storage:
+  // a cached revisionOnly response can hide newer writes from other devices.
+  if(url.pathname==='/api'||url.pathname.startsWith('/api/')){
+    event.respondWith(fetch(event.request,{cache:'no-store'}).catch(()=>new Response(JSON.stringify({error:'Servicio de sincronización no disponible'}),{status:503,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}})));
+    return;
+  }
   const critical=['/index.html','/app.js','/catalog-controls.js','/purchase-engine.js','/master.json','/styles.css','/sw.js'].some(path=>url.pathname.endsWith(path));
   if(critical||event.request.mode==='navigate'){
     event.respondWith((async()=>{
