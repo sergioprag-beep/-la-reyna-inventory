@@ -6,7 +6,7 @@ mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
 # Older source revisions need the compatibility patch; current source already has the period importer and dashboard logic.
-if ! grep -Fq 'Importar ventas Shift4 por período' dist/app.js; then
+if ! grep -Fq 'function saleFitsDateRange' dist/app.js; then
 # Apply the isolated Shift4 period-import correction to the built app bundle.
 # Three legacy hunks no longer match the updated app.js. Continue only for that
 # known mismatch; any different patch failure still stops the production build.
