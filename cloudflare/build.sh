@@ -406,7 +406,8 @@ for asset in ("app.js", "cloudflare-sync.js"):
 index.write_text(html)
 worker = Path("dist/sw.js")
 sw = worker.read_text()
-if sw.count(old) != 1:
-    raise SystemExit(f"Expected one service worker cache version; found {sw.count(old)}")
-worker.write_text(sw.replace(old, tag, 1))
+count = sw.count(old)
+if count < 1:
+    raise SystemExit("Expected service worker cache version was not found.")
+worker.write_text(sw.replace(old, tag))
 PY
