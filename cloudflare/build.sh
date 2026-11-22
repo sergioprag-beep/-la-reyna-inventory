@@ -511,3 +511,31 @@ if s.count(oldhead)==1:s=s.replace(oldhead,newhead,1)
 p.write_text(s)
 print("Grouped period imports and surfaced them in monthly sales summaries.")
 PY
+
+# Keep full-range product detail accessible while avoiding false month-level product attribution.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text()
+anchor=" if(!s)return toast('Venta no encontrada');"
+if s.count(anchor)!=1:raise SystemExit("Could not locate sale detail modal fallback.")
+fallback=""" const rangeParts=String(id||'').startsWith('RANGE-')?String(id).slice(6).split('|'):[];if(!s&&rangeParts.length>=4){const [source,batch,start,end]=rangeParts,rows=(state.sales||[]).filter(x=>x.importSource===source&&(x.importBatch||x.importFile||x.id)===batch&&String(x.periodStart||x.date||'').slice(0,10)===start&&String(x.periodEnd||x.periodStart||x.date||'').slice(0,10)===end);if(rows.length){const ds=rows.map(x=>saleDetail(x)),items=rows.flatMap(x=>Array.isArray(x.items)?x.items:(x.product?[{product:x.product,qty:x.qty,price:x.price}]:[]));s={id,date:start,periodStart:start,periodEnd:end,periodSummary:true,product:'Reporte '+String(rows[0].channel||source)+' · '+items.length+' líneas',channel:rows[0].channel||source,status:'COMPLETADA',qty:items.reduce((n,x)=>n+Number(x.qty||0),0),items,salesGrossOverride:ds.reduce((n,x)=>n+x.gross,0),salesDiscountOverride:ds.reduce((n,x)=>n+x.discountAmt,0),salesNetOverride:ds.reduce((n,x)=>n+x.net,0),cost:ds.reduce((n,x)=>n+x.cost,0),sourceIds:rows.map(x=>x.id)}}}
+"""
+s=s.replace(anchor,fallback+anchor,1)
+old="if(sale.ownerDaySummary||sale.importSource==='OWNER_ORDERS_CSV')continue;"
+if s.count(old)!=1:raise SystemExit("Could not isolate month product totals.")
+s=s.replace(old,"if(sale.periodSummary||sale.ownerDaySummary||sale.importSource==='OWNER_ORDERS_CSV')continue;",1)
+oldmsg="Los registros de este mes no incluyen líneas de productos. Aquí no se inventan artículos a partir del monto total."
+newmsg="Los reportes de rango tienen sus artículos dentro del detalle del reporte; el archivo no indica cuánto corresponde a cada mes."
+if s.count(oldmsg)!=1:raise SystemExit("Could not update month product explanation.")
+s=s.replace(oldmsg,newmsg,1)
+p.write_text(s)
+print("Connected grouped range report buttons to their underlying item rows.")
+PY
+python3 - <<'PY'
+from pathlib import Path
+old="2026-11-22-sales-month-products-v2";new="2026-11-22-sales-month-products-v3"
+for name in ("dist/index.html","dist/sw.js"):
+ p=Path(name);s=p.read_text()
+ if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
+ p.write_text(s.replace(old,new))
+PY
