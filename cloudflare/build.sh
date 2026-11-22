@@ -485,6 +485,7 @@ a=s.find("const monthNames=Array.from")
 b=s.find(";\n const size=",a)
 if a<0 or b<0: raise SystemExit("Could not locate monthly totals block.")
 monthblock="""const monthNames=Array.from({length:12},(_,i)=>new Date(2026,i,15).toLocaleDateString('es-US',{month:'long'})),yearRows=filtered.filter(r=>String(r.date||'').slice(0,4)===year),monthlyTotals=Array.from({length:12},(_,i)=>{const key=`${year}-${String(i+1).padStart(2,'0')}`,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);let estimated=0;for(const r of ranges){const {start,end}=salePeriodBounds(r),from=new Date(Math.max(Date.parse(start+'T12:00:00'),Date.parse(monthStart+'T12:00:00'))),to=new Date(Math.min(Date.parse(end+'T12:00:00'),Date.parse(monthEnd+'T12:00:00')));const overlap=Math.max(0,Math.round((to-from)/86400000)+1),whole=Math.max(1,Math.round((Date.parse(end+'T12:00:00')-Date.parse(start+'T12:00:00'))/86400000)+1);estimated+=Number(r.net||0)*overlap/whole}return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((a,r)=>a+Number(r.net||0),0)+estimated,estimated}})"""
+monthblock=monthblock.replace("__BT__",chr(96)).replace("__DOL__","$")
 if s.count("const monthNames=Array.from")!=1: raise SystemExit("Could not locate month names.")
 s=s[:a]+monthblock+s[b:]
 old="monthIndex>=0?yearRows.filter(r=>String(r.date||'').slice(0,7)===selectedMonth):[]"
@@ -493,6 +494,7 @@ if s.count(old)!=1: raise SystemExit("Could not include overlapping period sales
 s=s.replace(old,new,1)
 oldtxt="m.count?`${m.count} fichas`: 'Sin ventas registradas'"
 newtxt="m.count||m.reportCount?`${m.count?`${m.count} ventas`:''}${m.reportCount?`${m.count?' · ':''}${m.reportCount} reportes de rango`:''}`:'Sin ventas registradas'"
+oldtxt=oldtxt.replace("__BT__",chr(96)).replace("__DOL__","$");newtxt=newtxt.replace("__BT__",chr(96)).replace("__DOL__","$")
 if s.count(oldtxt)!=1: raise SystemExit("Could not update month card count.")
 s=s.replace(oldtxt,newtxt,1)
 oldamt="m.count?money(m.net):'—'"
@@ -503,6 +505,7 @@ if s.count(oldhint)!=1: raise SystemExit("Could not update monthly explanation."
 s=s.replace(oldhint,"Incluye ventas fechadas y una estimación de los reportes que abarcan varios meses.",1)
 oldhead="`${monthRows.length} fichas diarias · Neto ${money(monthlyTotals[monthIndex]?.net||0)}`"
 newhead="`${monthRows.length} ventas y reportes relacionados · Neto ${money(monthlyTotals[monthIndex]?.net||0)}${monthlyTotals[monthIndex]?.estimated?' · incluye estimación de rangos':''}`"
+oldhead=oldhead.replace("__BT__",chr(96)).replace("__DOL__","$");newhead=newhead.replace("__BT__",chr(96)).replace("__DOL__","$")
 if s.count(oldhead)==1:s=s.replace(oldhead,newhead,1)
 p.write_text(s)
 print("Grouped period imports and surfaced them in monthly sales summaries.")
