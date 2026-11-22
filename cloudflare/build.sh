@@ -13,7 +13,7 @@ if patch --batch --forward -p1 -d dist < shift4-period.patch >"$patch_log" 2>&1;
   cat "$patch_log"
 else
   cat "$patch_log"
-  if ! grep -Fq '3 out of 31 hunks FAILED' "$patch_log"; then
+  if ! grep -Eiq '3 out of 31 hunks failed' "$patch_log"; then
     rm -f "$patch_log" dist/app.js.rej
     exit 1
   fi
@@ -144,4 +144,17 @@ if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
 worker = worker.replace(old, "'/purchase-engine.js','/cloudflare-sync.js','/master.json'", 1)
 sw.write_text(worker)
+PY
+
+# When no date range is saved on this device, default to the current calendar year.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+for old, new in (("'2025-01-01'", "`${new Date().getFullYear()}-01-01`"), ("'2025-12-31'", "`${new Date().getFullYear()}-12-31`")):
+    if old not in s:
+        raise SystemExit(f"Expected fallback date {old} was not found.")
+    s = s.replace(old, new)
+p.write_text(s)
+print("Set the default date range to the current calendar year.")
 PY
