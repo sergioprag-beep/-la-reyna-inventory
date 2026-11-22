@@ -6,18 +6,26 @@ mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
 # Apply the isolated Shift4 period-import correction to the built app bundle.
-# Three legacy hunks no longer match the updated app.js. Continue only for that
-# known mismatch; any different patch failure still stops the production build.
+# The dashboard hunk is superseded by the normalization step below. Allow only
+# that single stale hunk, or the three previously known stale hunks.
 patch_log=$(mktemp)
 if patch --batch --forward -p1 -d dist < shift4-period.patch >"$patch_log" 2>&1; then
   cat "$patch_log"
 else
   cat "$patch_log"
-  if ! grep -Eiq '3 out of 31 hunks failed' "$patch_log"; then
+  one_known_failure=0
+  if grep -Eiq '1 out of 31 hunks failed' "$patch_log" && grep -Fq 'Hunk #1 FAILED at 330' "$patch_log"; then
+    one_known_failure=1
+  fi
+  three_known_failures=0
+  if grep -Eiq '3 out of 31 hunks failed' "$patch_log"; then
+    three_known_failures=1
+  fi
+  if [ "$one_known_failure" -ne 1 ] && [ "$three_known_failures" -ne 1 ]; then
     rm -f "$patch_log" dist/app.js.rej
     exit 1
   fi
-  echo "Continuing with 28 applicable patch hunks; 3 stale hunks were rejected."
+  echo "Continuing with known stale dashboard hunk(s); dashboard calculations are normalized below."
   rm -f dist/app.js.rej
 fi
 rm -f "$patch_log"
