@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v3";new="2026-11-22-sales-month-products-v4"
+old="2026-11-22-sales-month-products-v4";new="2026-11-22-sales-month-products-v5"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
@@ -607,4 +607,15 @@ if s.count(back)!=1:raise SystemExit("Could not locate month-back handler.")
 s=s.replace(back,"if(a==='sales-month-back'){state._salesChannel='all';state._salesMonth='';",1)
 p.write_text(s)
 print("Grouped range reports by platform and added monthly channel filters.")
+PY
+
+# Refresh a stale prior-year full-year UI selection to the current year.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text()
+old="state.settings.dateRange=savedRange}catch(e){console.warn('LRX UI preferences unavailable',e)}"
+new=old+";const currentCalendarYear=new Date().getFullYear(),previousCalendarYear=currentCalendarYear-1,activeDateRange=state.settings?.dateRange||{};if(activeDateRange.from===String(previousCalendarYear)+'-01-01'&&activeDateRange.to===String(previousCalendarYear)+'-12-31'){state.settings.dateRange={from:String(currentCalendarYear)+'-01-01',to:String(currentCalendarYear)+'-12-31'};try{localStorage.setItem('lrx_ui_date_range_preference',JSON.stringify(state.settings.dateRange))}catch(e){console.warn('Could not update prior-year date preference',e)}}"
+if s.count(old)!=1:raise SystemExit("Could not locate date preference initialization")
+p.write_text(s.replace(old,new,1))
+print("Moved a stale previous-year full-year view to the current year.")
 PY
