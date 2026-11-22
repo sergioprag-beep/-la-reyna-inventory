@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v6",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v6",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v7",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v7",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v6")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v7")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -232,7 +232,7 @@ if s.count(old)!=1: raise SystemExit("Could not wire the async Product Mix parse
 s=s.replace(old,new,1)
 for old,new in (
  ("Importar ventas Shift4 por período","Importar ventas Shift4 por período"),
- ("Importar Product Mix Shift4","Importar Product Mix Shift4"),
+ ("Importar Product Mix Shift4","Importar Shift4"),
  ("Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)","Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)"),
  ("Artículo Shift4","Artículo Shift4"),
  ("Selecciona primero el reporte Product Mix de Shift4","Selecciona primero el reporte Product Mix de Shift4"),
