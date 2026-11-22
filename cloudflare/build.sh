@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-22-channel-rollup-v1",
-    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-22-channel-rollup-v1",
+    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-22-channel-rollup-v2",
+    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-22-channel-rollup-v2",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-20-dre-report-v1" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-22-channel-rollup-v1")
+worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-22-channel-rollup-v2")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
