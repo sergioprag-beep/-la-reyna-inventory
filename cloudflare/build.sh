@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v9",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v9",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v10",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v10",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v9")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v10")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -292,4 +292,45 @@ once("return {...s,gross,discountAmt,commissionPct,commission,card,fixedFee,net,
 twice("channel:sale.channel||'Sin canal',date});","channel:canonicalSalesChannelName(sale.channel||'Sin canal'),date});","canonical menu engineering channel")
 p.write_text(s)
 print("Grouped platform aliases and deduplicated matching item-level imports.")
+PY
+
+
+# Route marketplace Product Mix files to Menu Engineering, not POS/DRE revenue.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js")
+s=p.read_text()
+def once(old,new,label):
+    global s
+    if s.count(old)!=1: raise SystemExit(f"Could not apply Product Mix routing: {label} ({s.count(old)} matches)")
+    s=s.replace(old,new,1)
+once(",'sales','promotions',",",'sales','productMixReports','promotions',","product mix state collection")
+once(
+    "const mapping={};for(const [k,tests] of Object.entries(aliases))mapping[k]=choose(headers,tests);const filenameDates=",
+    "const mapping={};for(const [k,tests] of Object.entries(aliases))mapping[k]=choose(headers,tests);const headerKeys=headers.map(genericChannelColumnKey),isProductMix=/product[\\\\s_-]*mix/i.test(String(file.name||''))||(['nombredelarticulo','totalvendido','ventasbrutas'].every(k=>headerKeys.includes(k)));const filenameDates=",
+    "Product Mix report detection")
+once("window._channelImportDraft={channel,grid,headerRow,headers,fileName:file.name,mapping};","window._channelImportDraft={channel,grid,headerRow,headers,fileName:file.name,mapping,kind:isProductMix?'product-mix':'channel-sales'};","store import type")
+once("renderChannelImportPreview()}catch(e){showError(e)}}}","document.getElementById('confirmChannelImport').textContent=isProductMix?'Importar Product Mix':'Importar ventas';renderChannelImportPreview()}catch(e){showError(e)}}}","import action label")
+once(
+    "No se descuenta inventario.</p>",
+    "No se descuenta inventario.</p>\${p.kind==='product-mix'?'<p class=\\\"muted\\\"><b>Product Mix:</b> se usará en Menu Engineering; no suma ventas financieras ni descuenta inventario.</p>':''}",
+    "Product Mix preview notice")
+start=s.index("function channelImportDedupe(rows){")
+end=s.index("function renderChannelImportPreview()",start)
+dedupe="""function channelImportDedupe(rows){const p=window._channelImportDraft,channel=canonicalSalesChannelName(p?.channel),existing=p?.kind==='product-mix'?(state.productMixReports||[]).filter(r=>canonicalSalesChannelName(r.channel)===channel).flatMap(r=>(r.products||[]).map(item=>genericChannelFingerprint({channel:r.channel,periodStart:r.periodStart,periodEnd:r.periodEnd,product:item.product,qty:item.qty,sales:item.gross}))):(state.sales||[]).filter(s=>canonicalSalesChannelName(s.channel)===channel).flatMap(s=>{const items=Array.isArray(s.items)&&s.items.length?s.items:[{product:s.product,qty:s.qty||1,price:s.price||0}];return items.map(item=>{const qty=Number(item.qty||1),sales=Number(item.price||s.price||0)*qty;return genericChannelFingerprint({channel:canonicalSalesChannelName(s.channel),date:s.date,periodStart:s.periodStart||s.date,periodEnd:s.periodEnd||s.date,product:item.product||s.product,qty,sales})})}),existingCounts=new Map(),seenCounts=new Map();for(const key of existing)existingCounts.set(key,(existingCounts.get(key)||0)+1);return rows.map(x=>{const fingerprint=genericChannelFingerprint({...x,channel}),seen=(seenCounts.get(fingerprint)||0)+1;seenCounts.set(fingerprint,seen);return {...x,fingerprint,duplicate:seen<=(existingCounts.get(fingerprint)||0)}})}\n"""
+s=s[:start]+dedupe+s[end:]
+once(
+    "function confirmChannelImport(){const p=window._channelImportDraft,allRows=channelImportDedupe(channelImportRows()),rows=allRows.filter(x=>!x.duplicate),skipped=allRows.length-rows.length,from=document.getElementById('channelImportFrom')?.value||'',to=document.getElementById('channelImportTo')?.value||'',channel=String(p?.channel||'').trim();if(!rows.length)return toast('No hay líneas nuevas para importar; las filas duplicadas se omitieron.');if(!channel)return toast('Selecciona el canal del archivo');const source=",
+    "function confirmChannelImport(){const p=window._channelImportDraft,allRows=channelImportDedupe(channelImportRows()),rows=allRows.filter(x=>!x.duplicate),skipped=allRows.length-rows.length,from=document.getElementById('channelImportFrom')?.value||'',to=document.getElementById('channelImportTo')?.value||'',channel=canonicalSalesChannelName(p?.channel);if(!rows.length)return toast('No hay líneas nuevas para importar; las filas duplicadas se omitieron.');if(!channel)return toast('Selecciona el canal del archivo');if(p?.kind==='product-mix'){const snapshot=JSON.stringify(state),discountCol=(p.headers||[]).findIndex(h=>['descuentos','discounts','discount'].includes(genericChannelColumnKey(h))),products=rows.map(x=>{const row=p.grid[p.headerRow+x.index]||[],discount=discountCol>=0?Math.abs(uberMoney(row[discountCol])):0;return {product:x.product,qty:Number(x.qty||0),gross:Number(x.sales||0),discount,net:Number(x.sales||0)-discount}});state.productMixReports=state.productMixReports||[];state.productMixReports.push({id:'PM-'+uberHeaderKey(channel)+'-'+from+'-'+to+'-'+Date.now(),channel,periodStart:from,periodEnd:to,fileName:p.fileName,importedAt:now(),products});audit('PRODUCT_MIX_IMPORT',channel+' · '+from+' a '+to+' · '+products.length+' productos para Menu Engineering');if(!save()){restoreStateSnapshot(snapshot);return}window._channelImportDraft=null;close();render();return toast(products.length+' productos de Product Mix guardados en Menu Engineering; ventas financieras sin cambio.')}const source=",
+    "Product Mix routing branch")
+once(
+    "const out=[],recipes=allRecipes();let pending=0;\\n for(const sale of state.sales||[]){\\n  if(['CANCELADA','DEVUELTA']",
+    "const out=[],recipes=allRecipes(),mixReports=state.productMixReports||[];let pending=0;\\n for(const sale of state.sales||[]){\\n  const saleDate=String(sale.date||sale.createdAt||'').slice(0,10);if(String(sale.importSource||'').startsWith('CHANNEL_CSV:')&&mixReports.some(r=>canonicalSalesChannelName(r.channel)===canonicalSalesChannelName(sale.channel)&&saleDate>=String(r.periodStart||'')&&saleDate<=String(r.periodEnd||'')))continue;\\n  if(['CANCELADA','DEVUELTA']",
+    "suppress duplicate channel summaries in Menu Engineering")
+once(
+    " return {items:out,pending};\\n}",
+    " for(const report of mixReports){const rs=String(report.periodStart||''),re=String(report.periodEnd||'');if((from&&from>rs)||(to&&to<re))continue;for(const item of report.products||[]){const recipe=recipes.find(r=>String(r.name||'').trim().toLowerCase()===String(item.product||'').trim().toLowerCase());if(!recipe){pending++;continue}const qty=Number(item.qty||0),gross=Number(item.gross||0),net=Number(item.net??gross),costDetail=recipeCostDetail(recipe),unitCost=recipeOutputCostFromDetail(recipe,costDetail),cost=unitCost*qty;out.push({product:recipe.name,recipeId:recipe.id,qty,gross,net,cost,unitCost,profit:net-cost,costComplete:costDetail.complete||(!Array.isArray(recipe.items)||!recipe.items.length)&&Number(recipe.cost||0)>0,channel:canonicalSalesChannelName(report.channel),date:re})}}\\n return {items:out,pending};\\n}",
+    "include Product Mix in Menu Engineering")
+p.write_text(s)
+print("Separated marketplace Product Mix from financial sales and linked it to Menu Engineering.")
 PY
