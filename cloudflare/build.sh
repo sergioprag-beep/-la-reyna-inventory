@@ -232,6 +232,7 @@ if s.count(old)!=1: raise SystemExit("Could not wire the async Product Mix parse
 s=s.replace(old,new,1)
 for old,new in (
  ("Importar ventas Shift4 por período","Importar Product Mix de DoorDash"),
+ ("Importar Product Mix Shift4","Importar Product Mix DoorDash"),
  ("Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)","Reporte Product Mix de DoorDash (.xlsx, .xls o .csv)"),
  ("Artículo Shift4","Artículo DoorDash"),
  ("Selecciona primero el reporte Product Mix de Shift4","Selecciona primero el Product Mix de DoorDash"),
