@@ -212,10 +212,36 @@ replacement = r'''async function parseShift4ProductMix(file,buffer){
  for(const sheet of sheets){for(let ri=0;ri<sheet.rows.length;ri++){const h=sheet.rows[ri].map(normHeader);if(ri===0)seenHeaders=h;const item=h.findIndex(x=>['item','product','product name','menu item','nombre del articulo','articulo'].includes(x)||x.includes('nombre del art')),gross=h.findIndex(x=>x.includes('gross sales')||x==='ventas brutas'||x==='venta bruta'),qty=h.findIndex(x=>x==='quantity'||x==='qty'||x==='total vendido'||x==='total sold');if(item>=0&&gross>=0&&qty>=0){found={name:sheet.name,rows:sheet.rows,ri,item,gross,qty,net:h.findIndex(x=>x.includes('net sales')||x==='ventas netas'),discount:h.findIndex(x=>x.includes('discount')||x.includes('descuento')),tax:h.findIndex(x=>x.includes('inclusive tax')||x.includes('impuesto incluido'))};break}}if(found)break}
  if(!found)return {error:`No reconocí las columnas del Product Mix. Encabezados detectados: ${seenHeaders.filter(Boolean).slice(0,20).join(' · ')||'ninguno'}. Se necesitan artículo, ventas brutas y cantidad.`};
  const parsePeriod=txt=>{const text=String(txt||''),m=text.match(/(?:period|periodo|período)\s*:?\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})(?:\s*(?:to|through|a|hasta|–|—|-)\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}))?/i);if(!m)return null;return {start:shift4DateValue(m[1]),end:shift4DateValue(m[2]||m[1])}};let period=null,periodSource='';for(const row of found.rows.slice(0,found.ri)){period=parsePeriod(row.map(x=>String(x||'')).join(' '));if(period?.start){periodSource='período del archivo';break}}if(!period?.start){const filename=String(file.name||''),range=filename.match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/i)||filename.match(/(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})/i),m=range||filename.match(/(\d{4}-\d{2}-\d{2})/);if(m){period={start:shift4DateValue(m[1]),end:shift4DateValue(m[2]||m[1])};periodSource='nombre del archivo'}}
- const products=[];for(const row of found.rows.slice(found.ri+1)){const name=String(row[found.item]||'').trim();if(!name||/^total\b/i.test(name))continue;const qty=shift4Num(row[found.qty]),gross=shift4Num(row[found.gross]);if(qty<=0)continue;const net=found.net>=0?shift4Num(row[found.net]):gross-(found.discount>=0?shift4Num(row[found.discount]):0);products.push({name,qty,gross,net,tax:found.tax>=0?shift4Num(row[found.tax]):0})}if(!products.length)return {error:'Encontré el reporte, pero no contiene artículos vendidos con cantidad.'};return {periodStart:period?.start||'',periodEnd:period?.end||period?.start||'',periodSource,products,sheet:found.name}
+ const products=[];for(const row of found.rows.slice(found.ri+1)){const name=String(row[found.item]||'').trim();if(!name||/^total\b/i.test(name))continue;const qty=shift4Num(row[found.qty]),gross=shift4Num(row[found.gross]);if(qty<=0)continue;const net=found.net>=0?shift4Num(row[found.net]):gross-(found.discount>=0?shift4Num(row[found.discount]):0);products.push({name,qty,gross,net,tax:found.tax>=0?shift4Num(row[found.tax]):0})}if(!products.length)return {error:'Encontré el reporte, pero no contiene artículos vendidos con cantidad.'};return {date:period?.start||'',dateSource:periodSource,periodStart:period?.start||'',periodEnd:period?.end||period?.start||'',periodSource,products,sheet:found.name}
 }
 '''
 s=s[:start]+replacement+s[end:]
 p.write_text(s)
 print("Replaced Shift4 CSV handling with direct UTF-8 parsing and header diagnostics.")
 PY
+
+
+# Connect the asynchronous CSV reader to the DoorDash Product Mix import dialog.
+python3 - <<'PYCODE'
+from pathlib import Path
+p=Path("dist/app.js")
+s=p.read_text()
+old="const parsed=parseShift4ProductMix(file,await file.arrayBuffer());"
+new="const parsed=await parseShift4ProductMix(file,await file.arrayBuffer());"
+if s.count(old)!=1: raise SystemExit("Could not wire the async Product Mix parser to the import dialog.")
+s=s.replace(old,new,1)
+for old,new in (
+ ("Importar ventas Shift4 por período","Importar Product Mix de DoorDash"),
+ ("Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)","Reporte Product Mix de DoorDash (.xlsx, .xls o .csv)"),
+ ("Artículo Shift4","Artículo DoorDash"),
+ ("Selecciona primero el reporte Product Mix de Shift4","Selecciona primero el Product Mix de DoorDash"),
+ (" registro(s) Shift4 importado(s)."," registro(s) de DoorDash importado(s)."),
+ ("Reporte Shift4 · ${items.length} productos","Reporte DoorDash · ${items.length} productos"),
+ ("No pude leer este archivo. Selecciona el reporte Product Mix de Shift4 en Excel o CSV.","No pude leer este archivo Product Mix de DoorDash. Revisa el formato CSV o Excel."),
+ ("price:qty?gross/qty:0,channel:'Shift4',commission:0","price:qty?gross/qty:0,channel:'DoorDash',commission:0"),
+):
+ if s.count(old)!=1: raise SystemExit(f"Could not update DoorDash import text or channel: {old}")
+ s=s.replace(old,new,1)
+p.write_text(s)
+print("Connected async Product Mix parser and labeled import as DoorDash.")
+PYCODE
