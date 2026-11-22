@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v8",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v8",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v9",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v9",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v8")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v9")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -277,32 +277,19 @@ s = p.read_text()
 def once(old, new, label):
     global s
     if s.count(old) != 1:
-        raise SystemExit(f"Could not apply channel grouping change: {label}")
+        raise SystemExit(f"Could not apply channel grouping change: {label} (found {s.count(old)})")
     s = s.replace(old, new, 1)
-once(
-    "function genericChannelColumnKey(value){return uberHeaderKey(value)}",
-    "function canonicalSalesChannelName(value){const raw=String(value||'').trim(),key=uberHeaderKey(raw).replace(/^productmix/,'');if(['shift4','salon','takeout','pickup','pos'].includes(key))return 'Shift4';if(['uber','ubereats'].includes(key))return 'Uber Eats';if(key==='doordash')return 'DoorDash';if(key==='grubhub')return 'Grubhub';return raw}function genericChannelColumnKey(value){return uberHeaderKey(value)}",
-    "canonical channel helper")
-once(
-    "function genericChannelImportModal(channel){window._channelImportDraft=",
-    "function genericChannelImportModal(channel){channel=canonicalSalesChannelName(channel);window._channelImportDraft=",
-    "channel import normalization")
-once(
-    "function genericChannelFingerprint(x){return [String(x.channel||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase(),String(x.periodStart||x.date||'').slice(0,10),String(x.periodEnd||x.date||'').slice(0,10),String(x.product||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),Number(x.qty||1).toFixed(3),Number(x.sales||0).toFixed(2),Number(x.commission||0).toFixed(2),Number(x.otherFee||0).toFixed(2),Number(x.payout||0).toFixed(2)].join('|')}",
-    "function genericChannelFingerprint(x){return [canonicalSalesChannelName(x.channel),String(x.periodStart||x.date||'').slice(0,10),String(x.periodEnd||x.date||'').slice(0,10),String(x.product||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),Number(x.qty||1).toFixed(3),Number(x.sales||0).toFixed(2)].join('|')}",
-    "platform fingerprint")
-once(
-    "function channelImportDedupe(rows){const p=window._channelImportDraft,channel=String(p?.channel||'').trim().toLowerCase(),existing=(state.sales||[]).filter(s=>String(s.channel||'').trim().toLowerCase()===channel).map(genericChannelExistingFingerprint),existingCounts=new Map(),seenCounts=new Map();for(const key of existing)existingCounts.set(key,(existingCounts.get(key)||0)+1);return rows.map(x=>{const fingerprint=genericChannelFingerprint({...x,channel:p.channel}),seen=(seenCounts.get(fingerprint)||0)+1;seenCounts.set(fingerprint,seen);return {...x,fingerprint,duplicate:seen<=(existingCounts.get(fingerprint)||0)}})}",
-    "function channelImportDedupe(rows){const p=window._channelImportDraft,channel=canonicalSalesChannelName(p?.channel),existing=(state.sales||[]).filter(s=>canonicalSalesChannelName(s.channel)===channel).flatMap(s=>{const items=Array.isArray(s.items)&&s.items.length?s.items:[{product:s.product,qty:s.qty||1,price:s.price||0}];return items.map(item=>{const qty=Number(item.qty||1),sales=Number(item.price||s.price||0)*qty;return genericChannelFingerprint({channel:canonicalSalesChannelName(s.channel),date:s.date,periodStart:s.periodStart||s.date,periodEnd:s.periodEnd||s.date,product:item.product||s.product,qty,sales})})}),existingCounts=new Map(),seenCounts=new Map();for(const key of existing)existingCounts.set(key,(existingCounts.get(key)||0)+1);return rows.map(x=>{const fingerprint=genericChannelFingerprint({...x,channel}),seen=(seenCounts.get(fingerprint)||0)+1;seenCounts.set(fingerprint,seen);return {...x,fingerprint,duplicate:seen<=(existingCounts.get(fingerprint)||0)}})}",
-    "cross-import item dedupe")
-once(
-    "return {...s,gross,discountAmt,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};",
-    "return {...s,channel:canonicalSalesChannelName(s.channel),gross,discountAmt,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};",
-    "canonical sales report channel")
-once(
-    "channel:sale.channel||'Sin canal',date});",
-    "channel:canonicalSalesChannelName(sale.channel||'Sin canal'),date});",
-    "canonical menu engineering channel")
+def twice(old,new,label):
+    global s
+    if s.count(old) != 2:
+        raise SystemExit(f"Could not apply channel grouping change: {label} (found {s.count(old)})")
+    s = s.replace(old,new)
+once("function genericChannelColumnKey(value){return uberHeaderKey(value)}","function canonicalSalesChannelName(value){const raw=String(value||'').trim(),key=uberHeaderKey(raw).replace(/^productmix/,'');if(['shift4','salon','takeout','pickup','pos'].includes(key))return 'Shift4';if(['uber','ubereats'].includes(key))return 'Uber Eats';if(key==='doordash')return 'DoorDash';if(key==='grubhub')return 'Grubhub';return raw}function genericChannelColumnKey(value){return uberHeaderKey(value)}","canonical channel helper")
+once("function genericChannelImportModal(channel){window._channelImportDraft=","function genericChannelImportModal(channel){channel=canonicalSalesChannelName(channel);window._channelImportDraft=","channel import normalization")
+once("function genericChannelFingerprint(x){return [String(x.channel||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase(),String(x.periodStart||x.date||'').slice(0,10),String(x.periodEnd||x.date||'').slice(0,10),String(x.product||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),Number(x.qty||1).toFixed(3),Number(x.sales||0).toFixed(2)].join('|')}","function genericChannelFingerprint(x){return [canonicalSalesChannelName(x.channel),String(x.periodStart||x.date||'').slice(0,10),String(x.periodEnd||x.date||'').slice(0,10),String(x.product||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),Number(x.qty||1).toFixed(3),Number(x.sales||0).toFixed(2)].join('|')}","platform fingerprint")
+once("function channelImportDedupe(rows){const p=window._channelImportDraft,channel=String(p?.channel||'').trim().toLowerCase(),existing=(state.sales||[]).filter(s=>String(s.channel||'').trim().toLowerCase()===channel).map(genericChannelExistingFingerprint),existingCounts=new Map(),seenCounts=new Map();for(const key of existing)existingCounts.set(key,(existingCounts.get(key)||0)+1);return rows.map(x=>{const fingerprint=genericChannelFingerprint({...x,channel:p.channel}),seen=(seenCounts.get(fingerprint)||0)+1;seenCounts.set(fingerprint,seen);return {...x,fingerprint,duplicate:seen<=(existingCounts.get(fingerprint)||0)}})}","function channelImportDedupe(rows){const p=window._channelImportDraft,channel=canonicalSalesChannelName(p?.channel),existing=(state.sales||[]).filter(s=>canonicalSalesChannelName(s.channel)===channel).flatMap(s=>{const items=Array.isArray(s.items)&&s.items.length?s.items:[{product:s.product,qty:s.qty||1,price:s.price||0}];return items.map(item=>{const qty=Number(item.qty||1),sales=Number(item.price||s.price||0)*qty;return genericChannelFingerprint({channel:canonicalSalesChannelName(s.channel),date:s.date,periodStart:s.periodStart||s.date,periodEnd:s.periodEnd||s.date,product:item.product||s.product,qty,sales})})}),existingCounts=new Map(),seenCounts=new Map();for(const key of existing)existingCounts.set(key,(existingCounts.get(key)||0)+1);return rows.map(x=>{const fingerprint=genericChannelFingerprint({...x,channel}),seen=(seenCounts.get(fingerprint)||0)+1;seenCounts.set(fingerprint,seen);return {...x,fingerprint,duplicate:seen<=(existingCounts.get(fingerprint)||0)}})}","cross-import item dedupe")
+once("return {...s,gross,discountAmt,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};","return {...s,channel:canonicalSalesChannelName(s.channel),gross,discountAmt,commissionPct,commission,card,fixedFee,net,cost,profit:net-cost,missing:[...new Set(missing)],margin:net?(net-cost)/net*100:0,foodCost:net?cost/net*100:0};","canonical sales report channel")
+twice("channel:sale.channel||'Sin canal',date});","channel:canonicalSalesChannelName(sale.channel||'Sin canal'),date});","canonical menu engineering channel")
 p.write_text(s)
-print("Grouped channel aliases and added cross-import item deduplication.")
+print("Grouped platform aliases and deduplicated matching item-level imports.")
 PY
