@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-channel-import-recovery-v1",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-channel-import-recovery-v1",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-dre-vendor-purchase-summary-v1",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-dre-vendor-purchase-summary-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-channel-import-recovery-v1")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-dre-vendor-purchase-summary-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -157,4 +157,42 @@ for old, new in (("'2025-01-01'", "`${new Date().getFullYear()}-01-01`"), ("'202
     s = s.replace(old, new)
 p.write_text(s)
 print("Set the default date range to the current calendar year.")
+PY
+
+# Show DRE supplier purchases in the financial summary without creating
+# inventory receipts or accounts-payable purchase records.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+old = " const purchases=rangePurchases.reduce((n,x)=>n+Number(x.total||0),0);"
+new = " const dreSupplierPurchases=(state.dreRecords||[]).filter(x=>x.type==='expense'&&['Compras a proveedores','Otros proveedores'].includes(String(x.category||'').trim())&&dreSupplierInRange(x,rangeFrom,rangeTo)),hasDreSupplierPurchases=dreSupplierPurchases.length>0,purchases=hasDreSupplierPurchases?dreSupplierPurchases.reduce((n,x)=>n+Number(x.amount||0),0):rangePurchases.reduce((n,x)=>n+Number(x.total||0),0);"
+if s.count(old) != 1:
+    raise SystemExit("Could not locate dashboard purchase calculation.")
+s = s.replace(old, new, 1)
+old = "['♨','Compras de Alimentos',money0(purchases),'Compras registradas en el período','orange']"
+new = "['♨',hasDreSupplierPurchases?'Compras DRE':'Compras de Alimentos',money0(purchases),hasDreSupplierPurchases?'DRE · agrupadas por proveedor':'Compras registradas en el período','orange']"
+if s.count(old) != 1:
+    raise SystemExit("Could not locate dashboard purchase card.")
+s = s.replace(old, new, 1)
+needle = "function purchases(){"
+helper = r'''function dreSupplierInRange(row,from,to){const period=String(row?.importPeriod||'');if(/^\d{4}-\d{2}$/.test(period)){const start=period+'-01',[year,month]=period.split('-').map(Number),end=new Date(year,month,0).toISOString().slice(0,10);return start<=to&&end>=from}const date=String(row?.date||row?.createdAt||'').slice(0,10);return Boolean(date&&date>=from&&date<=to)}
+function dreSupplierPurchaseSummary(){
+ const range=state.settings?.dateRange||{},year=new Date().getFullYear(),from=range.from||`${year}-01-01`,to=range.to||`${year}-12-31`,months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],groups=new Map();
+ for(const row of state.dreRecords||[]){const date=String(row.date||'').slice(0,10),category=String(row.category||'').trim(),supplier=String(row.description||'').trim();if(row.type!=='expense'||!['Compras a proveedores','Otros proveedores'].includes(category)||!dreSupplierInRange(row,from,to)||!supplier)continue;const key=supplier.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();let group=groups.get(key);if(!group){group={supplier,total:0,count:0,months:new Map()};groups.set(key,group)}const amount=Number(row.amount||0),month=date.slice(0,7);group.total+=amount;group.count++;group.months.set(month,(group.months.get(month)||0)+amount)}
+ const rows=[...groups.values()].sort((a,b)=>b.total-a.total);if(!rows.length)return '';
+ const body=rows.map(row=>{const monthly=[...row.months.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([period,amount])=>{const m=Number(period.slice(5,7))-1,y=period.slice(0,4);return `${months[m]} ${y}: ${money(amount)}`}).join(' · ');return `<tr><td><b>${esc(row.supplier)}</b></td><td>${esc(monthly)}</td><td>${row.count}</td><td><b>${money(row.total)}</b></td></tr>`}).join('');
+ return `<section class="card" style="margin-top:14px"><h3>Resumen financiero del DRE · compras por proveedor</h3><p class="muted">Montos agrupados desde las categorías de proveedores del DRE para el rango seleccionado. Solo informativo; no crea facturas, cuentas por pagar ni movimientos de inventario.</p><div class="tablewrap"><table><thead><tr><th>Proveedor / concepto</th><th>Detalle mensual</th><th>Registros</th><th>Total del rango</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th colspan="3">Total DRE por proveedores</th><th>${money(rows.reduce((sum,row)=>sum+row.total,0))}</th></tr></tfoot></table></div></section>`
+}
+'''
+if s.count(needle)!=1:
+    raise SystemExit("Could not locate purchases module renderer.")
+s=s.replace(needle,helper+needle,1)
+old = "<div class=\"grid\"><div class=\"card kpi\"><small>Compras</small><strong>${rows.length}</strong></div><div class=\"card kpi\"><small>Valor comprado</small><strong>${money(total)}</strong></div><div class=\"card kpi\"><small>Por pagar</small><strong>${money(payable)}</strong></div><div class=\"card kpi\"><small>Recibidas</small><strong>${received}</strong></div></div><div class=\"card\" style=\"margin-top:14px\"><div class=\"toolbar\">"
+new = "<div class=\"grid\"><div class=\"card kpi\"><small>Compras</small><strong>${rows.length}</strong></div><div class=\"card kpi\"><small>Valor comprado</small><strong>${money(total)}</strong></div><div class=\"card kpi\"><small>Por pagar</small><strong>${money(payable)}</strong></div><div class=\"card kpi\"><small>Recibidas</small><strong>${received}</strong></div></div>${dreSupplierPurchaseSummary()}<div class=\"card\" style=\"margin-top:14px\"><div class=\"toolbar\">"
+if s.count(old)!=1:
+    raise SystemExit("Could not insert the DRE supplier summary in the purchases module.")
+s=s.replace(old,new,1)
+p.write_text(s)
+print("Added DRE supplier purchase totals to dashboard and Purchases financial summary.")
 PY
