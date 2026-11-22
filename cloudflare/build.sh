@@ -544,7 +544,7 @@ PY
 python3 - <<'PY'
 from pathlib import Path
 p=Path("dist/app.js");s=p.read_text();sales_start=s.find("function sales(){")
-a=s.find("const monthlyTotals=Array.from",sales_start);b=s.find(";\n const size=",a)
+a=s.find("monthlyTotals=Array.from",sales_start);b=s.find(";\n const size=",a)
 if sales_start<0 or a<0 or b<0:raise SystemExit("Could not isolate monthly totals calculation.")
 block="""const monthlyTotals=Array.from({length:12},(_,i)=>{const key=__BT____DOL__{year}-__DOL__{String(i+1).padStart(2,'0')}__BT__,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((total,r)=>total+Number(r.net||0),0)}})"""
 block=block.replace("__BT__",chr(96)).replace("__DOL__","$")
@@ -573,4 +573,41 @@ for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
  p.write_text(s.replace(old,new))
+PY
+
+# Group multi-period reports by platform and provide platform filters inside each month.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text();sales_start=s.find("function sales(){")
+if sales_start<0:raise SystemExit("Could not locate sales renderer.")
+a=s.find("const periodSummaryPanel=",sales_start);b=s.find("\n const monthlyOverview=",a)
+if a<0 or b<0:raise SystemExit("Could not locate period summary panel.")
+panel="""const periodGroups=new Map();for(const r of periodSummaries){const name=canonicalSalesChannelName(r.channel||r.importSource||'Otros');if(!periodGroups.has(name))periodGroups.set(name,[]);periodGroups.get(name).push(r)}const rangeChannels=[...new Set([...channelCards.map(x=>canonicalSalesChannelName(x.name)),...periodGroups.keys()])];const periodSummaryPanel=periodSummaries.length?__BT__<details class="card sales-period-summary" style="margin-top:14px"><summary>Reportes de varios meses · __DOL__{periodSummaries.length} · __DOL__{money(periodSummaries.reduce((n,r)=>n+Number(r.net||0),0))}</summary><p class="muted">Cada canal queda agrupado. El importe es el total del rango del reporte, no un total mensual.</p><div class="sales-period-channels">__DOL__{rangeChannels.map(name=>{const reports=periodGroups.get(name)||[];return __BT__<details class="sales-period-channel"><summary>__DOL__{esc(name)} · __DOL__{reports.length} reportes__DOL__{reports.length?' · '+money(reports.reduce((n,r)=>n+Number(r.net||0),0)):''}</summary>__DOL__{reports.length?__BT__<div class="catalog-results">__DOL__{reports.map(r=>{const products=(r.items||[]).filter(x=>!isSyntheticSalesProduct(x.product||x.name));return __BT__<article class="catalog-card"><div class="catalog-title"><span class="status">__DOL__{esc(name)} · PERÍODO</span><h3>__DOL__{esc(salePeriodLabel(r))}</h3></div><div class="catalog-grid"><div><small>Productos</small><b>__DOL__{products.length?products.length+' artículos':'Sin detalle de artículos'}</b></div><div><small>Venta neta del período</small><b>__DOL__{money(r.net)}</b></div></div><div class="catalog-actions"><button class="btn primary" data-action="view-sale" data-id="__DOL__{esc(r.id)}">__DOL__{products.length?'Ver productos':'Ver detalle del total'}</button></div></article>__BT__}).join('')}</div>__BT__:__BT__<p class="muted">No hay reportes que abarquen varios meses en este canal. Sus ventas aparecen al abrir un mes.</p>__BT__}</details>__BT__}).join('')}</div></details>__BT__:'';"""
+panel=panel.replace("__BT__",chr(96)).replace("__DOL__","$")
+s=s[:a]+" const "+panel+s[b:]
+a=s.find("const size=",sales_start);b=s.find("\n const dailyCards=",a)
+if a<0 or b<0:raise SystemExit("Could not locate selected-month rows.")
+month="""const size=Math.max(10,Number(state._salesSize||25)),monthRows=monthIndex>=0?yearRows.filter(r=>{const {start,end}=salePeriodBounds(r),monthStart=selectedMonth+'-01',monthEnd=new Date(Number(selectedMonth.slice(0,4)),Number(selectedMonth.slice(5,7)),0).toISOString().slice(0,10);return r.periodSummary||isSalesPeriodSummary(r)?start<=monthEnd&&end>=monthStart:String(r.date||'').slice(0,7)===selectedMonth}):[],selectedChannel=String(state._salesChannel||'all'),channelKeyForView=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toLowerCase(),channelRows=selectedChannel==='all'?monthRows:monthRows.filter(r=>channelKeyForView(r.channel)===channelKeyForView(selectedChannel)),channelActualNet=channelRows.filter(r=>!r.periodSummary&&!isSalesPeriodSummary(r)).reduce((n,r)=>n+Number(r.net||0),0),pages=Math.max(1,Math.ceil(channelRows.length/size));state._salesPage=Math.min(Math.max(0,Number(state._salesPage||0)),pages-1);const page=state._salesPage,visible=channelRows.slice(page*size,(page+1)*size).reverse();"""
+s=s[:a]+month+s[b:]
+needle=" const dailyMonthView="
+insert=""" const salesChannelNames=[...new Set([...channelCards.map(x=>canonicalSalesChannelName(x.name)),...monthRows.map(x=>canonicalSalesChannelName(x.channel)).filter(Boolean)])],channelTabs=monthIndex<0?'':__BT__<nav class="sales-channel-tabs" aria-label="Filtrar ventas por canal"><button type="button" class="btn __DOL__{selectedChannel==='all'?'primary':''}" data-action="sales-channel-tab" data-id="all">Todos</button>__DOL__{salesChannelNames.map(name=>__BT__<button type="button" class="btn __DOL__{channelKeyForView(selectedChannel)===channelKeyForView(name)?'primary':''}" data-action="sales-channel-tab" data-id="__DOL__{esc(name)}">__DOL__{esc(name)}</button>__BT__).join('')}</nav>';
+"""
+insert=insert.replace("__BT__",chr(96)).replace("__DOL__","$")
+if s.count(needle)!=1:raise SystemExit("Could not insert channel tabs.")
+s=s.replace(needle,insert+needle,1)
+d=chr(36);marker=d+'{monthlyProductsPanel}<div class="toolbar"><input id="salesQ"'
+if s.count(marker)!=1:raise SystemExit("Could not place monthly channel tabs.")
+s=s.replace(marker,d+'{monthlyProductsPanel}'+d+'{channelTabs}<div class="toolbar"><input id="salesQ"',1)
+oldhead=d+"{monthRows.length} ventas y reportes relacionados · Neto "+d+"{money(monthlyTotals[monthIndex]?.net||0)}"+d+"{monthlyTotals[monthIndex]?.estimated?' · incluye estimación de rangos':''}"
+newhead=d+"{channelRows.length} registros · "+d+"{selectedChannel==='all'?'todos los canales':esc(selectedChannel)} · Neto fechado "+d+"{money(channelActualNet)}"
+if s.count(oldhead)!=1:raise SystemExit("Could not replace month detail heading.")
+s=s.replace(oldhead,newhead,1)
+anchor="if(a==='sales-month-open'){state._salesMonth=String(id||'');"
+if s.count(anchor)!=1:raise SystemExit("Could not locate month-open handler.")
+s=s.replace(anchor,"if(a==='sales-channel-tab'){state._salesChannel=String(id||'all');state._salesPage=0;return render()}if(a==='sales-month-open'){state._salesChannel='all';state._salesMonth=String(id||'');",1)
+back="if(a==='sales-month-back'){state._salesMonth='';"
+if s.count(back)!=1:raise SystemExit("Could not locate month-back handler.")
+s=s.replace(back,"if(a==='sales-month-back'){state._salesChannel='all';state._salesMonth='';",1)
+p.write_text(s)
+print("Grouped range reports by platform and added monthly channel filters.")
 PY
