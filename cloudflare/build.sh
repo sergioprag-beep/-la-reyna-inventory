@@ -491,8 +491,8 @@ monthblock=monthblock.replace("__BT__",chr(96)).replace("__DOL__","$")
 s=s[:a]+monthblock+s[b:]
 old="monthIndex>=0?yearRows.filter(r=>String(r.date||'').slice(0,7)===selectedMonth):[]"
 new="monthIndex>=0?yearRows.filter(r=>!r.periodSummary?String(r.date||'').slice(0,7)===selectedMonth:(salePeriodBounds(r).start<=selectedMonth+'-31'&&salePeriodBounds(r).end>=selectedMonth+'-01')):[]"
-if s.count(old)!=1: raise SystemExit("Could not include overlapping period sales in month detail.")
-s=s.replace(old,new,1)
+if s.count(old)==1:s=s.replace(old,new,1)
+elif "salePeriodBounds(r)" not in s[s.find("const size=",sales_start):s.find("const dailyCards=",sales_start)]:raise SystemExit("Could not include overlapping period sales in month detail.")
 oldtxt="m.count?`${m.count} fichas`: 'Sin ventas registradas'"
 newtxt="m.count||m.reportCount?`${m.count?`${m.count} ventas`:''}${m.reportCount?`${m.count?' · ':''}${m.reportCount} reportes de rango`:''}`:'Sin ventas registradas'"
 oldtxt=oldtxt.replace("__BT__",chr(96)).replace("__DOL__","$");newtxt=newtxt.replace("__BT__",chr(96)).replace("__DOL__","$")
