@@ -619,3 +619,37 @@ if s.count(old)!=1:raise SystemExit("Could not locate date preference initializa
 p.write_text(s.replace(old,new,1))
 print("Moved a stale previous-year full-year view to the current year.")
 PY
+
+# Make the dashboard KPIs direct, keyboard-accessible links; reduce repeated full-state cloning when saving.
+python3 - <<'PY'
+from pathlib import Path
+d=chr(36)
+app=Path("dist/app.js");s=app.read_text()
+old='<article class="approved-kpi-card '+d+'{k[4]}">'
+target=d+'{k[1].includes("Ventas")?"ventas":k[1].includes("Compras")||k[1]==="Cuentas por Pagar"?"compras":k[1]==="Food Cost"||k[1]==="Margen Bruto"?"rentabilidad":k[1]==="Resultado Operativo"?"dre":k[1]==="Inventario"?"inventario":k[1]==="Empleados"?"empleados":"reportes"}'
+new='<article class="approved-kpi-card '+d+'{k[4]}" data-jump="'+target+'" role="link" tabindex="0" aria-label="Abrir módulo '+d+'{esc(k[1])}">'
+if s.count(old)!=1:raise SystemExit("Could not locate dashboard KPI cards")
+s=s.replace(old,new,1)
+old="const previous=JSON.parse(previousText||'{}'),collections="
+new="const previous=previousText&&previousText===syncDeletionBaselineText&&syncDeletionBaseline?syncDeletionBaseline:JSON.parse(previousText||'{}'),collections="
+if s.count(old)!=1:raise SystemExit("Could not locate deletion snapshot parse")
+s=s.replace(old,new,1)
+needle='function recordSyncDeletions(previousText){'
+if s.count(needle)!=1:raise SystemExit("Could not locate deletion helper")
+s=s.replace(needle,'let syncDeletionBaselineText=null,syncDeletionBaseline=null;\n'+needle,1)
+old="const snapshot=window.LRXGetSharedState?.()||state;try{window.LRXCloudSync?.onLocalSave(snapshot)}"
+new="const snapshot=JSON.parse(serialized);for(const key of Object.keys(snapshot))if(key.startsWith('_'))delete snapshot[key];if(snapshot.settings&&typeof snapshot.settings==='object'){delete snapshot.settings.language;delete snapshot.settings.dateRange}syncDeletionBaselineText=serialized;syncDeletionBaseline=snapshot;try{window.LRXCloudSync?.onLocalSave(snapshot,true)}"
+if s.count(old)!=1:raise SystemExit("Could not locate save snapshot clone")
+s=s.replace(old,new,1)
+keydown="document.addEventListener('keydown',e=>{const card=e.target.closest?.('.menu-decision-card');"
+if s.count(keydown)!=1:raise SystemExit("Could not locate keyboard handler")
+s=s.replace(keydown,"document.addEventListener('keydown',e=>{const card=e.target.closest?.('[data-jump][role=link]');if(card&&(e.key==='Enter'||e.key===' ')){e.preventDefault();go(card.dataset.jump)}});\n"+keydown,1)
+app.write_text(s)
+sync=Path("dist/cloudflare-sync.js");s=sync.read_text()
+old="function onLocalSave(value){\n  localMutationSeq++;\n  queuedSnapshot=JSON.parse(JSON.stringify(value));"
+new="function onLocalSave(value,immutable=false){\n  localMutationSeq++;\n  queuedSnapshot=immutable?value:JSON.parse(JSON.stringify(value));"
+if s.count(old)!=1:raise SystemExit("Could not locate cloud snapshot clone")
+sync.write_text(s.replace(old,new,1))
+styles=Path("dist/styles.css");styles.write_text(styles.read_text()+"\n.approved-kpi-card[data-jump]{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.approved-kpi-card[data-jump]:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(16,24,40,.1)}.approved-kpi-card[data-jump]:focus-visible{outline:3px solid #c42f61;outline-offset:2px}\n")
+print("Linked dashboard KPI cards and removed redundant full-state cloning on saves.")
+PY
