@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-dre-vendor-purchase-summary-v1",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-dre-vendor-purchase-summary-v1",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-shift4-spanish-csv-v1",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-shift4-spanish-csv-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-dre-vendor-purchase-summary-v1")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-shift4-spanish-csv-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -195,4 +195,28 @@ if s.count(old)!=1:
 s=s.replace(old,new,1)
 p.write_text(s)
 print("Added DRE supplier purchase totals to dashboard and Purchases financial summary.")
+PY
+
+# Accept the Spanish Shift4 Product Mix CSV headers and its start/end dates in the filename.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+old = "const item=h.findIndex(x=>['item','product','product name','menu item'].includes(x));const gross=h.findIndex(x=>x.includes('gross sales'));const qty=h.findIndex(x=>x==='quantity'||x==='qty');"
+new = "const item=h.findIndex(x=>['item','product','product name','menu item','nombre del artículo','nombre del articulo','artículo','articulo'].includes(x));const gross=h.findIndex(x=>x.includes('gross sales')||x==='ventas brutas'||x==='venta bruta');const qty=h.findIndex(x=>x==='quantity'||x==='qty'||x==='total vendido'||x==='total sold');"
+if s.count(old) != 1:
+    raise SystemExit("Could not find Shift4 Product Mix header detection.")
+s = s.replace(old, new, 1)
+old = "net:h.findIndex(x=>x.includes('net sales')),discount:h.findIndex(x=>x.includes('discount')),tax:h.findIndex(x=>x.includes('inclusive tax'))"
+new = "net:h.findIndex(x=>x.includes('net sales')||x==='ventas netas'),discount:h.findIndex(x=>x.includes('discount')||x.includes('descuento')),tax:h.findIndex(x=>x.includes('inclusive tax')||x.includes('impuesto incluido'))"
+if s.count(old) != 1:
+    raise SystemExit("Could not find Shift4 net/discount/tax header detection.")
+s = s.replace(old, new, 1)
+old = "const m=String(file.name||'').match(/(\\d{4}-\\d{2}-\\d{2})_to_(\\d{4}-\\d{2}-\\d{2})/i)||String(file.name||'').match(/(\\d{4}-\\d{2}-\\d{2})/);"
+new = "const fileName=String(file.name||''),rangeMatch=fileName.match(/(\\d{4}-\\d{2}-\\d{2})_(\\d{4}-\\d{2}-\\d{2})/i)||fileName.match(/(\\d{4}-\\d{2}-\\d{2})_to_(\\d{4}-\\d{2}-\\d{2})/i),m=rangeMatch||fileName.match(/(\\d{4}-\\d{2}-\\d{2})/);"
+if s.count(old) != 1:
+    raise SystemExit("Could not find Shift4 filename period detection.")
+s = s.replace(old, new, 1)
+p.write_text(s)
+print("Enabled Spanish Shift4 Product Mix headers and start/end period detection.")
 PY
