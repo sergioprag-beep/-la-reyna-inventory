@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-shift4-spanish-csv-v1",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-shift4-spanish-csv-v1",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-shift4-csv-parser-v2",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-shift4-csv-parser-v2",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-shift4-spanish-csv-v1")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-shift4-csv-parser-v2")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -197,26 +197,25 @@ p.write_text(s)
 print("Added DRE supplier purchase totals to dashboard and Purchases financial summary.")
 PY
 
-# Accept the Spanish Shift4 Product Mix CSV headers and its start/end dates in the filename.
+# Read CSV reports directly so Spanish UTF-8 headers do not depend on XLSX autodetection.
 python3 - <<'PY'
 from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
-old = "const item=h.findIndex(x=>['item','product','product name','menu item'].includes(x));const gross=h.findIndex(x=>x.includes('gross sales'));const qty=h.findIndex(x=>x==='quantity'||x==='qty');"
-new = "const item=h.findIndex(x=>['item','product','product name','menu item','nombre del artículo','nombre del articulo','artículo','articulo'].includes(x));const gross=h.findIndex(x=>x.includes('gross sales')||x==='ventas brutas'||x==='venta bruta');const qty=h.findIndex(x=>x==='quantity'||x==='qty'||x==='total vendido'||x==='total sold');"
-if s.count(old) != 1:
-    raise SystemExit("Could not find Shift4 Product Mix header detection.")
-s = s.replace(old, new, 1)
-old = "net:h.findIndex(x=>x.includes('net sales')),discount:h.findIndex(x=>x.includes('discount')),tax:h.findIndex(x=>x.includes('inclusive tax'))"
-new = "net:h.findIndex(x=>x.includes('net sales')||x==='ventas netas'),discount:h.findIndex(x=>x.includes('discount')||x.includes('descuento')),tax:h.findIndex(x=>x.includes('inclusive tax')||x.includes('impuesto incluido'))"
-if s.count(old) != 1:
-    raise SystemExit("Could not find Shift4 net/discount/tax header detection.")
-s = s.replace(old, new, 1)
-old = "const m=String(file.name||'').match(/(\\d{4}-\\d{2}-\\d{2})_to_(\\d{4}-\\d{2}-\\d{2})/i)||String(file.name||'').match(/(\\d{4}-\\d{2}-\\d{2})/);"
-new = "const fileName=String(file.name||''),rangeMatch=fileName.match(/(\\d{4}-\\d{2}-\\d{2})_(\\d{4}-\\d{2}-\\d{2})/i)||fileName.match(/(\\d{4}-\\d{2}-\\d{2})_to_(\\d{4}-\\d{2}-\\d{2})/i),m=rangeMatch||fileName.match(/(\\d{4}-\\d{2}-\\d{2})/);"
-if s.count(old) != 1:
-    raise SystemExit("Could not find Shift4 filename period detection.")
-s = s.replace(old, new, 1)
+start = s.index("function parseShift4ProductMix(file,buffer){")
+end = s.index("function shift4SalesImportModal(){", start)
+replacement = r'''async function parseShift4ProductMix(file,buffer){
+ const csv=/\.csv$/i.test(String(file?.name||''));let sheets=[];
+ if(csv){let text=new TextDecoder('utf-8').decode(buffer);if(text.includes('�'))text=new TextDecoder('windows-1252').decode(buffer);text=text.replace(/^\uFEFF/,'');const first=text.split(/\r?\n/,1)[0],delimiters=[',',';','\t'],delimiter=delimiters.sort((a,b)=>first.split(b).length-first.split(a).length)[0],rows=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const ch=text[i];if(quoted){if(ch==='"'&&text[i+1]==='"'){field+='"';i++}else if(ch==='"')quoted=false;else field+=ch}else if(ch==='"')quoted=true;else if(ch===delimiter){row.push(field);field=''}else if(ch==='\n'){row.push(field);rows.push(row);row=[];field=''}else if(ch!=='\r')field+=ch}if(field.length||row.length){row.push(field);rows.push(row)}sheets=[{name:String(file.name||'Product Mix').replace(/\.csv$/i,''),rows}];}
+ else{if(!window.XLSX)return {error:'No se cargó el lector de Excel. Recarga la app e inténtalo otra vez.'};const wb=XLSX.read(buffer,{type:'array',cellDates:true});sheets=wb.SheetNames.map(name=>({name,rows:XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:false,defval:''})}))}
+ const normHeader=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');let found=null,seenHeaders=[];
+ for(const sheet of sheets){for(let ri=0;ri<sheet.rows.length;ri++){const h=sheet.rows[ri].map(normHeader);if(ri===0)seenHeaders=h;const item=h.findIndex(x=>['item','product','product name','menu item','nombre del articulo','articulo'].includes(x)||x.includes('nombre del art')),gross=h.findIndex(x=>x.includes('gross sales')||x==='ventas brutas'||x==='venta bruta'),qty=h.findIndex(x=>x==='quantity'||x==='qty'||x==='total vendido'||x==='total sold');if(item>=0&&gross>=0&&qty>=0){found={name:sheet.name,rows:sheet.rows,ri,item,gross,qty,net:h.findIndex(x=>x.includes('net sales')||x==='ventas netas'),discount:h.findIndex(x=>x.includes('discount')||x.includes('descuento')),tax:h.findIndex(x=>x.includes('inclusive tax')||x.includes('impuesto incluido'))};break}}if(found)break}
+ if(!found)return {error:`No reconocí las columnas del Product Mix. Encabezados detectados: ${seenHeaders.filter(Boolean).slice(0,20).join(' · ')||'ninguno'}. Se necesitan artículo, ventas brutas y cantidad.`};
+ const parsePeriod=txt=>{const text=String(txt||''),m=text.match(/(?:period|periodo|período)\s*:?\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})(?:\s*(?:to|through|a|hasta|–|—|-)\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}))?/i);if(!m)return null;return {start:shift4DateValue(m[1]),end:shift4DateValue(m[2]||m[1])}};let period=null,periodSource='';for(const row of found.rows.slice(0,found.ri)){period=parsePeriod(row.map(x=>String(x||'')).join(' '));if(period?.start){periodSource='período del archivo';break}}if(!period?.start){const filename=String(file.name||''),range=filename.match(/(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})/i)||filename.match(/(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})/i),m=range||filename.match(/(\d{4}-\d{2}-\d{2})/);if(m){period={start:shift4DateValue(m[1]),end:shift4DateValue(m[2]||m[1])};periodSource='nombre del archivo'}}
+ const products=[];for(const row of found.rows.slice(found.ri+1)){const name=String(row[found.item]||'').trim();if(!name||/^total\b/i.test(name))continue;const qty=shift4Num(row[found.qty]),gross=shift4Num(row[found.gross]);if(qty<=0)continue;const net=found.net>=0?shift4Num(row[found.net]):gross-(found.discount>=0?shift4Num(row[found.discount]):0);products.push({name,qty,gross,net,tax:found.tax>=0?shift4Num(row[found.tax]):0})}if(!products.length)return {error:'Encontré el reporte, pero no contiene artículos vendidos con cantidad.'};return {periodStart:period?.start||'',periodEnd:period?.end||period?.start||'',periodSource,products,sheet:found.name}
+}
+'''
+s=s[:start]+replacement+s[end:]
 p.write_text(s)
-print("Enabled Spanish Shift4 Product Mix headers and start/end period detection.")
+print("Replaced Shift4 CSV handling with direct UTF-8 parsing and header diagnostics.")
 PY
