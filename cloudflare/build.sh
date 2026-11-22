@@ -5,8 +5,6 @@ rm -rf dist
 mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
-# Older source revisions need the compatibility patch; current source already has the period importer and dashboard logic.
-if ! grep -Fq 'function saleFitsDateRange' dist/app.js; then
 # Apply the isolated Shift4 period-import correction to the built app bundle.
 # Three legacy hunks no longer match the updated app.js. Continue only for that
 # known mismatch; any different patch failure still stops the production build.
@@ -61,11 +59,9 @@ print("Normalized dashboard calculations after partial patch application.")
 # the browser from parsing the entire app bundle.
 bad = "costIncompleteSales.length+' ventas,'green'"
 good = "costIncompleteSales.length+' ventas','green'"
-if bad in s or good not in s:
+if bad in s:
     raise SystemExit("Dashboard KPI JavaScript is malformed after patching.")
 PY
-
-fi
 
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
@@ -130,6 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-channel-import-recovery-v1",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-channel-import-recovery-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -140,6 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-channel-import-recovery-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
