@@ -108,7 +108,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v570';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v571';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-21-render-recovery-v1",
-    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-21-render-recovery-v1",
+    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-22-channel-rollup-v1",
+    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-22-channel-rollup-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,10 +138,30 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-20-dre-report-v1" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-21-render-recovery-v1")
+worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-22-channel-rollup-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
 worker = worker.replace(old, "'/purchase-engine.js','/cloudflare-sync.js','/master.json'", 1)
 sw.write_text(worker)
+PY
+
+ 
+# Canonicalize channel names before rendering POS sales and fee cards.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js")
+s=p.read_text()
+old=r"channelKey=value=>String(value||'Sin canal').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()"
+new="const channelSlug=value=>String(value||'Sin canal').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'').replace(/^productmix|productmix$/g,'');const channelName=value=>{const key=channelSlug(value);if(['shift4','salon','takeout','pickup','pos'].includes(key))return 'Shift4';if(['uber','ubereats'].includes(key))return 'Uber Eats';if(key==='doordash')return 'DoorDash';if(key==='grubhub')return 'Grubhub';return String(value||'Sin canal').trim()};const channelKey=value=>channelSlug(value)"
+if s.count(old)!=1:
+    raise SystemExit(f"Could not replace the POS channel grouping key ({s.count(old)} matches)")
+s=s.replace(old,new,1)
+old="const channels=state.settings.channels||[],configured=new Set(channels.map(c=>channelKey(c.name))),channelCards=[...channels,...[...channelStats.values()].filter(x=>!configured.has(channelKey(x.name))).map(x=>({name:x.name,type:'Importado',active:true}))],q=String(state._salesQ||'').toLowerCase(),grouped=new Map(),display=[];"
+new="const channels=state.settings.channels||[],configured=new Set(channels.map(c=>channelKey(c.name))),channelCards=[...new Map(channels.map(c=>{const name=channelName(c.name);return [channelKey(name),{...c,name}]})).values(),...[...channelStats.values()].filter(x=>!configured.has(channelKey(x.name))).map(x=>({...x,name:channelName(x.name),type:'Importado',active:true}))],q=String(state._salesQ||'').toLowerCase(),grouped=new Map(),display=[];"
+if s.count(old)!=1:
+    raise SystemExit(f"Could not merge duplicate POS channel cards ({s.count(old)} matches)")
+s=s.replace(old,new,1)
+p.write_text(s)
+print("Merged POS sales and imported channel fees under canonical channel names.")
 PY
