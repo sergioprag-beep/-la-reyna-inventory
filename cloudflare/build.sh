@@ -388,7 +388,7 @@ from pathlib import Path
 tag = "2026-11-22-channel-rollup-v1"
 index = Path("dist/index.html")
 html = index.read_text()
-old = "2026-11-21-shift4-range-v2"
+old = "2026-11-22-doordash-productmix-v14"
 for asset in ("app.js", "cloudflare-sync.js"):
     before = f"{asset}?v={old}"
     after = f"{asset}?v={tag}"
