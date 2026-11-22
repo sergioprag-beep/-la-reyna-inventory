@@ -417,7 +417,7 @@ PY
 python3 - <<'PY'
 from pathlib import Path
 p=Path("dist/app.js");s=p.read_text();tick=chr(96)
-helper="function isSyntheticSalesProduct(value){return /^(?:venta owner(?:\\\\s+\\\\d{4}-\\\\d{2}-\\\\d{2})?|orden(?:es)? de owner|reporte(?: diario)? shift4|resumen(?: diario)? shift4)\\\\b/i.test(String(value||'').trim())}\\n"
+helper="function isSyntheticSalesProduct(value){return /^(?:venta owner(?:\\s+\\d{4}-\\d{2}-\\d{2})?|orden(?:es)? de owner|reporte(?: diario)? shift4|resumen(?: diario)? shift4)\\b/i.test(String(value||'').trim())}\\n"
 marker="function sales(){"
 if s.count(marker)!=1: raise SystemExit("Could not locate POS sales renderer.")
 if "function isSyntheticSalesProduct(" not in s:s=s.replace(marker,helper+marker,1)
@@ -437,7 +437,7 @@ month_marker="</div></div><div class=\\"toolbar\\"><input id=\\"salesQ\\""
 if s.count(month_marker)!=1:raise SystemExit("Could not place monthly product summary.")
 s=s.replace(month_marker,"</div></div>$"+"{monthlyProductsPanel}<div class=\\"toolbar\\"><input id=\\"salesQ\\"",1)
 if s.count("function saleViewModal(id){")!=1:raise SystemExit("Could not locate product modal.")
-fallback=""" if(!s){const match=String(id).match(/^SHIFT4-(\\\\d{4}-\\\\d{2}-\\\\d{2})-(\\\\d{4}-\\\\d{2}-\\\\d{2})$/);if(match){const start=match[1],end=match[2],rows=(state.sales||[]).filter(x=>isShift4DailyLine(x)&&salePeriodBounds(x).start===start&&salePeriodBounds(x).end===end);if(rows.length){const ds=rows.map(x=>saleDetail(x)),items=rows.flatMap(x=>Array.isArray(x.items)?x.items:(x.product&&!isSyntheticSalesProduct(x.product)?[{product:x.product,qty:x.qty,price:x.price}]:[])).filter(x=>!isSyntheticSalesProduct(x.product||x.name));s={id,date:start,periodStart:start,periodEnd:end,periodSummary:true,product:"+tick+"Reporte Shift4 · ${items.length} artículos"+tick+",channel:'Shift4',status:'COMPLETADA',qty:items.reduce((n,x)=>n+Number(x.qty||0),0),items,salesGrossOverride:ds.reduce((n,x)=>n+x.gross,0),salesDiscountOverride:ds.reduce((n,x)=>n+x.discountAmt,0),salesNetOverride:ds.reduce((n,x)=>n+x.net,0),cost:ds.reduce((n,x)=>n+x.cost,0),dailySummary:true,sourceIds:rows.map(x=>x.id)}}}}\n"""
+fallback=""" if(!s){const match=String(id).match(/^SHIFT4-(\\d{4}-\\d{2}-\\d{2})-(\\d{4}-\\d{2}-\\d{2})$/);if(match){const start=match[1],end=match[2],rows=(state.sales||[]).filter(x=>isShift4DailyLine(x)&&salePeriodBounds(x).start===start&&salePeriodBounds(x).end===end);if(rows.length){const ds=rows.map(x=>saleDetail(x)),items=rows.flatMap(x=>Array.isArray(x.items)?x.items:(x.product&&!isSyntheticSalesProduct(x.product)?[{product:x.product,qty:x.qty,price:x.price}]:[])).filter(x=>!isSyntheticSalesProduct(x.product||x.name));s={id,date:start,periodStart:start,periodEnd:end,periodSummary:true,product:"+tick+"Reporte Shift4 · ${items.length} artículos"+tick+",channel:'Shift4',status:'COMPLETADA',qty:items.reduce((n,x)=>n+Number(x.qty||0),0),items,salesGrossOverride:ds.reduce((n,x)=>n+x.gross,0),salesDiscountOverride:ds.reduce((n,x)=>n+x.discountAmt,0),salesNetOverride:ds.reduce((n,x)=>n+x.net,0),cost:ds.reduce((n,x)=>n+x.cost,0),dailySummary:true,sourceIds:rows.map(x=>x.id)}}}}\n"""
 nf=" if(!s)return toast('Venta no encontrada');"
 if s.count(nf)!=1:raise SystemExit("Could not insert multi-month lookup.")
 s=s.replace(nf,fallback+nf,1)
