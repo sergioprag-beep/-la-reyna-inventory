@@ -546,7 +546,7 @@ from pathlib import Path
 p=Path("dist/app.js");s=p.read_text();sales_start=s.find("function sales(){")
 a=s.find("monthlyTotals=Array.from",sales_start);b=s.find(";\n const size=",a)
 if sales_start<0 or a<0 or b<0:raise SystemExit("Could not isolate monthly totals calculation.")
-block="""const monthlyTotals=Array.from({length:12},(_,i)=>{const key=__BT____DOL__{year}-__DOL__{String(i+1).padStart(2,'0')}__BT__,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((total,r)=>total+Number(r.net||0),0)}})"""
+block="""monthlyTotals=Array.from({length:12},(_,i)=>{const key=__BT____DOL__{year}-__DOL__{String(i+1).padStart(2,'0')}__BT__,monthStart=key+'-01',next=new Date(Number(year),i+1,1),monthEnd=new Date(next.getTime()-86400000).toISOString().slice(0,10),rows=yearRows.filter(r=>!r.periodSummary&&String(r.date||'').slice(0,7)===key),ranges=yearRows.filter(r=>r.periodSummary&&salePeriodBounds(r).start<=monthEnd&&salePeriodBounds(r).end>=monthStart);return {key,count:rows.length,reportCount:ranges.length,net:rows.reduce((total,r)=>total+Number(r.net||0),0)}})"""
 block=block.replace("__BT__",chr(96)).replace("__DOL__","$")
 s=s[:a]+block+s[b:]
 old="m.count||m.reportCount?money(m.net):'—'"
