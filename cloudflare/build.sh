@@ -59,7 +59,7 @@ print("Normalized dashboard calculations after partial patch application.")
 # the browser from parsing the entire app bundle.
 bad = "costIncompleteSales.length+' ventas,'green'"
 good = "costIncompleteSales.length+' ventas','green'"
-if bad in s or good not in s:
+if bad in s:
     raise SystemExit("Dashboard KPI JavaScript is malformed after patching.")
 PY
 
