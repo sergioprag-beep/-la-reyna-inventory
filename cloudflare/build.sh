@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v11",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v11",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v12",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v12",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v11")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v12")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -309,7 +309,7 @@ if s.count(old)!=2: raise SystemExit(f"Could not register Product Mix state ({s.
 s=s.replace(old,",'sales','productMixReports','promotions',")
 once(
     "const mapping={};for(const [k,tests] of Object.entries(aliases))mapping[k]=choose(headers,tests);const filenameDates=",
-    "const mapping={};for(const [k,tests] of Object.entries(aliases))mapping[k]=choose(headers,tests);const headerKeys=headers.map(genericChannelColumnKey),isProductMix=/product[\\\\s_-]*mix/i.test(String(file.name||''))||(['nombredelarticulo','totalvendido','ventasbrutas'].every(k=>headerKeys.includes(k)));const filenameDates=",
+    "const mapping={};for(const [k,tests] of Object.entries(aliases))mapping[k]=choose(headers,tests);const headerKeys=headers.map(genericChannelColumnKey),isProductMix=/product[\\s_-]*mix/i.test(String(file.name||''))||(['nombredelarticulo','totalvendido','ventasbrutas'].every(k=>headerKeys.includes(k)));const filenameDates=",
     "Product Mix report detection")
 once("window._channelImportDraft={channel,grid,headerRow,headers,fileName:file.name,mapping};","window._channelImportDraft={channel,grid,headerRow,headers,fileName:file.name,mapping,kind:isProductMix?'product-mix':'channel-sales'};","store import type")
 once("renderChannelImportPreview()}catch(e){showError(e)}}}","document.getElementById('confirmChannelImport').textContent=isProductMix?'Importar Product Mix':'Importar ventas';renderChannelImportPreview()}catch(e){showError(e)}}}","import action label")
@@ -334,12 +334,12 @@ part_once(
     "const out=[],recipes=allRecipes(),products=menuCatalogProducts(),mixReports=state.productMixReports||[],unlinked=new Map(),excludedSummaries=[],platformFees=new Map();let pending=0;",
     "report list")
 part_once(
-    " for(const sale of state.sales||[]){\\n  if(['CANCELADA','DEVUELTA']",
-    " for(const sale of state.sales||[]){\\n  const saleDate=String(sale.date||sale.createdAt||'').slice(0,10);if(String(sale.importSource||'').startsWith('CHANNEL_CSV:')&&mixReports.some(r=>canonicalSalesChannelName(r.channel)===canonicalSalesChannelName(sale.channel)&&saleDate>=String(r.periodStart||'')&&saleDate<=String(r.periodEnd||'')))continue;\\n  if(['CANCELADA','DEVUELTA']",
+    " for(const sale of state.sales||[]){\n  if(['CANCELADA','DEVUELTA']",
+    " for(const sale of state.sales||[]){\n  const saleDate=String(sale.date||sale.createdAt||'').slice(0,10);if(String(sale.importSource||'').startsWith('CHANNEL_CSV:')&&mixReports.some(r=>canonicalSalesChannelName(r.channel)===canonicalSalesChannelName(sale.channel)&&saleDate>=String(r.periodStart||'')&&saleDate<=String(r.periodEnd||'')))continue;\n  if(['CANCELADA','DEVUELTA']",
     "skip duplicate channel menu sales")
 part_once(
     " return {items:out,pending,unlinked:[...unlinked.values()].sort((a,b)=>b.gross-a.gross),excludedSummaries};",
-    " for(const report of mixReports){const rs=String(report.periodStart||''),re=String(report.periodEnd||'');if(!inRange(rs,re)){const overlaps=Boolean(rs&&re&&rs<=String(to||'9999-12-31').slice(0,10)&&re>=String(from||'0000-01-01').slice(0,10));if(overlaps)excludedSummaries.push({start:rs,end:re,saleId:report.id});continue}for(const item of report.products||[]){const recipe=menuRecipeMatch(item.product,recipes),product=recipe?null:menuProductMatch(item.product,products);if(!recipe&&!saleableMenuProduct(product)){pending++;const name=String(item.product||'Artículo sin nombre').trim(),key=menuRecipeKey(name)||name.toLowerCase(),entry=unlinked.get(key)||{name,qty:0,gross:0,rows:0};entry.qty+=Number(item.qty||1);entry.gross+=Number(item.gross||0);entry.rows++;unlinked.set(key,entry);continue}const qty=Number(item.qty||1),gross=Number(item.gross||0),net=Number(item.net??gross);if(product){const unitCost=Number(product.finalCost||product.usableCost||product.cost||0),cost=unitCost*qty;out.push({product:product.name||item.product,productId:product.id,qty,gross,net,cost,unitCost,profit:net-cost,costComplete:unitCost>0,costMissing:[],costIssue:unitCost>0?'':'Falta costo de compra registrado',channel:canonicalSalesChannelName(report.channel),date:re});continue}const costDetail=menuEngineeringRecipeCost(recipe),unitCost=costDetail.unitCost,cost=unitCost*qty;out.push({product:recipe.name,recipeId:recipe.id,qty,gross,net,cost,unitCost,profit:net-cost,costComplete:costDetail.complete,costMissing:costDetail.detail.missing||[],costIssue:costDetail.issue,channel:canonicalSalesChannelName(report.channel),date:re})}}\\n return {items:out,pending,unlinked:[...unlinked.values()].sort((a,b)=>b.gross-a.gross),excludedSummaries};",
+    " for(const report of mixReports){const rs=String(report.periodStart||''),re=String(report.periodEnd||'');if(!inRange(rs,re)){const overlaps=Boolean(rs&&re&&rs<=String(to||'9999-12-31').slice(0,10)&&re>=String(from||'0000-01-01').slice(0,10));if(overlaps)excludedSummaries.push({start:rs,end:re,saleId:report.id});continue}for(const item of report.products||[]){const recipe=menuRecipeMatch(item.product,recipes),product=recipe?null:menuProductMatch(item.product,products);if(!recipe&&!saleableMenuProduct(product)){pending++;const name=String(item.product||'Artículo sin nombre').trim(),key=menuRecipeKey(name)||name.toLowerCase(),entry=unlinked.get(key)||{name,qty:0,gross:0,rows:0};entry.qty+=Number(item.qty||1);entry.gross+=Number(item.gross||0);entry.rows++;unlinked.set(key,entry);continue}const qty=Number(item.qty||1),gross=Number(item.gross||0),net=Number(item.net??gross);if(product){const unitCost=Number(product.finalCost||product.usableCost||product.cost||0),cost=unitCost*qty;out.push({product:product.name||item.product,productId:product.id,qty,gross,net,cost,unitCost,profit:net-cost,costComplete:unitCost>0,costMissing:[],costIssue:unitCost>0?'':'Falta costo de compra registrado',channel:canonicalSalesChannelName(report.channel),date:re});continue}const costDetail=menuEngineeringRecipeCost(recipe),unitCost=costDetail.unitCost,cost=unitCost*qty;out.push({product:recipe.name,recipeId:recipe.id,qty,gross,net,cost,unitCost,profit:net-cost,costComplete:costDetail.complete,costMissing:costDetail.detail.missing||[],costIssue:costDetail.issue,channel:canonicalSalesChannelName(report.channel),date:re})}}\n return {items:out,pending,unlinked:[...unlinked.values()].sort((a,b)=>b.gross-a.gross),excludedSummaries};",
     "add report details")
 s=s[:start]+part+s[end:]
 p.write_text(s)
