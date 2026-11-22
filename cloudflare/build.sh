@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v5",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v5",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v6",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v6",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v5")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v6")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -231,20 +231,21 @@ new="const parsed=await parseShift4ProductMix(file,await file.arrayBuffer());"
 if s.count(old)!=1: raise SystemExit("Could not wire the async Product Mix parser to the import dialog.")
 s=s.replace(old,new,1)
 for old,new in (
- ("Importar ventas Shift4 por período","Importar Product Mix de DoorDash"),
- ("Importar Product Mix Shift4","Importar Product Mix DoorDash"),
- ("Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)","Reporte Product Mix de DoorDash (.xlsx, .xls o .csv)"),
- ("Artículo Shift4","Artículo DoorDash"),
- ("Selecciona primero el reporte Product Mix de Shift4","Selecciona primero el Product Mix de DoorDash"),
- (" registro(s) Shift4 importado(s)."," registro(s) de DoorDash importado(s)."),
- ("Reporte Shift4 · ${items.length} productos","Reporte DoorDash · ${items.length} productos"),
- ("No pude leer este archivo. Selecciona el reporte Product Mix de Shift4 en Excel o CSV.","No pude leer este archivo Product Mix de DoorDash. Revisa el formato CSV o Excel."),
- ("price:qty?gross/qty:0,channel:'Shift4',commission:0","price:qty?gross/qty:0,channel:'DoorDash',commission:0"),
+ ("Importar ventas Shift4 por período","Importar ventas Shift4 por período"),
+ ("Importar Product Mix Shift4","Importar Product Mix Shift4"),
+ ("Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)","Reporte Product Mix de Shift4 (.xlsx, .xls o .csv)"),
+ ("Artículo Shift4","Artículo Shift4"),
+ ("Selecciona primero el reporte Product Mix de Shift4","Selecciona primero el reporte Product Mix de Shift4"),
+ (" registro(s) Shift4 importado(s)."," registro(s) Shift4 importado(s)."),
+ ("Reporte Shift4 · ${items.length} productos","Reporte Shift4 · ${items.length} productos"),
+ ("No pude leer este archivo. Selecciona el reporte Product Mix de Shift4 en Excel o CSV.","No pude leer este archivo. Selecciona el reporte Product Mix de Shift4 en Excel o CSV."),
+ ("price:qty?gross/qty:0,channel:'Shift4',commission:0","price:qty?gross/qty:0,channel:'Shift4',commission:0"),
 ):
+
  if s.count(old)!=1: raise SystemExit(f"Could not update DoorDash import text or channel: {old}")
  s=s.replace(old,new,1)
 p.write_text(s)
-print("Connected async Product Mix parser and labeled import as DoorDash.")
+print("Connected async Shift4 Product Mix parser.")
 PYCODE
 
 
