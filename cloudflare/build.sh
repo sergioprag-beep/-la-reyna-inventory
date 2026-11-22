@@ -368,7 +368,7 @@ python3 - <<'PY'
 from pathlib import Path
 p=Path("dist/app.js")
 s=p.read_text()
-old=r"channelKey=value=>String(value||'Sin canal').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').trim().toLowerCase()"
+old=r"channelKey=value=>String(value||'Sin canal').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()"
 new="channelKey=value=>canonicalSalesChannelName(value||'Sin canal')"
 if s.count(old)!=1:
     raise SystemExit(f"Could not normalize the channel summary key ({s.count(old)} matches)")
