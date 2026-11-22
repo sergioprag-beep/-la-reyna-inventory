@@ -5,6 +5,8 @@ rm -rf dist
 mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
+# Older source revisions need the compatibility patch; current source already has the period importer and dashboard logic.
+if ! grep -Fq 'Importar ventas Shift4 por período' dist/app.js; then
 # Apply the isolated Shift4 period-import correction to the built app bundle.
 # Three legacy hunks no longer match the updated app.js. Continue only for that
 # known mismatch; any different patch failure still stops the production build.
@@ -62,6 +64,8 @@ good = "costIncompleteSales.length+' ventas','green'"
 if bad in s or good not in s:
     raise SystemExit("Dashboard KPI JavaScript is malformed after patching.")
 PY
+
+fi
 
 # app.js contains an obsolete service-worker update path. It competes with the
 # versioned updater in index.html, which can make clients switch workers and reload.
@@ -126,8 +130,6 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-20-dre-report-v1": "app.js?v=2026-11-21-render-recovery-v1",
-    "cloudflare-sync.js?v=2026-11-18-shopping-reconcile-v5": "cloudflare-sync.js?v=2026-11-21-render-recovery-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -136,9 +138,8 @@ for old, new in replacements.items():
 index.write_text(html)
 sw = Path("dist/sw.js")
 worker = sw.read_text()
-if "2026-11-20-dre-report-v1" not in worker:
+if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-20-dre-report-v1", "2026-11-21-render-recovery-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")

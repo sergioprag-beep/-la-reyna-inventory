@@ -1,6 +1,6 @@
-// Pages deployment refresh for the DRE accounting importer.
-const CACHE='lrx-2026-11-20-dre-report-v1';
-const VERSION='2026-11-20-dre-report-v1';
+// Pages deployment refresh for the Shift4 period importer.
+const CACHE='lrx-2026-11-21-shift4-range-v2';
+const VERSION='2026-11-21-shift4-range-v2';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
