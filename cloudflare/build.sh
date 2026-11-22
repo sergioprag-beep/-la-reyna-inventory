@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-shift4-csv-parser-v2",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-shift4-csv-parser-v2",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v5",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v5",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-shift4-csv-parser-v2")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v5")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -246,3 +246,23 @@ for old,new in (
 p.write_text(s)
 print("Connected async Product Mix parser and labeled import as DoorDash.")
 PYCODE
+
+
+# Recognize Spanish DoorDash Product Mix headers in the generic channel importer.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("dist/app.js")
+s = p.read_text()
+changes = (
+    ("<h3>Importar archivo · ${esc(channel)}</h3>", "<h3>Importar archivo · ${esc(String(channel).toLowerCase()==='doordash'?'Product Mix DoorDash':channel)}</h3>"),
+    ("product:['nombredearticulo','articulo'", "product:['nombredelarticulo','nombredearticulo','articulo'"),
+    ("qty:['cantidad','quantity','qty','units','itemsold']", "qty:['cantidad','quantity','qty','totalvendido','units','itemsold']"),
+    ("sales:['ventassinimpuestos','grosssales'", "sales:['ventasbrutas','ventassinimpuestos','grosssales'"),
+)
+for old, new in changes:
+    if s.count(old) != 1:
+        raise SystemExit(f"Could not apply DoorDash generic-import change: {old}")
+    s = s.replace(old, new, 1)
+p.write_text(s)
+print("Enabled Product Mix DoorDash headers in the generic channel importer.")
+PY
