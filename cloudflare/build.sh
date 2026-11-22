@@ -653,3 +653,23 @@ sync.write_text(s.replace(old,new,1))
 styles=Path("dist/styles.css");styles.write_text(styles.read_text()+"\n.approved-kpi-card[data-jump]{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.approved-kpi-card[data-jump]:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(16,24,40,.1)}.approved-kpi-card[data-jump]:focus-visible{outline:3px solid #c42f61;outline-offset:2px}\n")
 print("Linked dashboard KPI cards and removed redundant full-state cloning on saves.")
 PY
+
+# Clarify that POS costing is incomplete on existing sales records, rather than sales being missing.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text();d=chr(36)
+replacements=[
+(d+"{costIncompleteSales.length} ventas",d+"{costIncompleteSales.length} ventas sin costo completo"),
+("Costeo incompleto · "+d+"{money(grossProfit)} parcial",d+"{costIncompleteSales.length} ventas sin receta o costo · parcial "+d+"{money(grossProfit)}"),
+("Costea "+d+"{costIncompleteSales.length} ventas","Completa receta/costo en "+d+"{costIncompleteSales.length} ventas"),
+("Falta costear "+d+"{costIncompleteSales.length} ventas","Completa receta/costo en "+d+"{costIncompleteSales.length} ventas"),
+("Falta costo en "+d+"{costIncompleteSales.length} ventas","Sin receta o costo en "+d+"{costIncompleteSales.length} ventas"),
+]
+total=0
+for old,new in replacements:
+ n=s.count(old)
+ if n:s=s.replace(old,new);total+=n
+if not total:raise SystemExit("No pending-cost labels were found")
+p.write_text(s)
+print("Clarified POS cost incompleteness in "+str(total)+" labels.")
+PY
