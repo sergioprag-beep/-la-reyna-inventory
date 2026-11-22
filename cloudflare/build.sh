@@ -126,8 +126,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v12",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v12",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v13",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v13",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -138,7 +138,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v12")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v13")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -344,4 +344,20 @@ part_once(
 s=s[:start]+part+s[end:]
 p.write_text(s)
 print("Separated marketplace Product Mix from financial sales and linked it to Menu Engineering.")
+PY
+
+
+# Keep the selected channel name in the generic importer and render its Product Mix notice.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js")
+s=p.read_text()
+old="String(channel).toLowerCase()==='doordash'?'Product Mix DoorDash':channel"
+if s.count(old)!=1: raise SystemExit("Could not restore the DoorDash channel heading.")
+s=s.replace(old,"channel",1)
+old=chr(92)+chr(36)+"{p.kind"
+if s.count(old)!=1: raise SystemExit("Could not fix the Product Mix preview notice.")
+s=s.replace(old,chr(36)+"{p.kind",1)
+p.write_text(s)
+print("Kept DoorDash as the selected channel and enabled the Product Mix preview notice.")
 PY
