@@ -55,6 +55,12 @@ if food < 0 or food_end < 0:
 s = s[:food] + " const fcTarget=Number(state.settings.targetFoodCost||30),actualFoodCost=sales&&costComplete?posCogs/sales*100:null" + s[food_end:]
 p.write_text(s)
 print("Normalized dashboard calculations after partial patch application.")
+# Reject the malformed dashboard KPI quote sequence that previously stopped
+# the browser from parsing the entire app bundle.
+bad = "costIncompleteSales.length+' ventas,'green'"
+good = "costIncompleteSales.length+' ventas','green'"
+if bad in s or good not in s:
+    raise SystemExit("Dashboard KPI JavaScript is malformed after patching.")
 PY
 
 # app.js contains an obsolete service-worker update path. It competes with the
