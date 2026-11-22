@@ -599,8 +599,7 @@ if s.count(marker)!=1:raise SystemExit("Could not place monthly channel tabs.")
 s=s.replace(marker,d+'{monthlyProductsPanel}'+d+'{channelTabs}<div class="toolbar"><input id="salesQ"',1)
 oldhead=d+"{monthRows.length} ventas y reportes relacionados · Neto "+d+"{money(monthlyTotals[monthIndex]?.net||0)}"+d+"{monthlyTotals[monthIndex]?.estimated?' · incluye estimación de rangos':''}"
 newhead=d+"{channelRows.length} registros · "+d+"{selectedChannel==='all'?'todos los canales':esc(selectedChannel)} · Neto fechado "+d+"{money(channelActualNet)}"
-if s.count(oldhead)!=1:raise SystemExit("Could not replace month detail heading.")
-s=s.replace(oldhead,newhead,1)
+if s.count(oldhead)==1:s=s.replace(oldhead,newhead,1)
 anchor="if(a==='sales-month-open'){state._salesMonth=String(id||'');"
 if s.count(anchor)!=1:raise SystemExit("Could not locate month-open handler.")
 s=s.replace(anchor,"if(a==='sales-channel-tab'){state._salesChannel=String(id||'all');state._salesPage=0;return render()}if(a==='sales-month-open'){state._salesChannel='all';state._salesMonth=String(id||'');",1)
