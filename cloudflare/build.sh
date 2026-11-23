@@ -116,7 +116,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v573';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v574';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -134,8 +134,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-tax-sale-report-v1",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-tax-sale-report-v1",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-tax-sale-report-v2",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-tax-sale-report-v2",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -146,7 +146,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-tax-sale-report-v1")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-tax-sale-report-v2")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -396,7 +396,7 @@ from pathlib import Path
 tag = "2026-11-22-channel-rollup-v1"
 index = Path("dist/index.html")
 html = index.read_text()
-old = "2026-11-23-tax-sale-report-v1"
+old = "2026-11-23-tax-sale-report-v2"
 for asset in ("app.js", "cloudflare-sync.js"):
     before = f"{asset}?v={old}"
     after = f"{asset}?v={tag}"
@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v3";new="2026-11-23-tax-sale-report-v1"
+old="2026-11-22-sales-month-products-v3";new="2026-11-23-tax-sale-report-v2"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
@@ -732,7 +732,7 @@ function taxSalePaymentModal(){const from=String(state._dreFrom||new Date().toIS
 function taxSalePaymentSave(){const amount=Number(document.getElementById('taxSalePayAmount')?.value||0),date=document.getElementById('taxSalePayDate')?.value||'',from=document.getElementById('taxSalePayFrom')?.value||'',to=document.getElementById('taxSalePayTo')?.value||'',reference=document.getElementById('taxSalePayRef')?.value.trim()||'';if(!(amount>0)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(from)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(to)||from>to)return toast('Revisa el monto, fecha y período del pago.');const accrued=taxSaleRows(from,to).reduce((n,x)=>n+Number(x.taxSaleAmount||0),0),alreadyPaid=(state.taxSalePayments||[]).filter(x=>String(x.periodFrom||'')===from&&String(x.periodTo||'')===to).reduce((n,x)=>n+Number(x.amount||0),0);if(amount>Math.max(0,accrued-alreadyPaid)+.005)return toast('El pago supera el saldo Tax Sale pendiente del período.');const snapshot=JSON.stringify(state);state.taxSalePayments=Array.isArray(state.taxSalePayments)?state.taxSalePayments:[];state.taxSalePayments.push({id:'TAXPAY-'+Date.now(),account:'Tax Sale',date,periodFrom:from,periodTo:to,amount,reference,createdAt:now(),createdBy:currentUser().name});audit('TAX_SALE_PAYMENT',money(amount)+' · IRS · '+from+' a '+to);if(!save()){restoreStateSnapshot(snapshot);return}close();render();toast('Pago de Tax Sale registrado.')}
 function taxSaleExport(){const from=String(state._dreFrom||''),to=String(state._dreTo||''),rows=taxSaleRows(from,to).map(x=>({tipo:'Tax Sale causado',fecha:String(x.date||'').slice(0,10),id:x.id,canal:x.channel,baseGravable:x.taxBase,tasaAplicada:x.taxSaleSource==='Estimado 7%'?7:'Reportada',taxSale:x.taxSaleAmount,origen:x.taxSaleSource}));(state.taxSalePayments||[]).filter(x=>(!from||String(x.periodFrom||x.date||'')>=from)&&(!to||String(x.periodTo||x.date||'')<=to)).forEach(x=>rows.push({tipo:'Pago al IRS',fecha:x.date,id:x.id,canal:'Tax Sale',baseGravable:'',tasaAplicada:'',taxSale:-Number(x.amount||0),origen:x.reference||'Pago registrado'}));if(!rows.length)return toast('No hay movimientos Tax Sale en este período.');return exportExcel(rows,'Tax_Sale_por_pagar')}
 function taxSalePrint(){const from=String(state._dreFrom||''),to=String(state._dreTo||''),rows=taxSaleRows(from,to),body=taxSaleReport().replace(/<button[\\s\\S]*?<\\/button>/g,'');return printHtml('Tax Sale por pagar · '+(from||'Inicio')+' a '+(to||'hoy'),body)}
-const __lrxDreBase=dre;dre=function(){let html=__lrxDreBase(),i=html.indexOf('<div class="grid"><div class="card kpi"><small>Ventas brutas</small>');if(i>=0)html=html.slice(0,i)+taxSaleReport()+html.slice(i);return html};
+const __lrxDreBase=dre;dre=function(){let html=__lrxDreBase(),i=html.indexOf('<div class="grid"><div class="card kpi"><small>Ventas brutas</small>');if(i>=0)html=html.slice(0,i)+taxSaleReport()+html.slice(i);return html};V.dre=dre;
 document.addEventListener('click',e=>{const a=e.target?.closest?.('[data-action]')?.dataset?.action;if(a==='tax-sale-payment')taxSalePaymentModal();if(a==='tax-sale-payment-save')taxSalePaymentSave();if(a==='tax-sale-pdf')taxSalePrint();if(a==='tax-sale-excel')taxSaleExport()});
 """
 if "function dre(){" not in s or "function taxSaleFor(" in s:raise SystemExit("Could not safely append Tax Sale report helpers.")
