@@ -116,7 +116,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v571';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v572';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -134,8 +134,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-22-doordash-productmix-v14",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-22-doordash-productmix-v14",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-ticket-charges-v1",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-ticket-charges-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -146,7 +146,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-22-doordash-productmix-v14")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-ticket-charges-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -396,7 +396,7 @@ from pathlib import Path
 tag = "2026-11-22-channel-rollup-v1"
 index = Path("dist/index.html")
 html = index.read_text()
-old = "2026-11-22-doordash-productmix-v14"
+old = "2026-11-23-ticket-charges-v1"
 for asset in ("app.js", "cloudflare-sync.js"):
     before = f"{asset}?v={old}"
     after = f"{asset}?v={tag}"
@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v3";new="2026-11-22-sales-month-products-v6"
+old="2026-11-22-sales-month-products-v3";new="2026-11-23-ticket-charges-v1"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
@@ -672,4 +672,48 @@ for old,new in replacements:
 if not total:raise SystemExit("No pending-cost labels were found")
 p.write_text(s)
 print("Clarified POS cost incompleteness in "+str(total)+" labels.")
+PY
+
+
+# Manual ticket taxes and charges, employee report, and channel fixed-fee mode.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text()
+old='<div class="field"><label>Cargo fijo por orden</label><input id="chFixed"'
+new='<div class="field"><label>Cálculo del cargo por orden</label><select id="chFixedMode"><option value="amount" ${r?.fixedFeeMode!==\'percent\'?\'selected\':\'\'}>Monto fijo ($)</option><option value="percent" ${r?.fixedFeeMode===\'percent\'?\'selected\':\'\'}>Porcentaje (%)</option></select></div><div class="field"><label>Cargo por orden</label><input id="chFixed"'
+if s.count(old)!=1: raise SystemExit("Channel fixed fee field changed.")
+s=s.replace(old,new,1)
+needle="function deleteChannel(name){"
+wrapper="""const __lrxSaveChannelBase=saveChannel;saveChannel=function(oldName=''){const mode=document.getElementById('chFixedMode')?.value||'amount',old=(state.settings.channels||[]).find(c=>String(c.name)===String(oldName)),used=(state.sales||[]).some(x=>String(x.channel||'').toLowerCase()===String(oldName).toLowerCase());if(used&&old&&String(old.fixedFeeMode||'amount')!==mode)return toast('No cambies el tipo de cargo de un canal con ventas históricas. Crea un canal nuevo para órdenes futuras.');const name=document.getElementById('chName')?.value?.trim()||oldName;__lrxSaveChannelBase(oldName);const c=(state.settings.channels||[]).find(x=>String(x.name)===String(name));if(c){c.fixedFeeMode=mode;save()}};"""
+if s.count(needle)!=1: raise SystemExit("Channel save wrapper anchor changed.")
+s=s.replace(needle,wrapper+needle,1)
+helpers="""function saleExtraChargeRow(row={}){const em=state.employees||[];return '<div class="formgrid sale-extra-charge" style="padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0"><div class="field"><label>Concepto</label><input data-charge-label value="'+esc(row.label||'')+'" placeholder="Ej. To-go y contenedores"></div><div class="field"><label>Tipo</label><select data-charge-kind><option value="surcharge" '+(row.kind==='surcharge'?'selected':'')+'>Cargo adicional</option><option value="tip" '+(row.kind==='tip'?'selected':'')+'>Tip</option><option value="gratuity" '+(row.kind==='gratuity'?'selected':'')+'>Gratuity</option></select></div><div class="field"><label>Cálculo</label><select data-charge-mode><option value="amount" '+(row.mode!=='percent'?'selected':'')+'>Monto ($)</option><option value="percent" '+(row.mode==='percent'?'selected':'')+'>Porcentaje (%)</option></select></div><div class="field"><label>Monto / porcentaje</label><input data-charge-value type="number" min="0" step=".01" value="'+Number(row.value||0)+'"></div><div class="field"><label>Empleado (opcional)</label><select data-charge-employee><option value="">— Sin asignar —</option>'+em.map(e=>'<option value="'+esc(e.id||e.name)+'" '+(String(row.employeeId||'')===String(e.id||e.name)?'selected':'')+'>'+esc(e.name||e.fullName||e.id)+'</option>').join('')+'</select></div><div class="field"><label>&nbsp;</label><button type="button" class="btn danger" data-action="sale-charge-remove">Quitar</button></div></div>'}
+function readSaleExtraCharges(){return [...document.querySelectorAll('.sale-extra-charge')].map(r=>({label:r.querySelector('[data-charge-label]')?.value.trim()||'',kind:r.querySelector('[data-charge-kind]')?.value||'surcharge',mode:r.querySelector('[data-charge-mode]')?.value||'amount',value:Number(r.querySelector('[data-charge-value]')?.value||0),employeeId:r.querySelector('[data-charge-employee]')?.value||''})).filter(x=>x.label&&x.value>0)}
+function saleChargeAmount(x,base){return Math.round((x.mode==='percent'?base*Number(x.value||0)/100:Number(x.value||0))*100)/100}
+const __lrxSaleModalBase=saleModal;saleModal=function(existing=null){__lrxSaleModalBase(existing);const box=document.getElementById('salePreview');if(!box)return;const cs=Array.isArray(existing?.additionalCharges)?existing.additionalCharges:[];box.insertAdjacentHTML('beforebegin','<div class="field full card" style="margin:10px 0"><h4>Impuesto y cargos del ticket</h4><div class="formgrid"><div class="field"><label>Impuesto</label><select id="saleTaxMode"><option value="amount" '+(existing?.customerTaxMode!=='percent'?'selected':'')+'>Monto exacto ($)</option><option value="percent" '+(existing?.customerTaxMode==='percent'?'selected':'')+'>Porcentaje (%)</option></select></div><div class="field"><label>Monto / porcentaje de impuesto</label><input id="saleTaxValue" type="number" min="0" step=".01" value="'+Number(existing?.customerTaxValue??existing?.customerTaxAmount??0)+'"></div></div><p class="muted">Calculado sobre comida después del descuento. El impuesto queda separado de ventas netas.</p><label>Cargos adicionales: tips, gratuity, to-go, contenedores, etc.</label><div id="saleExtraCharges">'+(cs.length?cs.map(saleExtraChargeRow).join(''):saleExtraChargeRow())+'</div><button type="button" class="btn" id="addSaleExtraCharge">＋ Agregar renglón de cargo</button><p class="muted">Cada renglón puede ser monto o porcentaje y asignarse a un empleado.</p></div>');document.getElementById('addSaleExtraCharge')?.addEventListener('click',()=>{document.getElementById('saleExtraCharges')?.insertAdjacentHTML('beforeend',saleExtraChargeRow());previewSale()});document.getElementById('saleExtraCharges')?.addEventListener('click',e=>{if(e.target.closest('[data-action="sale-charge-remove"]')){e.target.closest('.sale-extra-charge')?.remove();previewSale()}});document.querySelectorAll('#saleTaxMode,#saleTaxValue,.sale-extra-charge input,.sale-extra-charge select').forEach(x=>x.addEventListener('input',previewSale));document.querySelectorAll('#saleTaxMode').forEach(x=>x.addEventListener('change',previewSale));previewSale()};
+const __lrxPreviewSaleBase=previewSale;previewSale=function(){__lrxPreviewSaleBase();const box=document.getElementById('salePreview');if(!box)return;const items=readSaleItems(),gross=items.reduce((n,x)=>n+x.price*x.qty,0),disc=Math.min(100,Number(document.getElementById('saleDiscount')?.value||0)),base=gross*(1-disc/100),tax=saleChargeAmount({mode:document.getElementById('saleTaxMode')?.value||'amount',value:Number(document.getElementById('saleTaxValue')?.value||0)},base),add=readSaleExtraCharges().reduce((n,x)=>n+saleChargeAmount(x,base),0);box.insertAdjacentHTML('beforeend','<div>Impuesto <b>'+money(tax)+'</b> · Cargos <b>'+money(add)+'</b> · Total ticket <b>'+money(base+tax+add)+'</b></div>')};
+const __lrxSaveSaleBase=saveSale;saveSale=function(existingId=''){const tm=document.getElementById('saleTaxMode')?.value||'amount',tv=Number(document.getElementById('saleTaxValue')?.value||0),charges=readSaleExtraCharges(),items=readSaleItems(),gross=items.reduce((n,x)=>n+x.price*x.qty,0),discount=Math.min(100,Number(document.getElementById('saleDiscount')?.value||0)),base=gross*(1-discount/100);if(!Number.isFinite(tv)||tv<0||charges.some(x=>!Number.isFinite(x.value)||x.value<0))return toast('Revisa impuesto y cargos adicionales');const ids=new Set((state.sales||[]).map(x=>String(x.id)));__lrxSaveSaleBase(existingId);const sale=existingId?(state.sales||[]).find(x=>String(x.id)===String(existingId)):(state.sales||[]).find(x=>!ids.has(String(x.id)));if(!sale)return;const ch=(state.settings.channels||[]).find(c=>String(c.name)===String(sale.channel||'')),fee=Number(ch?.fixedFee||0);sale.fixedFee=ch?.fixedFeeMode==='percent'?Math.round(base*fee)/100:fee;const tax=saleChargeAmount({mode:tm,value:tv},base);sale.customerTaxMode=tm;sale.customerTaxValue=tv;sale.customerTaxAmount=tax;sale.additionalCharges=charges.map(x=>{const e=(state.employees||[]).find(y=>String(y.id||y.name)===String(x.employeeId));return {...x,amount:saleChargeAmount(x,base),employeeName:e?.name||e?.fullName||''}});sale.ticketTotal=Math.round((base+tax+sale.additionalCharges.reduce((n,x)=>n+Number(x.amount||0),0))*100)/100;sale.updatedAt=now();if(!save())return toast('No se pudieron guardar impuesto y cargos.');render()};
+const __lrxSaleDetailBase=saleDetail;saleDetail=function(x,recipes){const z=__lrxSaleDetailBase(x,recipes),charges=Array.isArray(x?.additionalCharges)?x.additionalCharges:[],tax=Number(x?.customerTaxAmount||0),add=charges.reduce((n,c)=>n+Number(c.amount||0),0),ticketTotal=Number(x?.ticketTotal||Math.max(0,Number(z.gross||0)-Number(z.discountAmt||0))+tax+add),out={...z,tax,additionalCharges:charges,chargeTotal:add,ticketTotal};if(x?.salesNetOverride==null){const ch=(state.settings.channels||[]).find(c=>String(c.name||'').toLowerCase()===String(x?.channel||'').toLowerCase());if(ch?.fixedFeeMode==='percent'&&x?.fixedFee==null){const f=Math.round((Number(z.gross||0)-Number(z.discountAmt||0))*Number(ch.fixedFee||0))/100;out.fixedFee=f;out.net=Number(z.net||0)+Number(ch.fixedFee||0)-f;out.profit=out.net-Number(z.cost||0)}}return out};
+function employeeSalesChargeReport(){const from=state._hrChargeFrom||new Date().toISOString().slice(0,8)+'01',to=state._hrChargeTo||new Date().toISOString().slice(0,10),rows=(state.sales||[]).filter(x=>String(x.date||'')>=from&&String(x.date||'')<=to&&!['CANCELADA','DEVUELTA'].includes(String(x.status||'').toUpperCase())).flatMap(x=>(x.additionalCharges||[]).filter(c=>c.employeeId).map(c=>({employeeId:c.employeeId,employee:c.employeeName||c.employeeId,kind:c.kind,amount:Number(c.amount||0)}))),g=new Map();rows.forEach(x=>{if(!g.has(x.employeeId))g.set(x.employeeId,{employee:x.employee,tips:0,gratuity:0,charges:0,total:0,count:0});const y=g.get(x.employeeId);if(x.kind==='tip')y.tips+=x.amount;else if(x.kind==='gratuity')y.gratuity+=x.amount;else y.charges+=x.amount;y.total+=x.amount;y.count++});return '<div class="card" style="margin-top:14px"><h3>Tips, gratuity y cargos asignados por empleado</h3><p class="muted">Ventas manuales dentro del período; el impuesto no se suma a pagos al personal.</p><div class="toolbar"><label>Desde <input type="date" id="hrChargeFrom" value="'+esc(from)+'"></label><label>Hasta <input type="date" id="hrChargeTo" value="'+esc(to)+'"></label><button class="btn" data-action="employee-sales-charges-export">Exportar reporte</button></div><div class="tablewrap"><table><thead><tr><th>Empleado</th><th>Tips</th><th>Gratuity</th><th>Otros cargos</th><th>Total asignado</th><th>Registros</th></tr></thead><tbody>'+[...g.values()].sort((a,b)=>a.employee.localeCompare(b.employee)).map(x=>'<tr><td>'+esc(x.employee)+'</td><td>'+money(x.tips)+'</td><td>'+money(x.gratuity)+'</td><td>'+money(x.charges)+'</td><td><b>'+money(x.total)+'</b></td><td>'+x.count+'</td></tr>').join('')+(g.size?'':'<tr><td colspan="6" class="empty">Sin cargos asignados en este período.</td></tr>')+'</tbody></table></div></div>'}
+function employeeSalesChargesExport(){const from=state._hrChargeFrom||new Date().toISOString().slice(0,8)+'01',to=state._hrChargeTo||new Date().toISOString().slice(0,10),rows=(state.sales||[]).filter(x=>String(x.date||'')>=from&&String(x.date||'')<=to).flatMap(x=>(x.additionalCharges||[]).filter(c=>c.employeeId).map(c=>({fecha:x.date,venta:x.id,empleado:c.employeeName||c.employeeId,tipo:c.kind,concepto:c.label,monto:c.amount})));if(!rows.length)return toast('No hay cargos asignados para exportar.');exportExcel(rows,'tips_gratuity_cargos_empleados')}
+"""
+needle="function saleModal(existing=null){"
+if s.count(needle)!=1: raise SystemExit("Sales modal definition anchor missing.")
+s=s.replace(needle,helpers+"\n"+needle,1)
+anchor="+employeeLaborReport()+employeeTimecardHistory()+"
+if s.count(anchor)!=1: raise SystemExit("Employee report insertion point changed.")
+s=s.replace(anchor,"+employeeLaborReport()+employeeSalesChargeReport()+employeeTimecardHistory()+",1)
+anchor="if(a==='employee-timecards-import')return employeeTimecardChooseFile();"
+if s.count(anchor)!=1: raise SystemExit("Employee action dispatcher changed.")
+s=s.replace(anchor,"if(a==='employee-sales-charges-export')return employeeSalesChargesExport();"+anchor,1)
+anchor="function wireActionButtons(){"
+if s.count(anchor)!=1: raise SystemExit("Action binding insertion point changed.")
+s=s.replace(anchor,"""document.addEventListener('change',e=>{if(e.target?.id==='hrChargeFrom'){state._hrChargeFrom=e.target.value;render()}if(e.target?.id==='hrChargeTo'){state._hrChargeTo=e.target.value;render()}});
+"""+anchor,1)
+viewpatch="const __lrxSaleViewBase=saleViewModal;saleViewModal=function(id){__lrxSaleViewBase(id);const x=(state.sales||[]).find(r=>String(r.id)===String(id));if(!x||(!x.customerTaxAmount&&!x.additionalCharges?.length))return;const b=document.getElementById('modalBox');if(!b)return;const el=document.createElement('div');el.className='resultbox manual-ticket-breakdown';el.innerHTML='Impuesto <b>'+money(x.customerTaxAmount)+'</b> · Cargos adicionales <b>'+money((x.additionalCharges||[]).reduce((n,c)=>n+Number(c.amount||0),0))+'</b> · Total del ticket <b>'+money(x.ticketTotal)+'</b>'+(x.additionalCharges||[]).map(c=>'<br>'+esc(c.label)+' ('+esc(c.kind)+') '+money(c.amount)+(c.employeeName?' · '+esc(c.employeeName):'')).join('');b.appendChild(el)};"
+anchor="const __lrxSaleDetailBase=saleDetail;"
+if s.count(anchor)!=1:raise SystemExit("Could not insert ticket detail display")
+s=s.replace(anchor,viewpatch+anchor,1)
+p.write_text(s)
+print("Added ticket charge fields, employee HR totals, and percentage-based channel fees.")
 PY
