@@ -116,7 +116,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v572';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v573';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -134,8 +134,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-ticket-charges-v1",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-ticket-charges-v1",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-tax-sale-report-v1",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-tax-sale-report-v1",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -146,7 +146,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-ticket-charges-v1")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-tax-sale-report-v1")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -396,7 +396,7 @@ from pathlib import Path
 tag = "2026-11-22-channel-rollup-v1"
 index = Path("dist/index.html")
 html = index.read_text()
-old = "2026-11-23-ticket-charges-v1"
+old = "2026-11-23-tax-sale-report-v1"
 for asset in ("app.js", "cloudflare-sync.js"):
     before = f"{asset}?v={old}"
     after = f"{asset}?v={tag}"
@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v3";new="2026-11-23-ticket-charges-v1"
+old="2026-11-22-sales-month-products-v3";new="2026-11-23-tax-sale-report-v1"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
@@ -716,4 +716,33 @@ if s.count(anchor)!=1:raise SystemExit("Could not insert ticket detail display")
 s=s.replace(anchor,viewpatch+anchor,1)
 p.write_text(s)
 print("Added ticket charge fields, employee HR totals, and percentage-based channel fees.")
+PY
+
+
+# Tax Sale liability report: taxable POS/To-go/Owner sales, excluding third-party delivery apps.
+python3 - <<'PY'
+from pathlib import Path
+p=Path("dist/app.js");s=p.read_text()
+code="""function taxSaleIsExempt(s){const c=String(s?.channel||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');return ['doordash','grubhub','ubereats'].some(x=>c.includes(x))}
+function taxSaleBase(s){const d=saleDetail(s),items=Array.isArray(s?.items)&&s.items.length?s.items:[{product:s?.product||'',qty:s?.qty,price:s?.price}],taxLine=items.filter(x=>/^(tax|sales tax|tax sale|impuesto)$/i.test(String(x.product||x.name||'').trim())).reduce((n,x)=>n+Number(x.price||0)*Number(x.qty||1),0),gross=Math.max(0,Number(d.gross||0)-taxLine),discount=Math.max(0,Number(d.discountAmt||0)*(Number(d.gross||0)?gross/Number(d.gross||0):1));return Math.max(0,gross-discount)}
+function taxSaleFor(s){if(taxSaleIsExempt(s))return {amount:0,base:taxSaleBase(s),rate:0,source:'Exenta · app de delivery'};const base=taxSaleBase(s);let actual=0,source='Estimado 7%';if(Number(s?.customerTaxAmount)>0){actual=Number(s.customerTaxAmount);source='Impuesto del ticket'}else if(Number(s?.ownerTax)>0){actual=Number(s.ownerTax);source='Impuesto reportado por Owner'}else if(Number(s?.shift4Tax)>0){actual=Number(s.shift4Tax);source='Impuesto reportado por Product Mix'}else actual=Math.round(base*7)/100;return {amount:actual,base,rate:7,source}}
+function taxSaleRows(from='',to=''){return (state.sales||[]).filter(s=>{const date=String(s.date||s.createdAt||'').slice(0,10),status=String(s.status||'COMPLETADA').toUpperCase();return date&&(!from||date>=from)&&(!to||date<=to)&&!['CANCELADA','DEVUELTA'].includes(status)}).map(s=>{const t=taxSaleFor(s);return {...s,taxBase:t.base,taxSaleAmount:t.amount,taxSaleSource:t.source}})}
+function taxSaleReport(){const from=String(state._dreFrom||''),to=String(state._dreTo||''),rows=taxSaleRows(from,to),taxable=rows.filter(x=>x.taxSaleAmount>0),gross=taxable.reduce((n,x)=>n+x.taxBase,0),accrued=taxable.reduce((n,x)=>n+x.taxSaleAmount,0),exempt=rows.filter(x=>taxSaleIsExempt(x)).reduce((n,x)=>n+x.taxBase,0),payments=(state.taxSalePayments||[]).filter(x=>(!from||String(x.periodFrom||x.date||'')>=from)&&(!to||String(x.periodTo||x.date||'')<=to)),paid=payments.reduce((n,x)=>n+Number(x.amount||0),0),balance=Math.max(0,accrued-paid),byChannel=new Map();rows.forEach(x=>{const name=String(x.channel||'Sin canal'),g=byChannel.get(name)||{base:0,tax:0,count:0,source:taxSaleIsExempt(x)?'Exenta · app de delivery':x.taxSaleSource};g.base+=Number(x.taxBase||0);g.tax+=Number(x.taxSaleAmount||0);g.count++;if(g.source!==x.taxSaleSource)g.source='Mixto';byChannel.set(name,g)});const fmt=(x)=>money(x),period=(from||'Inicio')+' a '+(to||'hoy');return '<section class="card tax-sale-account" style="margin-top:14px"><div class="rowhead"><div><h3>Cuenta contable · Tax Sale por pagar</h3><p class="muted">Impuesto causado en ventas POS, To-go y Owner al 7%. DoorDash, Grubhub y Uber Eats quedan exentos según la regla indicada. Se usa el impuesto reportado por el ticket o la importación cuando está disponible; si falta, se estima al 7% del subtotal neto de descuentos.</p></div><div class="catalog-actions"><button class="btn primary" data-action="tax-sale-payment">Registrar pago al IRS</button><button class="btn" data-action="tax-sale-pdf">PDF</button><button class="btn" data-action="tax-sale-excel">Excel</button></div></div><p><b>Período:</b> '+esc(period)+'</p><div class="grid"><div class="card kpi"><small>Base gravable</small><strong>'+fmt(gross)+'</strong></div><div class="card kpi"><small>Tax Sale causado</small><strong>'+fmt(accrued)+'</strong></div><div class="card kpi"><small>Pagos registrados</small><strong>'+fmt(paid)+'</strong></div><div class="card kpi"><small>Saldo por pagar</small><strong>'+fmt(balance)+'</strong></div><div class="card kpi"><small>Ventas exentas de apps</small><strong>'+fmt(exempt)+'</strong></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Canal</th><th>Registros</th><th>Base gravable</th><th>Tax Sale</th><th>Origen</th></tr></thead><tbody>'+[...byChannel.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([name,x])=>'<tr><td>'+esc(name)+'</td><td>'+x.count+'</td><td>'+fmt(x.base)+'</td><td>'+fmt(x.tax)+'</td><td>'+esc(x.source)+'</td></tr>').join('')+(byChannel.size?'':'<tr><td colspan="5" class="empty">No hay ventas registradas en este período.</td></tr>')+'</tbody></table></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Pagos al IRS</th><th>Fecha</th><th>Período liquidado</th><th>Monto</th><th>Referencia</th></tr></thead><tbody>'+payments.map(x=>'<tr><td>Tax Sale</td><td>'+esc(x.date||'')+'</td><td>'+esc((x.periodFrom||'')+' a '+(x.periodTo||''))+'</td><td>'+fmt(x.amount)+'</td><td>'+esc(x.reference||'—')+'</td></tr>').join('')+(payments.length?'':'<tr><td colspan="5" class="empty">No hay pagos registrados para este período.</td></tr>')+'</tbody></table></div></section>'}
+function taxSalePaymentModal(){const from=String(state._dreFrom||new Date().toISOString().slice(0,8)+'01'),to=String(state._dreTo||new Date().toISOString().slice(0,10)),rows=taxSaleRows(from,to),accrued=rows.reduce((n,x)=>n+Number(x.taxSaleAmount||0),0),paid=(state.taxSalePayments||[]).filter(x=>String(x.periodFrom||'')===from&&String(x.periodTo||'')===to).reduce((n,x)=>n+Number(x.amount||0),0),balance=Math.max(0,accrued-paid);modal('<h3>Registrar pago · Tax Sale al IRS</h3><p>Saldo del período '+esc(from)+' a '+esc(to)+': <b>'+money(balance)+'</b></p><div class="formgrid"><div class="field"><label>Monto pagado</label><input id="taxSalePayAmount" type="number" min="0.01" step=".01" max="'+balance.toFixed(2)+'" value="'+balance.toFixed(2)+'"></div><div class="field"><label>Fecha del pago</label><input id="taxSalePayDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>Período desde</label><input id="taxSalePayFrom" type="date" value="'+esc(from)+'"></div><div class="field"><label>Período hasta</label><input id="taxSalePayTo" type="date" value="'+esc(to)+'"></div><div class="field full"><label>Referencia / confirmación de pago</label><input id="taxSalePayRef" placeholder="Opcional"></div></div><div class="actions"><button class="btn" data-action="close">Cancelar</button><button class="btn primary" data-action="tax-sale-payment-save">Guardar pago</button></div>')}
+function taxSalePaymentSave(){const amount=Number(document.getElementById('taxSalePayAmount')?.value||0),date=document.getElementById('taxSalePayDate')?.value||'',from=document.getElementById('taxSalePayFrom')?.value||'',to=document.getElementById('taxSalePayTo')?.value||'',reference=document.getElementById('taxSalePayRef')?.value.trim()||'';if(!(amount>0)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(from)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(to)||from>to)return toast('Revisa el monto, fecha y período del pago.');const accrued=taxSaleRows(from,to).reduce((n,x)=>n+Number(x.taxSaleAmount||0),0),alreadyPaid=(state.taxSalePayments||[]).filter(x=>String(x.periodFrom||'')===from&&String(x.periodTo||'')===to).reduce((n,x)=>n+Number(x.amount||0),0);if(amount>Math.max(0,accrued-alreadyPaid)+.005)return toast('El pago supera el saldo Tax Sale pendiente del período.');const snapshot=JSON.stringify(state);state.taxSalePayments=Array.isArray(state.taxSalePayments)?state.taxSalePayments:[];state.taxSalePayments.push({id:'TAXPAY-'+Date.now(),account:'Tax Sale',date,periodFrom:from,periodTo:to,amount,reference,createdAt:now(),createdBy:currentUser().name});audit('TAX_SALE_PAYMENT',money(amount)+' · IRS · '+from+' a '+to);if(!save()){restoreStateSnapshot(snapshot);return}close();render();toast('Pago de Tax Sale registrado.')}
+function taxSaleExport(){const from=String(state._dreFrom||''),to=String(state._dreTo||''),rows=taxSaleRows(from,to).map(x=>({tipo:'Tax Sale causado',fecha:String(x.date||'').slice(0,10),id:x.id,canal:x.channel,baseGravable:x.taxBase,tasaAplicada:x.taxSaleSource==='Estimado 7%'?7:'Reportada',taxSale:x.taxSaleAmount,origen:x.taxSaleSource}));(state.taxSalePayments||[]).filter(x=>(!from||String(x.periodFrom||x.date||'')>=from)&&(!to||String(x.periodTo||x.date||'')<=to)).forEach(x=>rows.push({tipo:'Pago al IRS',fecha:x.date,id:x.id,canal:'Tax Sale',baseGravable:'',tasaAplicada:'',taxSale:-Number(x.amount||0),origen:x.reference||'Pago registrado'}));if(!rows.length)return toast('No hay movimientos Tax Sale en este período.');return exportExcel(rows,'Tax_Sale_por_pagar')}
+function taxSalePrint(){const from=String(state._dreFrom||''),to=String(state._dreTo||''),rows=taxSaleRows(from,to),body=taxSaleReport().replace(/<button[\\s\\S]*?<\\/button>/g,'');return printHtml('Tax Sale por pagar · '+(from||'Inicio')+' a '+(to||'hoy'),body)}
+const __lrxDreBase=dre;dre=function(){let html=__lrxDreBase(),i=html.indexOf('<div class="grid"><div class="card kpi"><small>Ventas brutas</small>');if(i>=0)html=html.slice(0,i)+taxSaleReport()+html.slice(i);return html};
+document.addEventListener('click',e=>{const a=e.target?.closest?.('[data-action]')?.dataset?.action;if(a==='tax-sale-payment')taxSalePaymentModal();if(a==='tax-sale-payment-save')taxSalePaymentSave();if(a==='tax-sale-pdf')taxSalePrint();if(a==='tax-sale-excel')taxSaleExport()});
+"""
+if "function dre(){" not in s or "function taxSaleFor(" in s:raise SystemExit("Could not safely append Tax Sale report helpers.")
+# Set the manual ticket default to 7% on taxable channels and zero on exempt marketplace channels.
+old="document.getElementById('saleExtraCharges')?.addEventListener('click',e=>"
+new="""const taxModeEl=document.getElementById('saleTaxMode'),taxValueEl=document.getElementById('saleTaxValue'),taxSync=()=>{const channel=String(document.getElementById('saleChannel')?.value||''),exempt=/doordash|grubhub|uber\\s*eats|ubereats/i.test(channel);if(exempt){taxModeEl.value='amount';taxValueEl.value='0';taxValueEl.disabled=true}else{taxValueEl.disabled=false;if(!existing&&Number(taxValueEl.value||0)===0){taxModeEl.value='percent';taxValueEl.value='7'}}};taxSync();document.getElementById('saleChannel')?.addEventListener('change',()=>{taxSync();previewSale()});document.getElementById('saleExtraCharges')?.addEventListener('click',e=>"""
+if s.count(old)!=1:raise SystemExit("Manual tax default insertion point changed.")
+s=s.replace(old,new,1)
+# Tax-source logic and report functions load after the previously added charge features.
+s=s+"\n"+code
+p.write_text(s)
+print("Added Tax Sale payable account, sales-import tax aggregation, payment tracking, PDF, and Excel.")
 PY
