@@ -1,6 +1,6 @@
 // Pages deployment refresh for the Shift4 period importer.
-const CACHE='lrx-2026-11-21-shift4-range-v2';
-const VERSION='2026-11-21-shift4-range-v2';
+const CACHE='lrx-2026-11-24-tax-sale-report-v7';
+const VERSION='2026-11-24-tax-sale-report-v7';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
@@ -33,7 +33,7 @@ self.addEventListener('fetch',event=>{
     event.respondWith(fetch(event.request,{cache:'no-store'}).catch(()=>new Response(JSON.stringify({error:'Servicio de sincronización no disponible'}),{status:503,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}})));
     return;
   }
-  const critical=['/index.html','/app.js','/catalog-controls.js','/purchase-engine.js','/master.json','/styles.css','/sw.js'].some(path=>url.pathname.endsWith(path));
+  const critical=['/index.html','/app.js','/catalog-controls.js','/purchase-engine.js','/cloudflare-sync.js','/master.json','/styles.css','/sw.js'].some(path=>url.pathname.endsWith(path));
   if(critical||event.request.mode==='navigate'){
     event.respondWith((async()=>{
       try{
@@ -55,3 +55,4 @@ self.addEventListener('fetch',event=>{
     catch(error){return await caches.match('./index.html')||new Response('',{status:503})}
   })());
 });
+
