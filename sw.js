@@ -1,6 +1,6 @@
-// Pages deployment refresh for the Shift4 period importer.
-const CACHE='lrx-2026-11-24-tax-sale-dre-import-v13';
-const VERSION='2026-11-24-tax-sale-dre-import-v13';
+// Pages deployment refresh for tax period and yield fixes.
+const CACHE='lrx-2026-11-24-tax-sale-yield-fix-v14';
+const VERSION='2026-11-24-tax-sale-yield-fix-v14';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
