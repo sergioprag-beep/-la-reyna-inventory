@@ -116,7 +116,7 @@ from pathlib import Path
 p = Path("dist/app.js")
 s = p.read_text()
 changes = [
-    ("const APP_VERSION='v556';", "const APP_VERSION='v576';"),
+    ("const APP_VERSION='v556';", "const APP_VERSION='v577';"),
     ("master.json?v=2026-11-13-persist-recovery-v4", "master.json?v=2026-11-18-shopping-sync-v1"),
     ("seedRecipeUtensils();await normalizeUserUtensilImages();try{repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases()}catch(e){console.warn('LRX startup purchase reconciliation',e)}", "seedRecipeUtensils();setTimeout(async()=>{try{await normalizeUserUtensilImages();repairUnappliedPurchaseReceipts();reconcileInventoryFromPurchases();render()}catch(error){console.warn('LRX deferred startup maintenance',error)}},0);"),
     ("async function init(){try{await persistentStateReady;", "async function init(){const startupContent=document.getElementById('content');if(startupContent)startupContent.innerHTML='<div class=card><h2>Abriendo La Reyna Xpress…</h2><p>Cargando los datos del restaurante.</p></div>';try{await persistentStateReady;"),
@@ -134,8 +134,8 @@ from pathlib import Path
 index = Path("dist/index.html")
 html = index.read_text()
 replacements = {
-    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-23-tax-sale-report-v4",
-    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-23-tax-sale-report-v4",
+    "app.js?v=2026-11-21-shift4-range-v2": "app.js?v=2026-11-24-tax-sale-report-v5",
+    "cloudflare-sync.js?v=2026-11-21-shift4-range-v2": "cloudflare-sync.js?v=2026-11-24-tax-sale-report-v5",
 }
 for old, new in replacements.items():
     if html.count(old) != 1:
@@ -146,7 +146,7 @@ sw = Path("dist/sw.js")
 worker = sw.read_text()
 if "2026-11-21-shift4-range-v2" not in worker:
     raise SystemExit("Expected service worker version was not found.")
-worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-23-tax-sale-report-v4")
+worker = worker.replace("2026-11-21-shift4-range-v2", "2026-11-24-tax-sale-report-v5")
 old = "'/purchase-engine.js','/master.json'"
 if old not in worker:
     raise SystemExit("Could not update critical service worker assets.")
@@ -396,7 +396,7 @@ from pathlib import Path
 tag = "2026-11-22-channel-rollup-v1"
 index = Path("dist/index.html")
 html = index.read_text()
-old = "2026-11-23-tax-sale-report-v4"
+old = "2026-11-24-tax-sale-report-v5"
 for asset in ("app.js", "cloudflare-sync.js"):
     before = f"{asset}?v={old}"
     after = f"{asset}?v={tag}"
@@ -567,7 +567,7 @@ print("Removed estimated month allocations; preserved original range totals.")
 PY
 python3 - <<'PY'
 from pathlib import Path
-old="2026-11-22-sales-month-products-v3";new="2026-11-23-tax-sale-report-v4"
+old="2026-11-22-sales-month-products-v3";new="2026-11-24-tax-sale-report-v5"
 for name in ("dist/index.html","dist/sw.js"):
  p=Path(name);s=p.read_text()
  if old not in s:raise SystemExit("Missing prior sales cache tag in "+name)
@@ -745,7 +745,9 @@ s=s.replace(old,new,1)
 render_anchor="const body=(V[current]||generic)(m);content.innerHTML="
 if s.count(render_anchor)!=1:raise SystemExit("Could not anchor the DRE report to module rendering.")
 s=s.replace(render_anchor,"let body=(V[current]||generic)(m);if(current==='dre'&&typeof taxSaleReport==='function'&&!body.includes('tax-sale-account'))body=taxSaleReport()+body;content.innerHTML=",1)
-s=s+"\n"+code
+anchor="window.LRXGetSharedState=getSharedState;"
+if s.count(anchor)!=1:raise SystemExit("Could not place Tax Sale functions inside the application state scope.")
+s=s.replace(anchor,code+"\n"+anchor,1)
 p.write_text(s)
 print("Added Tax Sale payable account, sales-import tax aggregation, payment tracking, PDF, and Excel.")
 PY
