@@ -1,3 +1,4 @@
+# Directly bundle the Tax Sale report inside the application state closure.
 #!/usr/bin/env bash
 set -euo pipefail
 
