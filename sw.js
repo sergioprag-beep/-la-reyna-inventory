@@ -1,6 +1,6 @@
 // Pages deployment refresh for tax period and yield fixes.
-const CACHE='lrx-2026-11-24-tax-sale-yield-fix-v14';
-const VERSION='2026-11-24-tax-sale-yield-fix-v14';
+const CACHE='lrx-2026-11-24-dre-dedupe-v15';
+const VERSION='2026-11-24-dre-dedupe-v15';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,

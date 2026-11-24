@@ -145,6 +145,34 @@ async function publish(payload){
   }
   throw Error('No se pudo confirmar el guardado en la nube. Tus cambios siguen guardados en este dispositivo y se volverán a intentar.');
 }
+function repairDuplicateDreImports(state){
+  const records=Array.isArray(state?.dreRecords)?state.dreRecords:[];
+  const batchPeriods=new Map();
+  const periodOf=row=>{const stored=String(row?.importPeriod||'');if(/^\\d{4}-\\d{2}$/.test(stored))return stored;const date=String(row?.date||'').slice(0,10);return /^\\d{4}-\\d{2}-\\d{2}$/.test(date)?date.slice(0,7):''};
+  records.forEach((row,index)=>{
+    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||!row?.importBatch)return;
+    const period=periodOf(row);if(!period)return;
+    const batch=String(row.importBatch),key=period+'|'+batch;
+    if(!batchPeriods.has(key))batchPeriods.set(key,{period,batch,indexes:[],values:[]});
+    const group=batchPeriods.get(key),amount=Number(row.amount||0);
+    const canonical={type:String(row.type||''),dreMetric:String(row.dreMetric||''),category:String(row.category||''),description:String(row.description||''),amount:Number.isFinite(amount)?amount.toFixed(2):'0.00',date:String(row.date||''),importPeriod:period,sourceSheet:String(row.sourceSheet||''),importKey:String(row.importKey||'')};
+    group.indexes.push(index);group.values.push(canonical);
+  });
+  const signatures=new Map();
+  for(const group of batchPeriods.values()){
+    const signature=stableJSON(group.values.sort((a,b)=>stableJSON(a).localeCompare(stableJSON(b))));
+    const key=group.period+'|'+signature;
+    if(!signatures.has(key))signatures.set(key,[]);
+    signatures.get(key).push(group);
+  }
+  const remove=new Set();
+  for(const copies of signatures.values())if(copies.length>1){
+    copies.sort((a,b)=>a.batch.localeCompare(b.batch));
+    for(const duplicate of copies.slice(1))for(const index of duplicate.indexes)remove.add(index);
+  }
+  if(!remove.size)return{state,removed:0};
+  return{state:{...state,dreRecords:records.filter((_,index)=>!remove.has(index))},removed:remove.size};
+}
 function mergeValues(local,cloud,path=''){
   if(Array.isArray(local)||Array.isArray(cloud)){
     const left=Array.isArray(local)?local:[],right=Array.isArray(cloud)?cloud:[],out=[],positions=new Map();
@@ -230,7 +258,7 @@ async function publishMerged(local,cloud){
   const initial=JSON.parse(JSON.stringify(local||{})),initialText=stableJSON(initial),mutationAtStart=localMutationSeq;
   let base=cloud,merged=initial;
   for(let attempt=0;attempt<3;attempt++){
-    merged=applyPurchaseTombstones(mergeValues(merged,base?.payload||{}));revision=Number(base?.revision)||0;
+    merged=repairDuplicateDreImports(applyPurchaseTombstones(mergeValues(merged,base?.payload||{}))).state;revision=Number(base?.revision)||0;
     try{
       await publish(merged);
       // From this point Cloudflare accepted the merge and is authoritative.
@@ -289,6 +317,19 @@ function loginGate(){
 async function connect(){
   if(window.LRXAppReady)await window.LRXAppReady;if(window.LRXPersistentState?.ready)await window.LRXPersistentState.ready;
   const cloud=await getCloud(),local=localState(),localText=stableJSON(local);revision=Number(cloud.revision)||0;
+  if(cloud.payload){
+    const repaired=repairDuplicateDreImports(cloud.payload);
+    if(repaired.removed){
+      cloud.payload=repaired.state;
+      if(hasRecords(local)&&(localStorage.getItem(BOOTSTRAP_KEY)!=='1'||hasPendingLocalChanges())){
+        conflict=true;ready=true;startPolling();await reconcileConflict(cloud,local);return;
+      }
+      await publish(cloud.payload);
+      const saved=await saveLocal(cloud.payload,{cloudConfirmed:true});
+      lastSynced=stableJSON(cloud.payload);markCloudBootstrapComplete();clearPendingIfCurrent(cloud.payload);ready=true;startPolling();
+      status(saved?'DRE importado duplicado corregido':'Nube corregida; copia local pendiente',saved?'cloud':'error');return;
+    }
+  }
   if(!cloud.payload){
     if(!hasRecords(local)){ready=true;status('Sin copia compartida','local');startPolling();return}
     if(!confirm('Cloudflare todavía no tiene una copia de LRX. ¿Quieres publicar los datos de esta computadora?')){ready=true;status('Solo en esta computadora','local');startPolling();return}
@@ -326,8 +367,9 @@ async function checkCloud(){
   checkPromise=(async()=>{
     const head=await api('./api/state?revisionOnly=1');
     if(Number(head.revision)===revision&&!conflict)return false;
-    const cloud=await getCloud(),local=localState(),cloudText=stableJSON(cloud.payload||{});
-    if(stableJSON(local)===lastSynced&&!hasPendingLocalChanges()&&!queuedSnapshot){const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});revision=Number(cloud.revision)||0;lastSynced=cloudText;if(saved){markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}status('Sincronizado','cloud')}else status('Nube disponible; falta guardar copia local','error');return saved}
+    const cloud=await getCloud(),local=localState(),rawCloudText=stableJSON(cloud.payload||{}),repairedCloud=repairDuplicateDreImports(cloud.payload||{}),cloudText=stableJSON(repairedCloud.state);
+    if(repairedCloud.removed)cloud.payload=repairedCloud.state;
+    if(stableJSON(local)===lastSynced&&!hasPendingLocalChanges()&&!queuedSnapshot){revision=Number(cloud.revision)||0;if(repairedCloud.removed)await publish(cloud.payload);const saved=await saveLocal(cloud.payload||{},{cloudConfirmed:true});lastSynced=cloudText;if(saved){markCloudBootstrapComplete();localPending=false;try{localStorage.removeItem(PENDING_KEY)}catch{}status('Sincronizado','cloud')}else status('Nube disponible; falta guardar copia local','error');return saved}
     revision=Number(cloud.revision)||0;conflict=true;return reconcileConflict(cloud,local);
   })();
   try{return await checkPromise}finally{checkPromise=null}
