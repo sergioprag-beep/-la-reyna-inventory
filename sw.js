@@ -1,6 +1,6 @@
 // Pages deployment refresh for the Shift4 period importer.
-const CACHE='lrx-2026-11-24-tax-sale-report-v11';
-const VERSION='2026-11-24-tax-sale-report-v11';
+const CACHE='lrx-2026-11-24-tax-sale-report-v12';
+const VERSION='2026-11-24-tax-sale-report-v12';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
