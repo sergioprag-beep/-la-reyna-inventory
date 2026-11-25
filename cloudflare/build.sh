@@ -5,6 +5,18 @@ rm -rf dist
 mkdir -p dist
 cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflare-sync.js ui-translation-extra.js recipe-price-mobile.js sw.js master.json manifest.webmanifest hero-food.jpg hero-bar.jpg LRX-LOGO-PLANTILLAS.png LRX-LOGO-IMPRESION-TRANSPARENTE.png dist/
 
+# The current production app already contains the migrated modules. The legacy
+# patch pipeline below targets an older app.js and aborts on newer source.
+if grep -Fq "const APP_VERSION='v582';" dist/app.js \
+  && grep -Fq 'function repairDuplicateDreImports(state)' dist/cloudflare-sync.js \
+  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v18' dist/index.html \
+  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v18' dist/sw.js; then
+  mkdir -p dist/assets
+  cp -R assets/utensils dist/assets/
+  echo "Built the current production source directly; skipped obsolete migration patches."
+  exit 0
+fi
+
 # Apply the isolated Shift4 period-import correction to the built app bundle.
 # The dashboard hunk is superseded by the normalization step below. Allow only
 # that single stale hunk, or the three previously known stale hunks.
