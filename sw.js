@@ -1,6 +1,6 @@
 // Pages deployment refresh for the Shift4 period importer.
-const CACHE='lrx-2026-11-25-trust-dre-monthly-tax-v28';
-const VERSION='2026-11-25-trust-dre-monthly-tax-v28';
+const CACHE='lrx-2026-11-25-yield-prefill-save-fix-v29';
+const VERSION='2026-11-25-yield-prefill-save-fix-v29';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
