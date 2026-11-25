@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v585';
+const APP_VERSION='v586';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -1400,7 +1400,7 @@ function dreImportCategory(section,label=''){
 }
 function dreImportLabelIsTotal(label){
  const value=String(label||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
- return ['TOTAL','SUBTOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO','SUBTOTALPROVEEDORES','SUBTOTALGASTOS'].includes(value)
+ return value.startsWith('SUBTOTAL')||['TOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO'].includes(value)
 }
 function dreImportNum(v){if(typeof v==='number')return Number.isFinite(v)?v:0;const n=Number(String(v??'').replace(/[$,\s]/g,''));return Number.isFinite(n)?n:0}
 function dreImportKey(r){return [r.date,r.category,String(r.description||'').trim().toLowerCase(),Number(r.amount||0).toFixed(2)].join('|')}
