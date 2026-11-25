@@ -1,6 +1,6 @@
 // Pages deployment refresh for the Shift4 period importer.
-const CACHE='lrx-2026-11-25-dre-overlap-repair-v26';
-const VERSION='2026-11-25-dre-overlap-repair-v26';
+const CACHE='lrx-2026-11-25-yield-inline-product-v27';
+const VERSION='2026-11-25-yield-inline-product-v27';
 const ASSETS=[
   './','./index.html',`./styles.css?v=${VERSION}`,
   `./app.js?v=${VERSION}`,`./purchase-engine.js?v=${VERSION}`,`./catalog-controls.js?v=${VERSION}`,`./cloudflare-sync.js?v=${VERSION}`,
