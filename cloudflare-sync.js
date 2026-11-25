@@ -148,7 +148,7 @@ async function publish(payload){
 function repairDuplicateDreImports(state){
   const records=Array.isArray(state?.dreRecords)?state.dreRecords:[];
   const normalize=label=>String(label||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const summaryLabel=label=>['TOTAL','SUBTOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO','SUBTOTALPROVEEDORES','SUBTOTALGASTOS','SUBTOTALPROVEEDORESAYB'].includes(normalize(label));
+  const summaryLabel=label=>{const value=normalize(label);return value.startsWith('SUBTOTAL')||['TOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO'].includes(value)};
   const detectedCategory=label=>{
     const value=normalize(label);
     if(/ELECTRIC|ELECTRICITY|FPL|POWER|UTILITY/.test(value))return 'Electricidad';
