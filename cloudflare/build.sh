@@ -9,8 +9,8 @@ cp index.html styles.css app.js purchase-engine.js catalog-controls.js cloudflar
 # patch pipeline below targets an older app.js and aborts on newer source.
 if grep -Fq "const APP_VERSION='v582';" dist/app.js \
   && grep -Fq 'function repairDuplicateDreImports(state)' dist/cloudflare-sync.js \
-  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v18' dist/index.html \
-  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v18' dist/sw.js; then
+  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v19' dist/index.html \
+  && grep -Fq '2026-11-24-prod-tax-yield-dedupe-v19' dist/sw.js; then
   mkdir -p dist/assets
   cp -R assets/utensils dist/assets/
   echo "Built the current production source directly; skipped obsolete migration patches."
