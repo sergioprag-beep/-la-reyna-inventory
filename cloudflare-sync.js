@@ -147,15 +147,36 @@ async function publish(payload){
 }
 function repairDuplicateDreImports(state){
   const records=Array.isArray(state?.dreRecords)?state.dreRecords:[];
-  const summaryLabel=label=>{
-    const value=String(label||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    return ['TOTAL','SUBTOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO','SUBTOTALPROVEEDORES','SUBTOTALGASTOS'].includes(value);
+  const normalize=label=>String(label||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const summaryLabel=label=>['TOTAL','SUBTOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO','SUBTOTALPROVEEDORES','SUBTOTALGASTOS','SUBTOTALPROVEEDORESAYB'].includes(normalize(label));
+  const detectedCategory=label=>{
+    const value=normalize(label);
+    if(/ELECTRIC|ELECTRICITY|FPL|POWER|UTILITY/.test(value))return 'Electricidad';
+    if(/GAS/.test(value))return 'Gas';
+    if(/WATER|AGUA/.test(value))return 'Agua';
+    if(/INTERNET|TELEPHONE|PHONE|TELEFONO|COMCAST/.test(value))return 'Internet y teléfono';
+    if(/RENT|RENTA|ALQUILER|LEASE/.test(value))return 'Renta';
+    if(/REPAIR|MAINTENANCE|MANTENIMIENTO|REPARACION/.test(value))return 'Mantenimiento y reparaciones';
+    if(/INSURANCE|SEGURO/.test(value))return 'Seguros';
+    if(/CLEANING|LIMPIEZA/.test(value))return 'Limpieza';
+    if(/ADVERTIS|MARKETING|PUBLICIDAD/.test(value))return 'Publicidad y marketing';
+    if(/LICENSE|LICENCIA|PERMIT/.test(value))return 'Licencias y permisos';
+    if(/BANK|INTEREST|BANCO|INTERES/.test(value))return 'Gastos bancarios';
+    if(/ACCOUNTANT|PROFESSIONAL|LEGAL|CONTABLE|PROFESIONAL/.test(value))return 'Servicios profesionales';
+    return '';
   };
-  const summaryRows=new Set(records.map((row,index)=>index).filter(index=>{const row=records[index];return String(row?.importSource||'').startsWith('DRE_XLSX_')&&row?.type==='expense'&&summaryLabel(row.description)}));
+  const summaryRows=new Set(),categoryUpdates=new Map();
+  records.forEach((row,index)=>{
+    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||row?.type!=='expense')return;
+    if(summaryLabel(row.description)){summaryRows.add(index);return}
+    if(['Gastos generales','Servicios y suministros','Otros gastos'].includes(String(row.category||''))){
+      const category=detectedCategory(row.description);if(category&&category!==row.category)categoryUpdates.set(index,category);
+    }
+  });
   const batchPeriods=new Map();
   const periodOf=row=>{const stored=String(row?.importPeriod||'');if(/^\d{4}-\d{2}$/.test(stored))return stored;const date=String(row?.date||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(date)?date.slice(0,7):''};
   records.forEach((row,index)=>{
-    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||!row?.importBatch)return;
+    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||!row?.importBatch||summaryRows.has(index))return;
     const period=periodOf(row);if(!period)return;
     const batch=String(row.importBatch),key=period+'|'+batch;
     if(!batchPeriods.has(key))batchPeriods.set(key,{period,batch,indexes:[],values:[]});
@@ -175,8 +196,9 @@ function repairDuplicateDreImports(state){
     copies.sort((a,b)=>a.batch.localeCompare(b.batch));
     for(const duplicate of copies.slice(1))for(const index of duplicate.indexes)remove.add(index);
   }
-  if(!remove.size)return{state,removed:0};
-  return{state:{...state,dreRecords:records.filter((_,index)=>!remove.has(index))},removed:remove.size};
+  if(!remove.size&&!categoryUpdates.size)return{state,removed:0};
+  const repaired=records.flatMap((row,index)=>remove.has(index)?[]:[categoryUpdates.has(index)?{...row,category:categoryUpdates.get(index)}:row]);
+  return{state:{...state,dreRecords:repaired},removed:remove.size+categoryUpdates.size};
 }
 function mergeValues(local,cloud,path=''){
   if(Array.isArray(local)||Array.isArray(cloud)){
