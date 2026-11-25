@@ -147,6 +147,11 @@ async function publish(payload){
 }
 function repairDuplicateDreImports(state){
   const records=Array.isArray(state?.dreRecords)?state.dreRecords:[];
+  const summaryLabel=label=>{
+    const value=String(label||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    return ['TOTAL','SUBTOTAL','TOTALPROVEEDORES','TOTALPROVEEDORESAYB','TOTALOTROSPROVEEDORES','TOTALCOMPRAS','TOTALGASTOS','TOTALGENERAL','TOTALMENSUAL','TOTALOPERATIVO','SUBTOTALPROVEEDORES','SUBTOTALGASTOS'].includes(value);
+  };
+  const summaryRows=new Set(records.map((row,index)=>index).filter(index=>{const row=records[index];return String(row?.importSource||'').startsWith('DRE_XLSX_')&&row?.type==='expense'&&summaryLabel(row.description)}));
   const batchPeriods=new Map();
   const periodOf=row=>{const stored=String(row?.importPeriod||'');if(/^\d{4}-\d{2}$/.test(stored))return stored;const date=String(row?.date||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(date)?date.slice(0,7):''};
   records.forEach((row,index)=>{
@@ -165,7 +170,7 @@ function repairDuplicateDreImports(state){
     if(!signatures.has(key))signatures.set(key,[]);
     signatures.get(key).push(group);
   }
-  const remove=new Set();
+  const remove=new Set(summaryRows);
   for(const copies of signatures.values())if(copies.length>1){
     copies.sort((a,b)=>a.batch.localeCompare(b.batch));
     for(const duplicate of copies.slice(1))for(const index of duplicate.indexes)remove.add(index);
