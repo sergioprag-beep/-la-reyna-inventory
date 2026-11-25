@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v588';
+const APP_VERSION='v589';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -4420,6 +4420,9 @@ function taxSaleBase(s){const d=saleDetail(s),items=Array.isArray(s?.items)&&s.i
 function taxSaleFor(s){if(taxSaleIsExempt(s))return {amount:0,base:taxSaleBase(s),rate:0,source:'Exenta · app de delivery'};const base=taxSaleBase(s);let actual=0,source='Estimado 7%';if(Number(s?.customerTaxAmount)>0){actual=Number(s.customerTaxAmount);source='Impuesto del ticket'}else if(Number(s?.ownerTax)>0){actual=Number(s.ownerTax);source='Impuesto reportado por Owner'}else if(Number(s?.shift4Tax)>0){actual=Number(s.shift4Tax);source='Impuesto reportado por Product Mix'}else actual=Math.round(base*7)/100;const d=saleDetail(s),usedNetFallback=Number(d.gross||0)<=0&&Number(d.net||s?.salesNetOverride||0)>0;if(usedNetFallback&&source==='Estimado 7%')source='Estimado 7% · venta neta disponible';return {amount:actual,base,rate:7,source}}
 function taxSaleRows(from='',to=''){
  const inRange=r=>dreRecordFitsDateRange(r,from,to);
+ const latestByPeriod=rows=>{const map=new Map();for(const r of rows){const period=String(r.importPeriod||'').slice(0,7);if(!period)continue;const prior=map.get(period);if(!prior||String(r.createdAt||'')>String(prior.createdAt||''))map.set(period,r)}return map};
+ const dreGrossRows=(state.dreRecords||[]).filter(r=>r?.dreMetric==='grossSales'&&Number(r.amount)>0&&inRange(r));
+ if(dreGrossRows.length){const grossByPeriod=latestByPeriod(dreGrossRows),taxByPeriod=latestByPeriod((state.dreRecords||[]).filter(r=>r?.dreMetric==='salesTax'&&Number(r.amount)>0&&inRange(r)));return [...grossByPeriod.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([period,g])=>{const r=taxByPeriod.get(period);if(!r)return{id:'DRE-TAX-MISSING-'+period,date:g.date||g.createdAt,importPeriod:period,channel:'DRE · Tax Sale mensual pendiente',taxBase:0,taxSaleAmount:0,taxSaleSource:'Tax Sale mensual no importado',taxSaleReviewRequired:true};return{id:r.id,date:r.date||r.createdAt,importPeriod:period,channel:'POS / To-go / Owner · DRE',taxBase:Number(r.taxBase||Number(r.amount)/0.07),taxSaleAmount:Number(r.amount),taxSaleSource:'Tax Sale informado por mes en el DRE'}})}
  const reportedTax=(state.dreRecords||[]).filter(r=>r?.dreMetric==='salesTax'&&Number(r.amount)>0&&inRange(r));
  if(reportedTax.length)return reportedTax.map(r=>({id:r.id,date:r.date||r.createdAt,importPeriod:r.importPeriod,channel:'POS / To-go / Owner · DRE',taxBase:Number(r.taxBase||Number(r.amount)/0.07),taxSaleAmount:Number(r.amount),taxSaleSource:'Tax Sale informado por mes en el DRE'}));
  // Use the exact date scope as the DRE; full-period containment dropped monthly sales.
