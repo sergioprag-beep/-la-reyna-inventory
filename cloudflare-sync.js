@@ -176,7 +176,8 @@ function repairDuplicateDreImports(state){
   const batchPeriods=new Map();
   const periodOf=row=>{const stored=String(row?.importPeriod||'');if(/^\d{4}-\d{2}$/.test(stored))return stored;const date=String(row?.date||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(date)?date.slice(0,7):''};
   records.forEach((row,index)=>{
-    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||!row?.importBatch||summaryRows.has(index))return;
+    // Fingerprint imported expense rows separately; newer batches may add summary metrics and otherwise conceal a duplicate expense batch.
+    if(!String(row?.importSource||'').startsWith('DRE_XLSX_')||row?.type!=='expense'||!row?.importBatch||summaryRows.has(index))return;
     const period=periodOf(row);if(!period)return;
     const batch=String(row.importBatch),key=period+'|'+batch;
     if(!batchPeriods.has(key))batchPeriods.set(key,{period,batch,indexes:[],values:[]});
