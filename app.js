@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='v586';
+const APP_VERSION='v587';
 const KEY='lrx_state_v140';
 const LEGACY_KEYS=['lrx_state_v055','lrx_state_v112','lrx_state_v117','lrx_state_v118','lrx_state_v119','lrx_state_v120','lrx_state_v121','lrx_state_v122','lrx_state_v124','lrx_state_v125','lrx_state_v126','lrx_state_v127','lrx_state_v128','lrx_state_v129','lrx_state_v130','lrx_state_v131','lrx_state_v132','lrx_state_v133','lrx_state_v134','lrx_state_v135'];
 const MODULES=[
@@ -390,7 +390,7 @@ function inteligenciaAdministrativa(){
  const manual=(state.dreRecords||[]).filter(inPeriod),expenses=manual.filter(x=>x.type==='expense'),income=manual.filter(x=>x.type==='income'),dreGrossSales=manual.filter(x=>x.dreMetric==='grossSales').reduce((n,x)=>n+Number(x.amount||0),0),dreChannelFees=expenses.filter(x=>x.importSource==='UBER_EATS_CSV'||String(x.importSource||'').startsWith('CHANNEL_CSV:')).reduce((n,x)=>n+Number(x.amount||0),0),comparableDreSales=dreGrossSales?dreGrossSales-dreChannelFees:salesNet;
  const expenseTotal=expenses.reduce((n,x)=>n+Number(x.amount||0),0),incomeTotal=income.reduce((n,x)=>n+Number(x.amount||0),0),foodCost=salesNet>0&&costComplete?cogs/salesNet*100:null,target=Number(state.settings?.targetFoodCost||30);
  const recipeFoodCostRows=allRecipes().map(r=>{const d=recipeCostDetail(r),yieldQty=Number(r.yieldQty||r.yieldValue||1),unitCost=yieldQty?d.cost/yieldQty:d.cost,price=Number(r.salePrice||r.price||0);return {name:r.name,foodCost:price>0&&d.complete?unitCost/price*100:null}}).filter(r=>r.foodCost!=null&&Number.isFinite(r.foodCost)),recipeFoodCost=recipeFoodCostRows.length?recipeFoodCostRows.reduce((n,r)=>n+r.foodCost,0)/recipeFoodCostRows.length:null;
- const grouped=new Map();expenses.forEach(x=>{const k=String(x.category||'Sin categoría').trim()||'Sin categoría';grouped.set(k,(grouped.get(k)||0)+Number(x.amount||0))});
+ const grouped=new Map();expenses.forEach(x=>{const raw=String(x.category||'Sin categoría').trim()||'Sin categoría',k=['Compras a proveedores','Otros proveedores'].includes(raw)?'Compras a proveedores':raw;grouped.set(k,(grouped.get(k)||0)+Number(x.amount||0))});
  const topExpenses=[...grouped.entries()].sort((a,b)=>b[1]-a[1]).slice(0,5);
  const payables=purchaseGroupRows().filter(x=>['PENDIENTE','PARCIAL'].includes(String(x.status||'').toUpperCase())).reduce((n,x)=>n+purchaseBalance(x),0);
  const production=(state.production||[]).filter(inPeriod).length,employeeCount=(state.employees||[]).filter(x=>x.active!==false).length;
